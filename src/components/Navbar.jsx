@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import NotificationBell from './NotificationBell'
 
 const tabs = [
   { to: '/', label: '홈', icon: '🏠' },
@@ -13,7 +14,7 @@ export default function Navbar() {
         <span className="font-bold text-white text-lg lg:text-xl tracking-tight">
           🎮 이벤트허브
         </span>
-        <nav className="flex gap-1 lg:gap-2">
+        <nav className="flex items-center gap-1 lg:gap-2">
           {tabs.map(({ to, label, icon }) => (
             <NavLink
               key={to}
@@ -30,6 +31,7 @@ export default function Navbar() {
               {icon} {label}
             </NavLink>
           ))}
+          <NotificationBell />
         </nav>
       </div>
     </header>
