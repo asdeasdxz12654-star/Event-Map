@@ -3,13 +3,15 @@
 // 실행: node src/send-notifications.mjs
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FIREBASE_SERVICE_ACCOUNT_KEY(서비스 계정 JSON 전체를 문자열로)
 import { createClient } from '@supabase/supabase-js'
-import admin from 'firebase-admin'
+import { initializeApp, cert } from 'firebase-admin/app'
+import { getMessaging } from 'firebase-admin/messaging'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+initializeApp({
+  credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
 })
+const messaging = getMessaging()
 
 // 이벤트 날짜가 한국 기준(KST)이라 오늘/내일 판정도 KST로 맞춘다.
 function todayKST() {
@@ -66,7 +68,7 @@ async function notify(tokens, { title, body, url }) {
     console.log('  구독자 없음, 발송 스킵')
     return
   }
-  const response = await admin.messaging().sendEachForMulticast({
+  const response = await messaging.sendEachForMulticast({
     tokens,
     notification: { title, body },
     data: { url },
