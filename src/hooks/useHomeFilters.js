@@ -5,6 +5,7 @@ import { STATUS } from '../data/events'
 const useHomeFiltersStore = createLocalStorageHook('gameEventHub.homeFilters', {
   status: STATUS.UPCOMING,
   category: null,
+  hideSoldout: false,
 })
 
 export function useHomeFilters() {
@@ -18,5 +19,16 @@ export function useHomeFilters() {
     setFilters({ ...filters, category })
   }
 
-  return { status: filters.status, category: filters.category, setStatus, setCategory }
+  function setHideSoldout(hideSoldout) {
+    setFilters({ ...filters, hideSoldout })
+  }
+
+  return {
+    status: filters.status,
+    category: filters.category,
+    hideSoldout: filters.hideSoldout ?? false,
+    setStatus,
+    setCategory,
+    setHideSoldout,
+  }
 }

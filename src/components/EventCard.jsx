@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -6,10 +7,14 @@ import CategoryBadge from './CategoryBadge'
 import { getEventStatus } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 
+const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
+
 export default function EventCard({ event }) {
   const status = getEventStatus(event)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const bookmarked = isBookmarked(event.id)
+  const [imgError, setImgError] = useState(false)
+  const showPoster = !!event.posterUrl && !imgError
   const start = new Date(event.startDate)
   const end = new Date(event.endDate)
   const isSameDay = event.startDate === event.endDate
@@ -38,9 +43,28 @@ export default function EventCard({ event }) {
         {bookmarked ? '⭐' : '☆'}
       </button>
 
-      {/* 포스터 플레이스홀더 */}
-      <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-3 flex items-center justify-center text-4xl">
-        {event.category === '게임전시' ? '🎮' : event.category === '코스프레' ? '✨' : '🎵'}
+      {/* 포스터 */}
+      <div className="relative mb-3">
+        {showPoster ? (
+          <img
+            src={event.posterUrl}
+            alt={`${event.title} 포스터`}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="w-full aspect-[16/7] rounded-xl object-cover"
+          />
+        ) : (
+          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex items-center justify-center text-4xl">
+            {CATEGORY_EMOJI[event.category] ?? '🎪'}
+          </div>
+        )}
+        {event.ticketStatus === 'soldout' && (
+          <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center">
+            <span className="px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-full tracking-wide">
+              매진
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-start justify-between gap-2 mb-2">

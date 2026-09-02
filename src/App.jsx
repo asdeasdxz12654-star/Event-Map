@@ -4,6 +4,8 @@ import HomePage from './pages/HomePage'
 import CalendarPage from './pages/CalendarPage'
 import BookmarksPage from './pages/BookmarksPage'
 import EventDetailPage from './pages/EventDetailPage'
+import CosplayerDirectoryPage from './pages/CosplayerDirectoryPage'
+import CosplayerRegisterPage from './pages/CosplayerRegisterPage'
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/events/:id" element={<EventDetailPage />} />
+            <Route path="/cosplayers" element={<CosplayerDirectoryPage />} />
+            <Route path="/cosplayers/register" element={<CosplayerRegisterPage />} />
           </Routes>
         </main>
       </div>

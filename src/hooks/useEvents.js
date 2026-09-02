@@ -23,6 +23,7 @@ function mapEvent(row) {
     trustScore: row.trust_score,
     pastEvents: row.past_events ?? [],
     tags: row.tags ?? [],
+    ticketStatus: row.ticket_status ?? 'unknown',
   }
 }
 

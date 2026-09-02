@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -7,13 +8,19 @@ import CategoryBadge from '../components/CategoryBadge'
 import TrustScore from '../components/TrustScore'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
+import { useCosplayersByEvent } from '../hooks/useCosplayers'
+import CosplayerCard from '../components/CosplayerCard'
 import { downloadEventIcs } from '../utils/ics'
+
+const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 
 export default function EventDetailPage() {
   const { id } = useParams()
   const { events, loading, error } = useEvents()
   const event = events.find(e => e.id === id)
   const { isBookmarked, toggleBookmark } = useBookmarks()
+  const { cosplayers, loading: cosplayersLoading } = useCosplayersByEvent(id)
+  const [imgError, setImgError] = useState(false)
 
   if (loading) {
     return (
@@ -44,8 +51,22 @@ export default function EventDetailPage() {
     ? format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })
     : `${format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
 
+  const hasCoords = event.venueLat != null && event.venueLng != null
+
+  // 지도 보기 링크
   const naverMapUrl = `https://map.naver.com/v5/search/${encodeURIComponent(event.venueAddress)}`
-  const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(event.venue + ' ' + event.venueAddress)}`
+  const kakaoMapUrl = hasCoords
+    ? `https://map.kakao.com/link/to/${encodeURIComponent(event.venue)},${event.venueLat},${event.venueLng}`
+    : `https://map.kakao.com/link/search/${encodeURIComponent(event.venue + ' ' + event.venueAddress)}`
+
+  // 대중교통 길찾기 링크 (현재 위치 → 행사장)
+  // 네이버 방향 URL: directions/{from}/{to}/{경유}/{mode}, 좌표 순서는 경도,위도
+  const naverTransitUrl = hasCoords
+    ? `https://map.naver.com/v5/directions/-/-/${encodeURIComponent(event.venue)},${event.venueLng},${event.venueLat}/transit`
+    : `https://map.naver.com/v5/search/${encodeURIComponent(event.venueAddress)}`
+  const googleTransitUrl = hasCoords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${event.venueLat},${event.venueLng}&travelmode=transit`
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.venueAddress)}&travelmode=transit`
 
   return (
     <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -56,10 +77,19 @@ export default function EventDetailPage() {
 
       <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:items-start">
         <div className="lg:max-w-2xl">
-          {/* 포스터 플레이스홀더 */}
-          <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex items-center justify-center text-6xl">
-            {event.category === '게임전시' ? '🎮' : event.category === '코스프레' ? '✨' : '🎵'}
-          </div>
+          {/* 포스터 */}
+          {event.posterUrl && !imgError ? (
+            <img
+              src={event.posterUrl}
+              alt={`${event.title} 포스터`}
+              onError={() => setImgError(true)}
+              className="w-full rounded-2xl object-cover mb-6 max-h-[480px]"
+            />
+          ) : (
+            <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex items-center justify-center text-6xl">
+              {CATEGORY_EMOJI[event.category] ?? '🎪'}
+            </div>
+          )}
 
           {/* 타이틀 영역 */}
           <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
@@ -103,10 +133,30 @@ export default function EventDetailPage() {
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
           </div>
 
-          {/* 지도 버튼 */}
+          {/* 참가 코스어 */}
+          {(cosplayersLoading || cosplayers.length > 0) && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+              <h2 className="text-sm font-semibold text-white mb-3">
+                🎭 참가 코스어 {!cosplayersLoading && `(${cosplayers.length})`}
+              </h2>
+              {cosplayersLoading ? (
+                <p className="text-xs text-zinc-500 animate-pulse">불러오는 중...</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {cosplayers.map(c => (
+                    <CosplayerCard key={c.id} cosplayer={c} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 위치 & 경로 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
             <h2 className="text-sm font-semibold text-white mb-3">위치 & 경로</h2>
-            <div className="flex gap-2">
+
+            <p className="text-xs text-zinc-500 mb-1.5">지도에서 보기</p>
+            <div className="flex gap-2 mb-3">
               <a
                 href={naverMapUrl}
                 target="_blank"
@@ -122,6 +172,26 @@ export default function EventDetailPage() {
                 className="flex-1 py-2.5 bg-yellow-500/80 hover:bg-yellow-500 text-black text-sm font-medium rounded-xl text-center transition-colors"
               >
                 카카오맵
+              </a>
+            </div>
+
+            <p className="text-xs text-zinc-500 mb-1.5">대중교통 길찾기</p>
+            <div className="flex gap-2">
+              <a
+                href={naverTransitUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl text-center transition-colors"
+              >
+                🚇 네이버
+              </a>
+              <a
+                href={googleTransitUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
+              >
+                🗺 구글 맵
               </a>
             </div>
           </div>
@@ -172,14 +242,20 @@ function CtaButtons({ event }) {
         📅 캘린더에 추가 (.ics)
       </button>
       {event.ticketUrl && (
-        <a
-          href={event.ticketUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-2xl text-center transition-colors shadow-lg shadow-indigo-900/50"
-        >
-          🎟 예매하기
-        </a>
+        event.ticketStatus === 'soldout' ? (
+          <div className="w-full py-3.5 bg-zinc-800 text-zinc-500 font-semibold rounded-2xl text-center select-none">
+            🎟 매진
+          </div>
+        ) : (
+          <a
+            href={event.ticketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-2xl text-center transition-colors shadow-lg shadow-indigo-900/50"
+          >
+            🎟 {event.ticketStatus === 'available' ? '예매하기' : '예매 페이지'}
+          </a>
+        )
       )}
       {event.website && (
         <a

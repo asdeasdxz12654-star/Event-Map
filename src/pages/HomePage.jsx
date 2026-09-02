@@ -18,7 +18,14 @@ const CATEGORY_FILTERS = [
 
 export default function HomePage() {
   const { events, loading, error } = useEvents()
-  const { status: activeStatus, category: activeCategory, setStatus: setActiveStatus, setCategory: setActiveCategory } = useHomeFilters()
+  const {
+    status: activeStatus,
+    category: activeCategory,
+    hideSoldout,
+    setStatus: setActiveStatus,
+    setCategory: setActiveCategory,
+    setHideSoldout,
+  } = useHomeFilters()
 
   const statusCounts = {
     [STATUS.UPCOMING]: filterByStatus(events, STATUS.UPCOMING).length,
@@ -27,6 +34,7 @@ export default function HomePage() {
   }
 
   const filtered = filterByCategory(filterByStatus(events, activeStatus), activeCategory)
+    .filter(e => !hideSoldout || e.ticketStatus !== 'soldout')
 
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -59,8 +67,8 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* 카테고리 필터 */}
-      <div className="flex flex-wrap gap-2 mb-6 lg:mb-8">
+      {/* 카테고리 필터 + 매진 제외 토글 */}
+      <div className="flex flex-wrap items-center gap-2 mb-6 lg:mb-8">
         {CATEGORY_FILTERS.map(({ key, label }) => (
           <button
             key={String(key)}
@@ -74,6 +82,16 @@ export default function HomePage() {
             {label}
           </button>
         ))}
+        <button
+          onClick={() => setHideSoldout(!hideSoldout)}
+          className={`shrink-0 ml-auto px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all border ${
+            hideSoldout
+              ? 'bg-red-600/20 border-red-500/40 text-red-400'
+              : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'
+          }`}
+        >
+          {hideSoldout ? '매진 숨김 ✓' : '매진 제외'}
+        </button>
       </div>
 
       {/* 이벤트 그리드 */}
