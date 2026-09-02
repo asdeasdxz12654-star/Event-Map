@@ -9,6 +9,23 @@ const SW_PATH = '/firebase-messaging-sw.js'
 const SW_SCOPE = '/firebase-cloud-messaging-push-scope'
 const TOKEN_STORAGE_KEY = 'gameEventHub.pushToken'
 
+// navigator.serviceWorker.ready는 "현재 페이지(스코프 '/')를 담당하는" 등록을 기다리는 API라
+// 여기서 쓰면 안 된다 — PWA 워커(sw.js, 스코프 '/')를 기다리게 되어 우리가 방금 등록한
+// 별도 스코프의 워커와는 무관하게 멈춰버린다. 이 등록 자체가 활성화될 때까지 직접 기다린다.
+function waitForActivation(registration) {
+  if (registration.active) return Promise.resolve(registration)
+  const worker = registration.installing ?? registration.waiting
+  if (!worker) return Promise.resolve(registration)
+  return new Promise(resolve => {
+    worker.addEventListener('statechange', function onStateChange() {
+      if (worker.state === 'activated') {
+        worker.removeEventListener('statechange', onStateChange)
+        resolve(registration)
+      }
+    })
+  })
+}
+
 // 알림 권한 요청 -> FCM 토큰 발급 -> Supabase에 저장까지 담당하는 훅.
 export function usePushNotifications() {
   const [supported, setSupported] = useState(null) // null = 확인 중
@@ -62,6 +79,7 @@ export function usePushNotifications() {
       if (result !== 'granted') throw new Error('알림 권한이 거부되었습니다')
 
       const registration = await navigator.serviceWorker.register(SW_PATH, { scope: SW_SCOPE })
+      await waitForActivation(registration)
       const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })
 
       // 이미 등록된 토큰이면 unique 제약 위반(23505)이 나는데, 그건 실패가 아니라 정상 케이스로 취급한다.
