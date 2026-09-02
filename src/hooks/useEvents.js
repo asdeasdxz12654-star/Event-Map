@@ -24,6 +24,7 @@ function mapEvent(row) {
     pastEvents: row.past_events ?? [],
     tags: row.tags ?? [],
     ticketStatus: row.ticket_status ?? 'unknown',
+    createdAt: row.created_at ?? null,
   }
 }
 

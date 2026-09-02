@@ -11,18 +11,28 @@ export const STATUS = {
   ENDED: 'ended',
 }
 
+function parseLocalDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 export function getEventStatus(event) {
-  // 날짜 문자열(yyyy-MM-dd)을 로컬 자정으로 파싱해 타임존 오차를 방지한다.
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const [sy, sm, sd] = event.startDate.split('-').map(Number)
-  const [ey, em, ed] = event.endDate.split('-').map(Number)
-  const start = new Date(sy, sm - 1, sd)
-  const end = new Date(ey, em - 1, ed, 23, 59, 59, 999)
+  const start = parseLocalDate(event.startDate)
+  const end = parseLocalDate(event.endDate)
+  end.setHours(23, 59, 59, 999)
 
   if (today > end) return STATUS.ENDED
   if (today >= start) return STATUS.ONGOING
   return STATUS.UPCOMING
+}
+
+// 시작일까지 남은 일수 (진행중이면 0, 종료면 음수)
+export function getDaysUntil(event) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((parseLocalDate(event.startDate) - today) / 86400000)
 }
 
 export function filterByStatus(eventList, status) {
@@ -32,4 +42,19 @@ export function filterByStatus(eventList, status) {
 export function filterByCategory(eventList, category) {
   if (!category) return eventList
   return eventList.filter(e => e.category === category)
+}
+
+export function filterBySearch(eventList, query) {
+  if (!query || !query.trim()) return eventList
+  const q = query.trim().toLowerCase()
+  return eventList.filter(e =>
+    e.title?.toLowerCase().includes(q) ||
+    e.venue?.toLowerCase().includes(q) ||
+    e.organizer?.toLowerCase().includes(q) ||
+    e.tags?.some(t => t.toLowerCase().includes(q))
+  )
+}
+
+export function sortByNewest(list) {
+  return [...list].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
 }

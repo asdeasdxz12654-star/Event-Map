@@ -11,7 +11,12 @@ export default function BookmarksPage() {
 
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
-      <h1 className="text-2xl lg:text-3xl font-bold text-white mb-6">북마크</h1>
+      <div className="flex items-baseline gap-2 mb-6">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white">북마크</h1>
+        {!loading && bookmarked.length > 0 && (
+          <span className="text-sm text-zinc-400">{bookmarked.length}개</span>
+        )}
+      </div>
 
       {loading && (
         <div className="text-center py-16 text-zinc-500 animate-pulse">불러오는 중...</div>

@@ -32,7 +32,7 @@ export default function NotificationBell() {
     <button
       onClick={subscribe}
       disabled={loading}
-      title={error ? `알림 설정 실패: ${error.message}` : '새 행사·예매 오픈 알림 받기'}
+      title={error ? '알림 설정에 실패했습니다. 다시 시도해 주세요.' : '새 행사·예매 오픈 알림 받기'}
       className={`relative w-9 h-9 flex items-center justify-center rounded-lg hover:text-white hover:bg-white/10 text-sm transition-colors disabled:opacity-50 ${
         error ? 'text-red-400' : 'text-zinc-400'
       }`}

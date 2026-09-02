@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, isToday } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -23,6 +23,20 @@ export default function CalendarPage() {
 
   const [selectedDay, setSelectedDay] = useState(null)
   const selectedEvents = selectedDay ? getEventsForDay(selectedDay) : []
+  const eventListRef = useRef(null)
+
+  function selectDay(day) {
+    setSelectedDay(prev => {
+      const same = prev && format(prev, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+      return same ? null : day
+    })
+    // 모바일에서 날짜 선택 시 이벤트 목록으로 스크롤
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        eventListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }
 
   function prevMonth() {
     setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
@@ -96,7 +110,7 @@ export default function CalendarPage() {
                 return (
                   <button
                     key={day.toISOString()}
-                    onClick={() => setSelectedDay(isSelected ? null : day)}
+                    onClick={() => selectDay(day)}
                     className={`aspect-square flex flex-col items-center justify-start pt-1.5 px-1 relative transition-colors border border-transparent ${
                       isSelected
                         ? 'bg-indigo-600/30 border-indigo-500/50'
@@ -139,7 +153,7 @@ export default function CalendarPage() {
         </div>
 
         {/* 선택된 날 행사 목록 — PC에서는 달력 옆에 sticky 사이드 패널로 */}
-        <div className="mt-6 lg:mt-0 lg:sticky lg:top-20">
+        <div ref={eventListRef} className="mt-6 lg:mt-0 lg:sticky lg:top-20">
           {selectedDay ? (
             <div>
               <h2 className="text-sm lg:text-base font-semibold text-white mb-3">

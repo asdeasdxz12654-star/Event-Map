@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -234,15 +234,41 @@ function InfoRow({ icon, label, value }) {
   )
 }
 
+function ShareButton({ event }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event.title, text: `${event.title} | 게임이벤트허브`, url })
+      } catch {
+        // 사용자가 취소한 경우 무시
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {
+        // clipboard API 미지원 환경
+      }
+    }
+  }, [event.title])
+
+  return (
+    <button
+      onClick={handleShare}
+      className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+    >
+      {copied ? '✓ 링크 복사됨!' : '🔗 공유하기'}
+    </button>
+  )
+}
+
 function CtaButtons({ event }) {
   return (
     <div className="flex flex-col gap-2">
-      <button
-        onClick={() => downloadEventIcs(event)}
-        className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
-      >
-        📅 캘린더에 추가 (.ics)
-      </button>
       {event.ticketUrl && (
         event.ticketStatus === 'soldout' ? (
           <div className="w-full py-3.5 bg-zinc-800 text-zinc-500 font-semibold rounded-2xl text-center select-none">
@@ -269,6 +295,13 @@ function CtaButtons({ event }) {
           공식 사이트 →
         </a>
       )}
+      <button
+        onClick={() => downloadEventIcs(event)}
+        className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+      >
+        📅 캘린더에 추가 (.ics)
+      </button>
+      <ShareButton event={event} />
     </div>
   )
 }
