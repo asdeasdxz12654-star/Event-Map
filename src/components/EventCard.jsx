@@ -4,9 +4,12 @@ import { ko } from 'date-fns/locale'
 import StatusBadge from './StatusBadge'
 import CategoryBadge from './CategoryBadge'
 import { getEventStatus } from '../data/events'
+import { useBookmarks } from '../hooks/useBookmarks'
 
 export default function EventCard({ event }) {
   const status = getEventStatus(event)
+  const { isBookmarked, toggleBookmark } = useBookmarks()
+  const bookmarked = isBookmarked(event.id)
   const start = new Date(event.startDate)
   const end = new Date(event.endDate)
   const isSameDay = event.startDate === event.endDate
@@ -18,8 +21,23 @@ export default function EventCard({ event }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="block bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
+      className="relative block bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
     >
+      <button
+        onClick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          toggleBookmark(event.id)
+        }}
+        aria-label={bookmarked ? '북마크 해제' : '북마크에 추가'}
+        aria-pressed={bookmarked}
+        className={`absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full backdrop-blur transition-colors ${
+          bookmarked ? 'bg-indigo-500/80 text-white' : 'bg-black/40 text-zinc-300 hover:text-white'
+        }`}
+      >
+        {bookmarked ? '⭐' : '☆'}
+      </button>
+
       {/* 포스터 플레이스홀더 */}
       <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-3 flex items-center justify-center text-4xl">
         {event.category === '게임전시' ? '🎮' : event.category === '코스프레' ? '✨' : '🎵'}

@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 const tabs = [
   { to: '/', label: '홈', icon: '🏠' },
   { to: '/calendar', label: '달력', icon: '📅' },
+  { to: '/bookmarks', label: '북마크', icon: '⭐' },
 ]
 
 export default function Navbar() {

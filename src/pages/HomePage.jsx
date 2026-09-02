@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import EventCard from '../components/EventCard'
 import { filterByStatus, filterByCategory, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
+import { useHomeFilters } from '../hooks/useHomeFilters'
 
 const STATUS_TABS = [
   { key: STATUS.UPCOMING, label: '예정', icon: '🕐' },
@@ -18,8 +18,7 @@ const CATEGORY_FILTERS = [
 
 export default function HomePage() {
   const { events, loading, error } = useEvents()
-  const [activeStatus, setActiveStatus] = useState(STATUS.UPCOMING)
-  const [activeCategory, setActiveCategory] = useState(null)
+  const { status: activeStatus, category: activeCategory, setStatus: setActiveStatus, setCategory: setActiveCategory } = useHomeFilters()
 
   const statusCounts = {
     [STATUS.UPCOMING]: filterByStatus(events, STATUS.UPCOMING).length,

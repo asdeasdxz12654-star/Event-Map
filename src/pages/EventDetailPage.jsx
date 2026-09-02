@@ -6,11 +6,14 @@ import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
 import TrustScore from '../components/TrustScore'
 import { useEvents } from '../hooks/useEvents'
+import { useBookmarks } from '../hooks/useBookmarks'
+import { downloadEventIcs } from '../utils/ics'
 
 export default function EventDetailPage() {
   const { id } = useParams()
   const { events, loading, error } = useEvents()
   const event = events.find(e => e.id === id)
+  const { isBookmarked, toggleBookmark } = useBookmarks()
 
   if (loading) {
     return (
@@ -32,6 +35,7 @@ export default function EventDetailPage() {
   }
 
   const status = getEventStatus(event)
+  const bookmarked = isBookmarked(event.id)
   const start = new Date(event.startDate)
   const end = new Date(event.endDate)
   const isSameDay = event.startDate === event.endDate
@@ -56,9 +60,22 @@ export default function EventDetailPage() {
       </div>
 
       {/* 타이틀 영역 */}
-      <div className="flex flex-wrap items-start gap-2 mb-2">
-        <StatusBadge status={status} />
-        <CategoryBadge category={event.category} />
+      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-start gap-2">
+          <StatusBadge status={status} />
+          <CategoryBadge category={event.category} />
+        </div>
+        <button
+          onClick={() => toggleBookmark(event.id)}
+          aria-pressed={bookmarked}
+          className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border text-lg transition-colors ${
+            bookmarked
+              ? 'bg-indigo-600/80 border-indigo-500/50 text-white'
+              : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+          }`}
+        >
+          {bookmarked ? '⭐' : '☆'}
+        </button>
       </div>
       <h1 className="text-2xl font-bold text-white mb-1">{event.title}</h1>
       <p className="text-zinc-400 text-sm mb-6">{event.description}</p>
@@ -120,6 +137,12 @@ export default function EventDetailPage() {
 
       {/* CTA 버튼 */}
       <div className="flex flex-col gap-2">
+        <button
+          onClick={() => downloadEventIcs(event)}
+          className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+        >
+          📅 캘린더에 추가 (.ics)
+        </button>
         {event.ticketUrl && (
           <a
             href={event.ticketUrl}
