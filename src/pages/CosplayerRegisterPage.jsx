@@ -7,6 +7,21 @@ import { getEventStatus } from '../data/events'
 
 const BLANK = { nickname: '', bio: '', profile_url: '', twitter_url: '', instagram_url: '', other_url: '' }
 
+function isHttpsUrl(val) {
+  if (!val) return true
+  try { return new URL(val).protocol === 'https:' } catch { return false }
+}
+
+function validateForm(form) {
+  if (!form.nickname.trim()) return '닉네임을 입력해 주세요.'
+  if (form.nickname.trim().length > 30) return '닉네임은 30자 이내로 입력해 주세요.'
+  if (form.bio.length > 200) return '소개는 200자 이내로 입력해 주세요.'
+  for (const key of ['profile_url', 'twitter_url', 'instagram_url', 'other_url']) {
+    if (form[key] && !isHttpsUrl(form[key])) return 'URL은 https:// 로 시작해야 합니다.'
+  }
+  return null
+}
+
 export default function CosplayerRegisterPage() {
   const navigate = useNavigate()
   const { user, loading: authLoading, signInWithGoogle } = useAuth()
@@ -43,6 +58,8 @@ export default function CosplayerRegisterPage() {
 
   const handleSubmit = async e => {
     e.preventDefault()
+    const validationError = validateForm(form)
+    if (validationError) { setSubmitError(validationError); return }
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -57,7 +74,12 @@ export default function CosplayerRegisterPage() {
       await saveProfile(user.id, fields, selectedEventIds)
       navigate('/cosplayers')
     } catch (err) {
-      setSubmitError(err.message)
+      const msg = err.message ?? ''
+      if (msg.includes('unique') || msg.includes('duplicate')) {
+        setSubmitError('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.')
+      } else {
+        setSubmitError(msg)
+      }
     } finally {
       setSubmitting(false)
     }

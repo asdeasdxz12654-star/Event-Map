@@ -8,12 +8,12 @@
 create table if not exists public.cosplayers (
   id            text primary key default gen_random_uuid()::text,
   user_id       uuid unique not null references auth.users(id) on delete cascade,
-  nickname      text not null,
-  bio           text,
-  profile_url   text,       -- 프로필 사진 URL (본인이 직접 입력)
-  twitter_url   text,
-  instagram_url text,
-  other_url     text,       -- 기타 SNS/포트폴리오
+  nickname      text not null unique,
+  bio           text        check (char_length(bio) <= 200),
+  profile_url   text        check (profile_url is null or profile_url ~* '^https://'),
+  twitter_url   text        check (twitter_url is null or twitter_url ~* '^https://'),
+  instagram_url text        check (instagram_url is null or instagram_url ~* '^https://'),
+  other_url     text        check (other_url is null or other_url ~* '^https://'),
   -- 'approved': 공개, 'hidden': 본인/관리자 비공개
   -- MVP에서는 제출 즉시 approved. 심사가 필요해지면 'pending' 추가.
   status        text not null default 'approved'
