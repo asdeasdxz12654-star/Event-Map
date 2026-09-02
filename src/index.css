@@ -9,6 +9,8 @@ body {
   color: #f1f1f5;
   font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 #root {

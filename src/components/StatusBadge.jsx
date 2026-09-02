@@ -9,7 +9,7 @@ const config = {
 export default function StatusBadge({ status }) {
   const { label, className } = config[status] ?? config[STATUS.ENDED]
   return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${className}`}>
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${className}`}>
       {label}
     </span>
   )

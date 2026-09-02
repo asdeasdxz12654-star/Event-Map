@@ -26,7 +26,7 @@ export default function EventCard({ event }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="relative block bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
+      className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
     >
       <button
         onClick={e => {
@@ -78,18 +78,18 @@ export default function EventCard({ event }) {
         <CategoryBadge category={event.category} />
       </div>
 
-      <div className="space-y-1 text-xs text-zinc-400">
+      <div className="space-y-1 text-xs text-zinc-400 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span>📅</span>
-          <span>{dateStr}</span>
+          <span className="shrink-0">📅</span>
+          <span className="truncate">{dateStr}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span>📍</span>
-          <span>{event.venue}</span>
+          <span className="shrink-0">📍</span>
+          <span className="truncate">{event.venue}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span>💰</span>
-          <span>{event.admissionFee}</span>
+          <span className="shrink-0">💰</span>
+          <span className="truncate">{event.admissionFee}</span>
         </div>
       </div>
 

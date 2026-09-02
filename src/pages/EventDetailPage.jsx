@@ -49,7 +49,7 @@ export default function EventDetailPage() {
 
   const dateStr = isSameDay
     ? format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })
-    : `${format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
+    : `${format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })}\n~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
 
   const hasCoords = event.venueLat != null && event.venueLng != null
 
@@ -228,7 +228,7 @@ function InfoRow({ icon, label, value }) {
   return (
     <div className="flex gap-3 text-sm">
       <span className="shrink-0 w-5">{icon}</span>
-      <span className="text-zinc-400 shrink-0 w-16 whitespace-nowrap">{label}</span>
+      <span className="text-zinc-400 shrink-0 w-20 whitespace-nowrap">{label}</span>
       <span className="text-zinc-200 whitespace-pre-line">{value}</span>
     </div>
   )
