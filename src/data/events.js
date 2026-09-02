@@ -1,4 +1,4 @@
-// 이벤트 데이터는 Firestore 'EventMap' 컬렉션에서 가져온다. (src/hooks/useEvents.js)
+// 이벤트 데이터는 Supabase 'events' 테이블에서 가져온다. (src/hooks/useEvents.js, src/supabase.js)
 export const CATEGORIES = {
   GAME: '게임전시',
   COSPLAY: '코스프레',
