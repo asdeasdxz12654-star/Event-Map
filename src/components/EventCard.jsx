@@ -93,9 +93,9 @@ export default function EventCard({ event }) {
         </div>
       </div>
 
-      {event.ticketOpenDate && status === 'upcoming' && (
+      {event.ticketOpenDate && status === 'upcoming' && event.ticketOpenDate > format(new Date(), 'yyyy-MM-dd') && (
         <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400">
-          🎟 예매 오픈: {format(new Date(event.ticketOpenDate), 'M월 d일', { locale: ko })}
+          🎟 예매 오픈: {format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M월 d일', { locale: ko })}
         </div>
       )}
     </Link>

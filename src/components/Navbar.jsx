@@ -22,14 +22,15 @@ export default function Navbar() {
               to={to}
               end
               className={({ isActive }) =>
-                `px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg text-sm lg:text-base transition-colors ${
+                `px-2 sm:px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg text-sm lg:text-base transition-colors ${
                   isActive
                     ? 'bg-indigo-600 text-white font-medium'
                     : 'text-zinc-400 hover:text-white hover:bg-white/10'
                 }`
               }
             >
-              {icon} {label}
+              <span>{icon}</span>
+              <span className="hidden sm:inline"> {label}</span>
             </NavLink>
           ))}
           <NotificationBell />

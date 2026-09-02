@@ -54,19 +54,21 @@ export default function EventDetailPage() {
   const hasCoords = event.venueLat != null && event.venueLng != null
 
   // 지도 보기 링크
-  const naverMapUrl = `https://map.naver.com/v5/search/${encodeURIComponent(event.venueAddress)}`
+  const venueAddress = event.venueAddress ?? ''
+  const venueName = event.venue ?? ''
+  const naverMapUrl = `https://map.naver.com/v5/search/${encodeURIComponent(venueAddress || venueName)}`
   const kakaoMapUrl = hasCoords
-    ? `https://map.kakao.com/link/to/${encodeURIComponent(event.venue)},${event.venueLat},${event.venueLng}`
-    : `https://map.kakao.com/link/search/${encodeURIComponent(event.venue + ' ' + event.venueAddress)}`
+    ? `https://map.kakao.com/link/to/${encodeURIComponent(venueName)},${event.venueLat},${event.venueLng}`
+    : `https://map.kakao.com/link/search/${encodeURIComponent([venueName, venueAddress].filter(Boolean).join(' '))}`
 
   // 대중교통 길찾기 링크 (현재 위치 → 행사장)
   // 네이버 방향 URL: directions/{from}/{to}/{경유}/{mode}, 좌표 순서는 경도,위도
   const naverTransitUrl = hasCoords
-    ? `https://map.naver.com/v5/directions/-/-/${encodeURIComponent(event.venue)},${event.venueLng},${event.venueLat}/transit`
-    : `https://map.naver.com/v5/search/${encodeURIComponent(event.venueAddress)}`
+    ? `https://map.naver.com/v5/directions/-/-/${encodeURIComponent(venueName)},${event.venueLng},${event.venueLat}/transit`
+    : `https://map.naver.com/v5/search/${encodeURIComponent(venueAddress || venueName)}`
   const googleTransitUrl = hasCoords
     ? `https://www.google.com/maps/dir/?api=1&destination=${event.venueLat},${event.venueLng}&travelmode=transit`
-    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.venueAddress)}&travelmode=transit`
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(venueAddress || venueName)}&travelmode=transit`
 
   return (
     <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10">

@@ -27,6 +27,7 @@ export function useCosplayers() {
 export function useCosplayersByEvent(eventId) {
   const [cosplayers, setCosplayers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!eventId) { setLoading(false); return }
@@ -36,13 +37,14 @@ export function useCosplayersByEvent(eventId) {
       .eq('status', 'approved')
       .eq('cosplayer_events.event_id', eventId)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setCosplayers(data ?? [])
+      .then(({ data, error: err }) => {
+        if (err) setError(err)
+        else setCosplayers(data ?? [])
         setLoading(false)
       })
   }, [eventId])
 
-  return { cosplayers, loading }
+  return { cosplayers, loading, error }
 }
 
 // 로그인한 사용자의 본인 프로필 (없으면 null, 로딩 중이면 undefined)

@@ -12,11 +12,13 @@ export const STATUS = {
 }
 
 export function getEventStatus(event) {
+  // 날짜 문자열(yyyy-MM-dd)을 로컬 자정으로 파싱해 타임존 오차를 방지한다.
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const start = new Date(event.startDate)
-  const end = new Date(event.endDate)
-  end.setHours(23, 59, 59, 999)
+  const [sy, sm, sd] = event.startDate.split('-').map(Number)
+  const [ey, em, ed] = event.endDate.split('-').map(Number)
+  const start = new Date(sy, sm - 1, sd)
+  const end = new Date(ey, em - 1, ed, 23, 59, 59, 999)
 
   if (today > end) return STATUS.ENDED
   if (today >= start) return STATUS.ONGOING
