@@ -1,0 +1,28 @@
+name: Crawl news for events
+
+on:
+  schedule:
+    # 매일 21:00 UTC = 06:00 KST. GitHub Actions 스케줄은 정시 보장이 아니라 몇 분 밀릴 수 있음.
+    - cron: '0 21 * * *'
+  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - run: npm run crawl
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

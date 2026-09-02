@@ -1,0 +1,15 @@
+{
+  "name": "event-map-crawler",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "crawl": "node src/crawl.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@supabase/supabase-js": "^2.113.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^4.5.4"
+  }
+}
