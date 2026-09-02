@@ -34,7 +34,9 @@ messaging.onBackgroundMessage(payload => {
 // 알림 클릭 시 앱으로 포커스 이동(없으면 새 탭 열기)
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const targetUrl = event.notification.data?.url ?? '/'
+  // 반드시 상대 경로(/)만 허용 — 외부 URL 오픈 리다이렉트 방지
+  const raw = event.notification.data?.url
+  const targetUrl = (typeof raw === 'string' && raw.startsWith('/')) ? raw : '/'
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       for (const client of windowClients) {

@@ -74,11 +74,14 @@ export default function CosplayerRegisterPage() {
       await saveProfile(user.id, fields, selectedEventIds)
       navigate('/cosplayers')
     } catch (err) {
-      const msg = err.message ?? ''
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      const msg = err?.message ?? ''
+      const code = err?.code ?? ''
+      if (msg.includes('unique') || msg.includes('duplicate') || code === '23505') {
         setSubmitError('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.')
+      } else if (msg.includes('check') || code === '23514') {
+        setSubmitError('입력값을 다시 확인해 주세요.')
       } else {
-        setSubmitError(msg)
+        setSubmitError('저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
       }
     } finally {
       setSubmitting(false)
@@ -91,8 +94,8 @@ export default function CosplayerRegisterPage() {
     try {
       await deleteProfile(profile.id)
       navigate('/cosplayers')
-    } catch (err) {
-      setSubmitError(err.message)
+    } catch {
+      setSubmitError('삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setDeleting(false)
     }

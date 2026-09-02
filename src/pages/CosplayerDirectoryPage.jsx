@@ -25,7 +25,10 @@ export default function CosplayerDirectoryPage() {
       )}
 
       {error && (
-        <div className="text-center py-16 text-zinc-500">불러오기 실패: {error.message}</div>
+        <div className="text-center py-16 text-red-400">
+          <div className="text-4xl mb-3">⚠️</div>
+          <p>목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+        </div>
       )}
 
       {!loading && !error && cosplayers.length === 0 && (
