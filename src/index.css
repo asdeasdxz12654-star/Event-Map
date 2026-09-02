@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --bg-dark: #0f0f1a;
+}
+
+body {
+  background-color: #0f0f1a;
+  color: #f1f1f5;
+  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1a1a2e; }
+::-webkit-scrollbar-thumb { background: #4f4f7a; border-radius: 3px; }

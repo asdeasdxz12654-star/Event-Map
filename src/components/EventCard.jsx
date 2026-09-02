@@ -1,0 +1,61 @@
+import { Link } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ko } from 'date-fns/locale'
+import StatusBadge from './StatusBadge'
+import CategoryBadge from './CategoryBadge'
+import { getEventStatus } from '../data/events'
+
+export default function EventCard({ event }) {
+  const status = getEventStatus(event)
+  const start = new Date(event.startDate)
+  const end = new Date(event.endDate)
+  const isSameDay = event.startDate === event.endDate
+
+  const dateStr = isSameDay
+    ? format(start, 'M월 d일 (eee)', { locale: ko })
+    : `${format(start, 'M월 d일', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
+
+  return (
+    <Link
+      to={`/events/${event.id}`}
+      className="block bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
+    >
+      {/* 포스터 플레이스홀더 */}
+      <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-3 flex items-center justify-center text-4xl">
+        {event.category === '게임전시' ? '🎮' : event.category === '코스프레' ? '✨' : '🎵'}
+      </div>
+
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors text-sm leading-snug">
+          {event.title}
+        </h3>
+        <StatusBadge status={status} />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <CategoryBadge category={event.category} />
+      </div>
+
+      <div className="space-y-1 text-xs text-zinc-400">
+        <div className="flex items-center gap-1.5">
+          <span>📅</span>
+          <span>{dateStr}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span>📍</span>
+          <span>{event.venue}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span>💰</span>
+          <span>{event.admissionFee}</span>
+        </div>
+      </div>
+
+      {event.ticketOpenDate && status === 'upcoming' && (
+        <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400">
+          🎟 예매 오픈: {format(new Date(event.ticketOpenDate), 'M월 d일', { locale: ko })}
+        </div>
+      )}
+    </Link>
+  )
+}
