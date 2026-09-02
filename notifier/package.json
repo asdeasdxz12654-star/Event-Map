@@ -1,0 +1,13 @@
+{
+  "name": "event-map-notifier",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "send": "node src/send-notifications.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.113.0",
+    "firebase-admin": "^14.3.0"
+  }
+}

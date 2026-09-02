@@ -1,0 +1,28 @@
+name: Send event notifications
+
+on:
+  schedule:
+    # 매일 22:00 UTC = 07:00 KST. GitHub Actions 스케줄은 정시 보장이 아니라 몇 분 밀릴 수 있음.
+    - cron: '0 22 * * *'
+  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: notifier
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - run: npm run send
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
