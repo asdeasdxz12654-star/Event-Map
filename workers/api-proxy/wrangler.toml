@@ -1,0 +1,10 @@
+name = "event-map-api-proxy"
+main = "src/index.js"
+compatibility_date = "2026-09-02"
+
+# 외부 API 키는 여기 적지 말고 시크릿으로 등록:
+#   npx wrangler secret put TRANSIT_API_KEY
+# 코드에서는 env.TRANSIT_API_KEY 로 읽는다. 배포 후 값을 바꾸고 싶을 때도 secret put을 다시 실행하면 됨.
+
+[observability]
+enabled = true
