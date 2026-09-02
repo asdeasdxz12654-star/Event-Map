@@ -9,10 +9,10 @@ export default function BookmarksPage() {
   const bookmarked = events.filter(e => bookmarkIds.includes(e.id))
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-1">북마크</h1>
-        <p className="text-sm text-zinc-400">별표(⭐) 해둔 관심 행사 모음</p>
+    <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">북마크</h1>
+        <p className="text-sm lg:text-base text-zinc-400">별표(⭐) 해둔 관심 행사 모음</p>
       </div>
 
       {loading ? (
@@ -34,7 +34,7 @@ export default function BookmarksPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {bookmarked.map(event => (
             <EventCard key={event.id} event={event} />
           ))}

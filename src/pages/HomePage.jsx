@@ -29,20 +29,20 @@ export default function HomePage() {
   const filtered = filterByCategory(filterByStatus(events, activeStatus), activeCategory)
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-1">행사 정보</h1>
-        <p className="text-sm text-zinc-400">국내 게임·코스프레·게임음악 행사를 한눈에</p>
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 정보</h1>
+        <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악 행사를 한눈에</p>
       </div>
 
       {/* 상태 탭 */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 lg:gap-3 mb-4 lg:mb-5">
         {STATUS_TABS.map(({ key, label, icon }) => (
           <button
             key={key}
             onClick={() => setActiveStatus(key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl text-sm lg:text-base font-medium transition-all ${
               activeStatus === key
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
                 : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
@@ -60,12 +60,12 @@ export default function HomePage() {
       </div>
 
       {/* 카테고리 필터 */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex flex-wrap gap-2 mb-6 lg:mb-8">
         {CATEGORY_FILTERS.map(({ key, label }) => (
           <button
             key={String(key)}
             onClick={() => setActiveCategory(key)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
               activeCategory === key
                 ? 'bg-violet-600/80 text-white'
                 : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
@@ -93,7 +93,7 @@ export default function HomePage() {
           <p>해당하는 행사가 없습니다</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {filtered.map(event => (
             <EventCard key={event.id} event={event} />
           ))}
