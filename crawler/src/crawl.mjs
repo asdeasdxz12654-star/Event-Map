@@ -1,6 +1,7 @@
 // 게임 뉴스 RSS를 훑어서 행사(전시회/코스프레/콘서트) 소개 기사로 보이는 것만 골라
 // Claude로 구조화 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기" 상태로 저장한다.
 // KOPIS(공연예술통합전산망) 공식 API에서 게임음악 관련 공연도 같은 큐에 합류시킨다 (kopis.mjs).
+// KOPIS는 이미 구조화된 공식 데이터라 Claude 없이 필드를 그대로 매핑한다 (LLM 비용 없음).
 // 실행: node src/crawl.mjs
 // 환경변수: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KOPIS_API_KEY(선택)
 import Parser from 'rss-parser'
@@ -8,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
-import { fetchKopisCandidates, extractKopisEvent } from './kopis.mjs'
+import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
 
 const FEEDS = [
   { name: '게임메카', url: 'https://www.gamemeca.com/rss.php' },
@@ -154,16 +155,13 @@ async function main() {
 
       console.log(`[KOPIS] 후보: ${candidate.source_title}`)
 
+      // Claude 호출 없이 KOPIS 원본 필드를 기계적으로 매핑 (비용 없음, 대신 confidence로
+      // 신뢰도를 표시해 관리자 검수 페이지에서 최종 판단하도록 함)
       let extracted
       try {
-        extracted = await extractKopisEvent(candidate)
+        extracted = buildKopisDraft(candidate)
       } catch (err) {
-        console.error('  -> 추출 실패:', err.message)
-        continue
-      }
-
-      if (!extracted || !extracted.is_event) {
-        console.log('  -> 게임음악 공연 아님, 스킵')
+        console.error('  -> 매핑 실패:', err.message)
         continue
       }
 

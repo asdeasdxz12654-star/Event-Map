@@ -2,6 +2,11 @@
 // 공연을 찾아 crawl.mjs와 동일한 형태의 "후보"로 변환한다. 실제 등록/게시는 항상
 // event_drafts 검수 큐를 거친다 (KOPIS가 공식 API라도 "게임음악" 여부는 키워드 매칭 기반 추정).
 //
+// RSS 경로(crawl.mjs)와 달리 여기는 Claude를 호출하지 않는다 — KOPIS는 이미 구조화된 공식
+// 데이터라 자유 텍스트를 해석할 필요가 없고, LLM 비용 없이도 필드를 그대로 매핑할 수 있다.
+// 대신 "진짜 게임 관련인지" 판단을 LLM에 맡길 수 없으므로, 키워드 매칭을 더 보수적으로 하고
+// (아래 looksLikeGameMusic) confidence로 신뢰도를 표시해 사람 검수에서 걸러내도록 한다.
+//
 // 환경변수: KOPIS_API_KEY (data.go.kr 또는 kopis.or.kr에서 무료 발급)
 //
 // 파라미터명/응답 필드명은 실 서비스키로 목록+상세 조회를 직접 호출해 확인함 (2026-09-03).
@@ -9,8 +14,6 @@
 // 상세 응답: 위 필드 + prfcast, entrpsnmP/H/A/S, pcseguidance, sty(줄거리/프로그램), mt10id,
 //           relates.relate.relateurl (최상위 필드가 아니라 중첩 객체/배열 안에 있음, 아래 getRelateUrl 참고)
 import { XMLParser } from 'fast-xml-parser'
-import Anthropic from '@anthropic-ai/sdk'
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { EventExtractionSchema } from './schema.mjs'
 
 const KOPIS_BASE_URL = 'https://kopis.or.kr/openApi/restful/pblprfr'
@@ -23,16 +26,32 @@ const LOOKAHEAD_DAYS = 90
 const ROWS_PER_PAGE = 100
 const MAX_PAGES = 10
 
-// KOPIS는 장르코드(shcate)가 있지만 정확한 코드값이 불확실해 의존하지 않는다.
-// 대신 제목/장르명에 아래 키워드가 있는지로 게임음악 공연 후보를 걸러낸다.
-const KOPIS_KEYWORDS = [
-  '게임', '게임음악', 'OST', '오케스트라', '게임 콘서트', '게임음악 콘서트',
-  '파이널판타지', '젤다', '포켓몬', '스타크래프트', '리그오브레전드', '오버워치',
-  '원신', '동방', '니어', '왕가휘무',
+// 게임 프랜차이즈 이름 — 단독으로도 신뢰도 높은 신호 (confidence: high)
+// 주의: 짧은 단어는 무관한 한국어 단어와 우연히 겹칠 수 있다 (예: '니어' 단독은 '시니어'/
+// '주니어'에 걸림, '동방' 단독은 '동방신기'에 걸림 — 실제 KOPIS 데이터로 확인해서 뺐다).
+// 그래서 애매한 짧은 이름은 더 구체적인 표기로 넣는다.
+const FRANCHISE_KEYWORDS = [
+  '파이널판타지', '젤다', '포켓몬', '스타크래프트', '워크래프트', '디아블로',
+  '리그오브레전드', '오버워치', '원신', '동방프로젝트', '니어:오토마타', '니어 오토마타',
+  '리니지', '메이플스토리', '던전앤파이터', '블레이드앤소울', '로스트아크',
 ]
 
+// '게임'이 명시적으로 들어간 경우만 게임음악 후보로 본다. 처음엔 '오케스트라'/'OST'/'콘서트'만
+// 단독으로도 매칭시켰는데, 실제 KOPIS 500건 표본으로 확인해보니 전부 게임과 무관한 일반 클래식
+// 공연이었다 (예: "제17회 MS필하모닉 오케스트라 정기연주회"). 그래서 '게임'이 없는 일반 음악
+// 키워드는 후보에서 뺐다 — LLM 없이 걸러야 하니 재현율보다 정밀도를 우선한다.
+function looksLikeGameMusic(entry) {
+  const text = `${entry.prfnm ?? ''} ${entry.genrenm ?? ''}`
+  return text.includes('게임') || FRANCHISE_KEYWORDS.some(k => text.includes(k))
+}
+
+function estimateConfidence(text) {
+  if (FRANCHISE_KEYWORDS.some(k => text.includes(k))) return 'high'
+  if (text.includes('게임음악') || text.includes('게임 콘서트')) return 'medium'
+  return 'low' // '게임'만 걸린 경우 — 사람 검수로 최종 판단 필요
+}
+
 const xmlParser = new XMLParser({ ignoreAttributes: false })
-const client = new Anthropic()
 
 function formatDate(date) {
   const y = date.getFullYear()
@@ -41,10 +60,22 @@ function formatDate(date) {
   return `${y}${m}${d}`
 }
 
+// "2026.10.09" -> "2026-10-09" (event_drafts.extracted.start_date/end_date 형식에 맞춤)
+function parseKopisDate(d) {
+  return d ? d.replaceAll('.', '-') : null
+}
+
 // fast-xml-parser는 항목이 1개면 객체, 여러 개면 배열로 반환한다 -> 항상 배열로 정규화
 function asArray(value) {
   if (value === undefined || value === null) return []
   return Array.isArray(value) ? value : [value]
+}
+
+// relateurl은 최상위 필드가 아니라 relates.relate(단일 객체 또는 배열) 안에 중첩되어 있다.
+// (실 서비스키로 상세 조회 응답을 확인해 확정함)
+function getRelateUrl(raw) {
+  const relate = asArray(raw.relates?.relate)[0]
+  return relate?.relateurl ?? null
 }
 
 function buildKopisSourceUrl(mt20id) {
@@ -78,11 +109,6 @@ async function fetchKopisList({ stdate, eddate, cpage, rows }) {
 async function fetchKopisDetail(mt20id) {
   const parsed = await requestKopis(`${KOPIS_BASE_URL}/${encodeURIComponent(mt20id)}`, {})
   return parsed?.dbs?.db ?? null
-}
-
-function looksLikeGameMusic(entry) {
-  const text = `${entry.prfnm ?? ''} ${entry.genrenm ?? ''}`
-  return KOPIS_KEYWORDS.some(k => text.includes(k))
 }
 
 export async function fetchKopisCandidates() {
@@ -126,53 +152,37 @@ export async function fetchKopisCandidates() {
   return candidates
 }
 
-const KOPIS_EXTRACTION_SYSTEM_PROMPT = `너는 KOPIS(공연예술통합전산망) 공식 데이터에서 "게임음악" 성격의 공연을
-행사 정보로 정리하는 도우미다. 입력은 뉴스 기사가 아니라 이미 실존이 확인된 공연예술 데이터다.
-제목/장르에 "게임" 관련 키워드가 포함되어 후보로 올라온 것이므로, 명백히 게임과 무관한 우연의
-일치(예: 제목에 '게임'이 들어가지만 실제로는 스포츠/보드게임 등 다른 의미인 경우)가 아니라면
-is_event는 true로 판단해라. 게임 프랜차이즈 이름이 정확히 일치하면 confidence를 high로,
-"오케스트라"/"게임음악" 같은 일반적인 키워드로만 매칭된 경우는 medium 또는 low로 판단해라.
-category는 항상 "게임음악"이다. description은 제목/장소/장르 정보를 바탕으로 한두 문장으로
-자연스럽게 요약해라. 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).`
-
-// relateurl은 최상위 필드가 아니라 relates.relate(단일 객체 또는 배열) 안에 중첩되어 있다.
-// (실 서비스키로 상세 조회 응답을 확인해 확정함)
-function getRelateUrl(raw) {
-  const relate = asArray(raw.relates?.relate)[0]
-  return relate?.relateurl ?? null
+// sty(프로그램/줄거리 소개)와 장르·공연장 정보로 짧은 설명을 조립한다 (LLM 없이).
+function buildDescription(raw) {
+  const head = [raw.genrenm, raw.fcltynm].filter(Boolean).join(' · ')
+  const firstLine = raw.sty?.split('\n').map(s => s.trim()).find(Boolean)
+  const desc = [head, firstLine].filter(Boolean).join('. ')
+  return desc ? desc.slice(0, 200) : null
 }
 
-function buildKopisArticleText(raw) {
-  const relateUrl = getRelateUrl(raw)
-  return [
-    `공연명: ${raw.prfnm ?? ''}`,
-    `장르: ${raw.genrenm ?? ''}`,
-    `기간: ${raw.prfpdfrom ?? ''} ~ ${raw.prfpdto ?? ''}`,
-    `공연장: ${raw.fcltynm ?? ''}`,
-    raw.prfcast?.trim() ? `출연: ${raw.prfcast}` : null,
-    raw.entrpsnmP?.trim() ? `주최: ${raw.entrpsnmP}` : null,
-    raw.entrpsnmH?.trim() ? `기획: ${raw.entrpsnmH}` : null,
-    raw.pcseguidance ? `티켓 가격 안내: ${raw.pcseguidance}` : null,
-    raw.sty ? `소개: ${raw.sty}` : null,
-    relateUrl ? `관련/예매 링크: ${relateUrl}` : null,
-  ].filter(Boolean).join('\n')
-}
+// KOPIS 원본 필드를 event_drafts.extracted 스키마(EventExtractionSchema)로 기계적으로 매핑한다.
+// LLM 판단이 없으므로 is_event는 항상 true(=검수 큐에 올림)이고, "진짜 게임 관련인지"는
+// confidence로만 표시해 관리자 검수 페이지에서 사람이 최종 판단한다.
+export function buildKopisDraft(candidate) {
+  const raw = candidate.raw
+  const text = `${raw.prfnm ?? ''} ${raw.genrenm ?? ''}`
+  const organizer = [raw.entrpsnmP, raw.entrpsnmH].map(s => s?.trim()).find(Boolean) ?? null
 
-export async function extractKopisEvent(candidate) {
-  const response = await client.messages.parse({
-    model: 'claude-opus-5',
-    max_tokens: 2048,
-    output_config: {
-      effort: 'low',
-      format: zodOutputFormat(EventExtractionSchema),
-    },
-    system: KOPIS_EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: buildKopisArticleText(candidate.raw) }],
+  return EventExtractionSchema.parse({
+    is_event: true,
+    title: raw.prfnm ?? null,
+    category: '게임음악',
+    start_date: parseKopisDate(raw.prfpdfrom),
+    end_date: parseKopisDate(raw.prfpdto ?? raw.prfpdfrom),
+    venue: raw.fcltynm ?? null,
+    venue_address: null, // KOPIS 목록/상세 응답엔 주소가 없음 (공연장명만 제공)
+    organizer,
+    description: buildDescription(raw),
+    ticket_url: getRelateUrl(raw),
+    ticket_open_date: null,
+    admission_fee: raw.pcseguidance ?? null,
+    website: null,
+    tags: ['게임음악', raw.genrenm].filter(Boolean),
+    confidence: estimateConfidence(text),
   })
-
-  const extracted = response.parsed_output
-  if (extracted?.is_event) {
-    extracted.category = '게임음악' // 이 소스는 게임음악 전용이므로 모델 분류에 맡기지 않음
-  }
-  return extracted
 }
