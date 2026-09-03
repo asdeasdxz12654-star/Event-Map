@@ -4,10 +4,11 @@
 // crawl.mjs의 기존 looksRelevant/extractEvent 로직을 그대로 재사용한다 (자유 텍스트라 RSS와
 // 동일하게 Claude 판단이 필요함 — KOPIS처럼 구조화 데이터가 아님).
 //
-// 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET (developers.naver.com에서 무료 발급, 검색 API
-// 기준 하루 25,000건 한도)
+// 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET (NAVER API HUB에서 발급 — 예전 개발자센터
+// openapi.naver.com과 도메인/경로/인증 헤더가 다르니 주의. 실제로 두 방식 다 curl로 확인함:
+// 구버전(X-Naver-Client-Id 등, openapi.naver.com)은 401, API HUB 방식은 200 정상 응답.)
 
-const NAVER_NEWS_URL = 'https://openapi.naver.com/v1/search/news.json'
+const NAVER_NEWS_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/news'
 
 // RSS로는 잘 안 잡히는, 자체 API 없는 고정/연례 행사 이름들. 필요하면 이 목록만 늘리면 된다.
 export const NAVER_SEARCH_QUERIES = [
@@ -36,8 +37,8 @@ async function searchNaverNews(query) {
 
   const res = await fetch(url, {
     headers: {
-      'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
-      'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET,
+      'X-NCP-APIGW-API-KEY-ID': process.env.NAVER_CLIENT_ID,
+      'X-NCP-APIGW-API-KEY': process.env.NAVER_CLIENT_SECRET,
     },
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
