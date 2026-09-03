@@ -1,14 +1,26 @@
-// 네이버 뉴스 검색 API로 "지스타"/"코믹월드"처럼 자체 API가 없는 알려진 고정 행사를
-// 능동적으로 검색해 RSS(수동적으로 흘러오는 기사만 잡음)가 놓치는 소식을 보완한다.
-// 검색 결과는 RSS 아이템과 같은 모양({title, contentSnippet, link, pubDate})으로 정규화해서
-// crawl.mjs의 기존 looksRelevant/extractEvent 로직을 그대로 재사용한다 (자유 텍스트라 RSS와
-// 동일하게 Claude 판단이 필요함 — KOPIS처럼 구조화 데이터가 아님).
+// 네이버 뉴스/카페글 검색 API로 "지스타"/"코믹월드"/"원신"처럼 자체 API가 없는 알려진 고정
+// 행사나 게임사 공지를 능동적으로 검색해 RSS(수동적으로 흘러오는 기사만 잡음)가 놓치는 소식을
+// 보완한다. 검색 결과는 RSS 아이템과 같은 모양({title, contentSnippet, link, pubDate})으로
+// 정규화해서 crawl.mjs의 기존 looksRelevant/extractEvent 로직을 그대로 재사용한다 (자유
+// 텍스트라 Groq 판단이 필요함 — KOPIS처럼 구조화 데이터가 아님).
 //
 // 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET (NAVER API HUB에서 발급 — 예전 개발자센터
 // openapi.naver.com과 도메인/경로/인증 헤더가 다르니 주의. 실제로 두 방식 다 curl로 확인함:
 // 구버전(X-Naver-Client-Id 등, openapi.naver.com)은 401, API HUB 방식은 200 정상 응답.)
 
 const NAVER_NEWS_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/news'
+const NAVER_CAFE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/cafearticle'
+
+// 호요버스 게임들은 이벤트/행사 공지가 뉴스보다 공식 네이버카페에 먼저 올라오는 경우가 많다.
+// 카페글 검색은 "이 카페만" 지정해서 볼 수는 없고 키워드로 전체 카페를 검색하기 때문에,
+// 응답에 같이 오는 cafeurl로 실제 확인한 공식 카페 글만 신뢰하고 나머지(팬카페 등)는 버린다.
+// 명조/이환은 공식 채널이 네이버카페가 아니라 "네이버 라운지"인데, 라운지는 게임사가 자기
+// 게임 클라이언트에 심는 SDK 기반 기능이라 외부에서 검색/조회하는 공개 API가 없다 (확인함).
+// 젠레스 존 제로는 검색해봐도 공식 카페를 못 찾았음 — 라운지를 쓰는 것으로 추정, 목록에서 뺌.
+const CAFE_SEARCH_QUERIES = [
+  { query: '원신 공지', officialCafeUrl: 'cafe.naver.com/genshin' },
+  { query: '붕괴 스타레일 공지', officialCafeUrl: 'cafe.naver.com/honkaistarrail' },
+]
 
 // RSS로는 잘 안 잡히는, 자체 API 없는 고정/연례 행사 이름들. 필요하면 이 목록만 늘리면 된다.
 // 검색어 단독으로는 정확도가 낮은 것도 있지만(예: 일반 명사와 겹침), 실제 이벤트가 있으면
@@ -82,6 +94,49 @@ async function searchNaverNews(query) {
 
   const data = await res.json()
   return data.items ?? []
+}
+
+async function searchNaverCafe(query) {
+  const url = new URL(NAVER_CAFE_URL)
+  url.searchParams.set('query', query)
+  url.searchParams.set('display', '20')
+  url.searchParams.set('sort', 'date') // 최신순
+
+  const res = await fetch(url, {
+    headers: {
+      'X-NCP-APIGW-API-KEY-ID': process.env.NAVER_CLIENT_ID,
+      'X-NCP-APIGW-API-KEY': process.env.NAVER_CLIENT_SECRET,
+    },
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const data = await res.json()
+  return data.items ?? []
+}
+
+// 호요버스 게임 공식 카페 공지만 정규화해서 반환 (팬카페 등 공식이 아닌 글은 제외).
+// 카페글 검색 응답에는 발행일(pubDate)이 없어서 published_at은 null로 둔다.
+export async function fetchNaverCafeCandidates() {
+  const results = []
+  for (const { query, officialCafeUrl } of CAFE_SEARCH_QUERIES) {
+    let items
+    try {
+      items = await searchNaverCafe(query)
+    } catch (err) {
+      console.error(`[네이버카페] "${query}" 검색 실패:`, err.message)
+      continue
+    }
+    for (const item of items) {
+      if (!item.cafeurl?.includes(officialCafeUrl)) continue // 공식 카페 글만 신뢰
+      results.push({
+        title: stripTags(item.title),
+        contentSnippet: stripTags(item.description),
+        link: item.link,
+        pubDate: null,
+      })
+    }
+  }
+  return results
 }
 
 // crawl.mjs의 RSS 아이템과 동일한 모양으로 정규화해서 반환한다.

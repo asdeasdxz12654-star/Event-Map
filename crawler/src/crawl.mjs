@@ -13,7 +13,7 @@ import Parser from 'rss-parser'
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
-import { fetchNaverCandidates } from './naver.mjs'
+import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -151,6 +151,46 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
   return true
 }
 
+// 네이버 뉴스/카페 검색 결과처럼 "RSS 아이템과 같은 모양의 자유 텍스트 후보"를 공통으로
+// 처리한다 (자유 텍스트라 KOPIS와 달리 Groq 추출이 필요함). RSS는 피드별 looksRelevant
+// 사전 필터가 있어서 이 헬퍼를 쓰지 않고 별도 루프를 유지한다.
+async function processTextCandidates(label, sourceName, items) {
+  let scanned = 0
+  let saved = 0
+
+  for (const item of items) {
+    scanned++
+    if (!item.link || !item.title) continue
+    if (await alreadyCollected(item.link)) continue
+
+    console.log(`[${label}] 후보: ${item.title}`)
+
+    let extracted
+    try {
+      extracted = await extractEvent(item)
+    } catch (err) {
+      console.error('  -> 추출 실패:', err.message)
+      continue
+    }
+
+    if (!extracted || !extracted.is_event) {
+      console.log('  -> 행사 소개 기사 아님, 스킵')
+      continue
+    }
+
+    const ok = await saveDraft({
+      source_name: sourceName,
+      source_url: item.link,
+      source_title: item.title,
+      published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+      extracted,
+    })
+    if (ok) saved++
+  }
+
+  console.log(`[${label}] 조회 ${scanned}건 / 새로 저장 ${saved}건`)
+}
+
 async function main() {
   let scanned = 0
   let candidates = 0
@@ -244,10 +284,7 @@ async function main() {
     console.log(`[KOPIS] 조회 ${kopisScanned}건 / 새로 저장 ${kopisSaved}건`)
   }
 
-  // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Claude 추출)
-  let naverScanned = 0
-  let naverSaved = 0
-
+  // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Groq 추출)
   if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
     console.log('NAVER_CLIENT_ID/NAVER_CLIENT_SECRET 미설정, 네이버 검색 스킵')
   } else {
@@ -257,38 +294,17 @@ async function main() {
     } catch (err) {
       console.error('[네이버] 후보 조회 실패:', err.message)
     }
+    await processTextCandidates('네이버', '네이버검색', naverItems)
 
-    for (const item of naverItems) {
-      naverScanned++
-      if (!item.link || !item.title) continue
-      if (await alreadyCollected(item.link)) continue
-
-      console.log(`[네이버] 후보: ${item.title}`)
-
-      let extracted
-      try {
-        extracted = await extractEvent(item)
-      } catch (err) {
-        console.error('  -> 추출 실패:', err.message)
-        continue
-      }
-
-      if (!extracted || !extracted.is_event) {
-        console.log('  -> 행사 소개 기사 아님, 스킵')
-        continue
-      }
-
-      const ok = await saveDraft({
-        source_name: '네이버검색',
-        source_url: item.link,
-        source_title: item.title,
-        published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-        extracted,
-      })
-      if (ok) naverSaved++
+    // 네이버 카페 검색 — 호요버스 게임(원신/붕괴 스타레일)은 공식 카페 공지에 행사가 먼저
+    // 올라오는 경우가 많아서 별도로 찾는다 (같은 NAVER_CLIENT_ID/SECRET, 같은 시크릿 필요).
+    let cafeItems = []
+    try {
+      cafeItems = await fetchNaverCafeCandidates()
+    } catch (err) {
+      console.error('[네이버카페] 후보 조회 실패:', err.message)
     }
-
-    console.log(`[네이버] 조회 ${naverScanned}건 / 새로 저장 ${naverSaved}건`)
+    await processTextCandidates('네이버카페', '네이버카페', cafeItems)
   }
 }
 
