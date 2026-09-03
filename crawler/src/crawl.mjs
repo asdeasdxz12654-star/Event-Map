@@ -1,17 +1,33 @@
 // 게임 뉴스 RSS를 훑어서 행사(전시회/코스프레/콘서트) 소개 기사로 보이는 것만 골라
-// Claude로 구조화 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기" 상태로 저장한다.
-// 실행: node src/crawl.mjs  (환경변수: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+// Groq(무료 티어)로 구조화 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기"
+// 상태로 저장한다. 원래 Anthropic Claude를 썼는데, 유료 크레딧 없이도 돌리고 싶어서 Groq의
+// 무료 오픈모델(openai/gpt-oss-20b)로 교체했다 — 실제 한글 기사로 구조화 추출 품질 확인함.
+// KOPIS(공연예술통합전산망) 공식 API에서 게임음악 관련 공연도 같은 큐에 합류시킨다 (kopis.mjs).
+// KOPIS는 이미 구조화된 공식 데이터라 LLM 없이 필드를 그대로 매핑한다.
+// 네이버 뉴스 검색으로 지스타/코믹월드처럼 자체 API 없는 고정 행사도 능동적으로 찾는다
+// (naver.mjs) — 이쪽은 RSS와 마찬가지로 자유 텍스트라 Groq 추출을 그대로 거친다.
+// confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
+// 실행: node src/crawl.mjs
+// 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+//         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택)
 import Parser from 'rss-parser'
-import Anthropic from '@anthropic-ai/sdk'
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
-import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
+import { EventExtractionSchema } from './schema.mjs'
+import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
+import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
+
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+// gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
+// 내부 사고 과정에 토큰을 낭비하지 않고 바로 JSON을 뱉게 한다.
+const GROQ_MODEL = 'openai/gpt-oss-20b'
 
 const FEEDS = [
   { name: '게임메카', url: 'https://www.gamemeca.com/rss.php' },
   { name: '루리웹', url: 'https://bbs.ruliweb.com/news/rss' },
   { name: '게임뷰', url: 'https://www.gamevu.co.kr/rss/allArticle.xml' },
   { name: '게임톡', url: 'https://www.gametoc.co.kr/rss/allArticle.xml' },
+  { name: '인벤', url: 'https://webzine.inven.co.kr/news/rss.php' },
+  { name: '게임인사이트', url: 'https://www.gameinsight.co.kr/rss/allArticle.xml' },
 ]
 
 // RSS 요약만으로는 정보가 부족한 기사가 많아서, LLM 호출 전에 1차로 걸러내는 키워드.
@@ -19,36 +35,27 @@ const FEEDS = [
 const KEYWORDS = [
   '전시', '박람회', '페스티벌', '코스프레', '콘서트', '공연', '오케스트라',
   '축제', '행사', '개최', '개막', '티켓', '예매', '지스타', '부스', '컨벤션',
+  '팝업스토어', '팝업', '동인', '체험전', '굿즈전', '원화전', '컬래버',
+  '호요버스', '호요랜드', '명조', '띵조', 'AGF',
 ]
 
 const FEED_ITEM_LIMIT = 30 // 피드당 최신 N개까지만 검사
 
-const client = new Anthropic()
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const parser = new Parser()
 
-const EventExtractionSchema = z.object({
-  is_event: z.boolean(),
-  title: z.string().nullable(),
-  category: z.enum(['게임전시', '코스프레', '게임음악']).nullable(),
-  start_date: z.string().nullable().describe('YYYY-MM-DD'),
-  end_date: z.string().nullable().describe('YYYY-MM-DD, 하루짜리 행사면 start_date와 동일하게'),
-  venue: z.string().nullable(),
-  venue_address: z.string().nullable(),
-  organizer: z.string().nullable(),
-  description: z.string().nullable().describe('한두 문장 요약'),
-  ticket_url: z.string().nullable(),
-  ticket_open_date: z.string().nullable().describe('YYYY-MM-DD'),
-  admission_fee: z.string().nullable(),
-  website: z.string().nullable(),
-  tags: z.array(z.string()).nullable(),
-  confidence: z.enum(['high', 'medium', 'low']),
-})
-
+// Groq는 Anthropic의 zodOutputFormat 같은 스키마 강제 기능이 없어서, JSON 모양을 프롬프트에
+// 직접 명시한다 (schema.mjs의 EventExtractionSchema와 필드가 어긋나지 않게 같이 고칠 것).
 const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악 행사 뉴스를 분류·추출하는 도우미다.
 주어진 기사 제목과 요약을 보고, 이 기사가 "특정 행사(전시회, 코스프레 행사, 콘서트 등)를 구체적으로 소개/공지"하는 기사인지 판단해라.
 신작 게임 리뷰, 업데이트 소식, 순위 기사 등 특정 행사 공지가 아니면 is_event를 false로 하고 나머지 필드는 null로 둔다.
-행사 공지가 맞으면 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).`
+행사 공지가 맞으면 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
+title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지스타 2026"). 기사 헤드라인이나
+"OO사, 지스타 참가" 같은 참가사 중심 문장을 그대로 title로 쓰지 마라 — 같은 행사를 다루는
+기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
+참가하는 기사여도 title/start_date/venue는 그 행사 자체의 정보로 통일해서 채워라.
+반드시 아래 JSON 형식으로만 답해라 (설명 문장 없이 JSON 객체 하나만):
+{"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}`
 
 function stripHtml(html = '') {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -59,6 +66,49 @@ function looksRelevant(item) {
   return KEYWORDS.some(k => text.includes(k))
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const GROQ_MAX_RETRIES = 5 // 무료 티어 분당 토큰 한도(TPM)에 자주 걸려서, 서버가 알려주는
+// 대기 시간만큼 기다렸다가 재시도한다 (고정 딜레이보다 실제 토큰 버킷 상태에 맞게 정확함).
+
+async function callGroq(articleText) {
+  for (let attempt = 0; attempt <= GROQ_MAX_RETRIES; attempt++) {
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        reasoning_effort: 'low', // 내부 사고에 토큰 낭비 안 하고 바로 JSON 출력하게 함
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
+          { role: 'user', content: articleText },
+        ],
+        max_tokens: 1024,
+      }),
+    })
+
+    if (res.ok) return res
+
+    const bodyText = await res.text()
+    if (res.status === 429 && attempt < GROQ_MAX_RETRIES) {
+      const waitSec = parseFloat(bodyText.match(/try again in ([\d.]+)s/i)?.[1] ?? '5')
+      const waitMs = Math.ceil(waitSec * 1000) + 300 // 여유분 300ms
+      console.log(`  -> Groq 분당 한도 초과, ${(waitMs / 1000).toFixed(1)}초 대기 후 재시도`)
+      await sleep(waitMs)
+      continue
+    }
+    throw new Error(`Groq 요청 실패: HTTP ${res.status} ${bodyText}`)
+  }
+}
+
+const VALID_CATEGORIES = ['게임전시', '코스프레', '게임음악']
+
 async function extractEvent(item) {
   const articleText = [
     `제목: ${item.title}`,
@@ -67,18 +117,17 @@ async function extractEvent(item) {
     `링크: ${item.link}`,
   ].filter(Boolean).join('\n')
 
-  const response = await client.messages.parse({
-    model: 'claude-opus-5',
-    max_tokens: 2048,
-    output_config: {
-      effort: 'low', // 짧은 텍스트 분류/추출이라 낮은 effort로 충분, 대량 처리 비용 절감
-      format: zodOutputFormat(EventExtractionSchema),
-    },
-    system: EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: articleText }],
-  })
+  const res = await callGroq(articleText)
+  const data = await res.json()
+  const content = data.choices?.[0]?.message?.content
+  if (!content) throw new Error('Groq 응답에 content 없음')
 
-  return response.parsed_output
+  const raw = JSON.parse(content)
+  // Anthropic의 tool-use와 달리 Groq는 enum을 강제하지 못해서, 가끔 셋 중 하나가 아닌 값을
+  // 뱉을 때가 있다 (예: "콘서트"). 그 필드 하나 때문에 통째로 버리지 않고 null로 완화한다.
+  if (raw.category && !VALID_CATEGORIES.includes(raw.category)) raw.category = null
+
+  return EventExtractionSchema.parse(raw)
 }
 
 async function alreadyCollected(sourceUrl) {
@@ -88,6 +137,78 @@ async function alreadyCollected(sourceUrl) {
     .eq('source_url', sourceUrl)
     .maybeSingle()
   return !!data
+}
+
+// RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
+// confidence:high는 검수 없이 바로 승인해서 events에 반영한다 (medium/low는 계속 pending으로
+// 남아 /admin/drafts에서 사람이 검수). high조차 가끔 틀릴 수 있지만, 매번 전부 검수하는
+// 부담보다 안전하다고 판단해서 절충함 — 잘못됐을 때는 events에서 직접 지우면 된다.
+async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
+  const { data, error } = await supabase
+    .from('event_drafts')
+    .insert({ source_name, source_url, source_title, published_at, extracted })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('  -> 저장 실패:', error.message)
+    return false
+  }
+  console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
+
+  if (extracted.confidence === 'high') {
+    const { error: approveError } = await supabase
+      .from('event_drafts')
+      .update({ status: 'approved' }) // promote_event_draft() 트리거가 events에 반영
+      .eq('id', data.id)
+    if (approveError) {
+      console.error('  -> 자동 승인 실패(검수 대기로 남음):', approveError.message)
+    } else {
+      console.log('  -> confidence:high -> 자동 승인됨')
+    }
+  }
+
+  return true
+}
+
+// 네이버 뉴스/카페 검색 결과처럼 "RSS 아이템과 같은 모양의 자유 텍스트 후보"를 공통으로
+// 처리한다 (자유 텍스트라 KOPIS와 달리 Groq 추출이 필요함). RSS는 피드별 looksRelevant
+// 사전 필터가 있어서 이 헬퍼를 쓰지 않고 별도 루프를 유지한다.
+async function processTextCandidates(label, sourceName, items) {
+  let scanned = 0
+  let saved = 0
+
+  for (const item of items) {
+    scanned++
+    if (!item.link || !item.title) continue
+    if (await alreadyCollected(item.link)) continue
+
+    console.log(`[${label}] 후보: ${item.title}`)
+
+    let extracted
+    try {
+      extracted = await extractEvent(item)
+    } catch (err) {
+      console.error('  -> 추출 실패:', err.message)
+      continue
+    }
+
+    if (!extracted || !extracted.is_event) {
+      console.log('  -> 행사 소개 기사 아님, 스킵')
+      continue
+    }
+
+    const ok = await saveDraft({
+      source_name: sourceName,
+      source_url: item.link,
+      source_title: item.title,
+      published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+      extracted,
+    })
+    if (ok) saved++
+  }
+
+  console.log(`[${label}] 조회 ${scanned}건 / 새로 저장 ${saved}건`)
 }
 
 async function main() {
@@ -126,24 +247,85 @@ async function main() {
         continue
       }
 
-      const { error } = await supabase.from('event_drafts').insert({
+      const ok = await saveDraft({
         source_name: feed.name,
         source_url: item.link,
         source_title: item.title,
         published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
         extracted,
       })
-
-      if (error) {
-        console.error('  -> 저장 실패:', error.message)
-      } else {
-        saved++
-        console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
-      }
+      if (ok) saved++
     }
   }
 
   console.log(`\n검사한 기사 ${scanned}건 / 키워드 후보 ${candidates}건 / 새로 저장 ${saved}건`)
+
+  // KOPIS(공연예술통합전산망) 게임음악 공연 수집 — 키가 없으면 조용히 스킵 (로컬/부분 실행 지원)
+  let kopisScanned = 0
+  let kopisSaved = 0
+
+  if (!process.env.KOPIS_API_KEY) {
+    console.log('KOPIS_API_KEY 미설정, KOPIS 수집 스킵')
+  } else {
+    let kopisCandidates = []
+    try {
+      kopisCandidates = await fetchKopisCandidates()
+    } catch (err) {
+      console.error('[KOPIS] 후보 조회 실패:', err.message)
+    }
+
+    for (const candidate of kopisCandidates) {
+      kopisScanned++
+      if (!candidate.source_url || !candidate.source_title) continue
+      if (await alreadyCollected(candidate.source_url)) continue
+
+      console.log(`[KOPIS] 후보: ${candidate.source_title}`)
+
+      // Claude 호출 없이 KOPIS 원본 필드를 기계적으로 매핑 (비용 없음, 대신 confidence로
+      // 신뢰도를 표시해 관리자 검수 페이지에서 최종 판단하도록 함)
+      let extracted
+      try {
+        extracted = buildKopisDraft(candidate)
+      } catch (err) {
+        console.error('  -> 매핑 실패:', err.message)
+        continue
+      }
+
+      const ok = await saveDraft({
+        source_name: candidate.source_name,
+        source_url: candidate.source_url,
+        source_title: candidate.source_title,
+        published_at: candidate.published_at,
+        extracted,
+      })
+      if (ok) kopisSaved++
+    }
+
+    console.log(`[KOPIS] 조회 ${kopisScanned}건 / 새로 저장 ${kopisSaved}건`)
+  }
+
+  // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Groq 추출)
+  if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
+    console.log('NAVER_CLIENT_ID/NAVER_CLIENT_SECRET 미설정, 네이버 검색 스킵')
+  } else {
+    let naverItems = []
+    try {
+      naverItems = await fetchNaverCandidates()
+    } catch (err) {
+      console.error('[네이버] 후보 조회 실패:', err.message)
+    }
+    await processTextCandidates('네이버', '네이버검색', naverItems)
+
+    // 네이버 카페 검색 — 호요버스 게임(원신/붕괴 스타레일)은 공식 카페 공지에 행사가 먼저
+    // 올라오는 경우가 많아서 별도로 찾는다 (같은 NAVER_CLIENT_ID/SECRET, 같은 시크릿 필요).
+    let cafeItems = []
+    try {
+      cafeItems = await fetchNaverCafeCandidates()
+    } catch (err) {
+      console.error('[네이버카페] 후보 조회 실패:', err.message)
+    }
+    await processTextCandidates('네이버카페', '네이버카페', cafeItems)
+  }
 }
 
 main().catch(err => {

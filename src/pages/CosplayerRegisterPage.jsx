@@ -117,7 +117,7 @@ export default function CosplayerRegisterPage() {
           이메일은 공개되지 않으며, 닉네임만 표시됩니다.
         </p>
         <button
-          onClick={signInWithGoogle}
+          onClick={() => signInWithGoogle()}
           className="px-6 py-3 bg-white text-zinc-900 font-semibold rounded-xl hover:bg-zinc-100 transition-colors"
         >
           Google로 계속하기
