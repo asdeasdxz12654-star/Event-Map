@@ -17,6 +17,7 @@ import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
+import { upsertKnownEvents } from './known-events.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -35,9 +36,7 @@ const FEEDS = [
 // RSS 요약만으로는 정보가 부족한 기사가 많아서, LLM 호출 전에 1차로 걸러내는 키워드.
 // (리뷰/업데이트/공략 기사 등은 대부분 여기 안 걸림 -> API 비용 절감)
 const KEYWORDS = [
-  '전시', '박람회', '페스티벌', '코스프레', '콘서트', '공연', '오케스트라',
-  '축제', '행사', '개최', '개막', '티켓', '예매', '지스타', '부스', '컨벤션',
-  '팝업스토어', '팝업', '동인', '체험전', '굿즈전', '원화전', '컬래버',
+  '지스타', '팝업스토어', '팝업', '굿즈전', '원화전',
   '호요버스', '호요랜드', '명조', '띵조', 'AGF',
 ]
 
@@ -76,6 +75,22 @@ function stripHtml(html = '') {
 function looksRelevant(item) {
   const text = `${item.title ?? ''} ${item.contentSnippet ?? item.content ?? ''}`
   return KEYWORDS.some(k => text.includes(k))
+}
+
+// 네이버 검색 결과 제목 기반 사전 필터.
+// 게임 특화 쿼리를 써도 Naver API가 관련 기사를 함께 반환하는 경우가 있어,
+// 게임·행사와 무관한 제목을 Groq 호출 전에 걷어낸다.
+const NAVER_GAME_TITLE_KEYWORDS = [
+  '게임', '코스프레', '코스튬', '동인', '서브컬처',
+  '블루아카이브', '니케', '원신', '붕괴', '스타레일',
+  '명조', '띵조', '호요버스', '호요랜드', '젠레스', '쿠로게임즈',
+  '코믹월드', '코스앤코믹', '일러스타', '지스타', 'AGF',
+  '팝업스토어', '굿즈',
+]
+
+function naverLooksRelevant(item) {
+  const title = item.title ?? ''
+  return NAVER_GAME_TITLE_KEYWORDS.some(k => title.includes(k))
 }
 
 function sleep(ms) {
@@ -232,6 +247,9 @@ async function processTextCandidates(label, sourceName, items) {
 }
 
 async function main() {
+  // 날짜 공식으로 계산 가능한 정기 행사를 LLM 없이 먼저 등록
+  await upsertKnownEvents(supabase)
+
   let scanned = 0
   let candidates = 0
   let saved = 0
@@ -330,7 +348,9 @@ async function main() {
   } else {
     let naverItems = []
     try {
-      naverItems = await fetchNaverCandidates()
+      const all = await fetchNaverCandidates()
+      naverItems = all.filter(naverLooksRelevant)
+      console.log(`[네이버] 제목 필터 후 ${naverItems.length}건 / 전체 ${all.length}건`)
     } catch (err) {
       console.error('[네이버] 후보 조회 실패:', err.message)
     }
