@@ -334,14 +334,37 @@ async function main() {
     await processTextCandidates('네이버카페', '네이버카페', cafeItems)
   }
 
-  // 네이버 게임 라운지 공지 — 젠레스 존 제로·이환·명조 운영자 공지에서 오프라인 행사만 수집
-  let loungeItems = []
-  try {
-    loungeItems = await fetchNaverLoungeCandidates()
-  } catch (err) {
-    console.error('[라운지] 후보 조회 실패:', err.message)
+  // 네이버 게임 라운지 공지 — 하루 1회만 조회 (수동 실행 중복 방지)
+  // 오늘 날짜를 source_url로 쓴 sentinel이 event_drafts에 없을 때만 API를 호출한다.
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD (UTC 기준, 실용상 무방)
+  const loungeDailyKey = `naver-lounge://daily/${today}`
+  if (await alreadyCollected(loungeDailyKey)) {
+    console.log('[라운지] 오늘 이미 조회됨, 스킵')
+  } else {
+    let loungeItems = []
+    try {
+      loungeItems = await fetchNaverLoungeCandidates()
+    } catch (err) {
+      console.error('[라운지] 후보 조회 실패:', err.message)
+    }
+    await processTextCandidates('라운지', '네이버라운지', loungeItems)
+
+    // 조회 완료 sentinel 삽입 — 다음 실행에서 alreadyCollected()가 true를 반환하게 됨
+    await supabase.from('event_drafts').insert({
+      source_name: '네이버라운지',
+      source_url: loungeDailyKey,
+      source_title: `[라운지 일일 조회 완료] ${today}`,
+      published_at: new Date().toISOString(),
+      status: 'rejected',
+      extracted: {
+        is_event: false, confidence: 'low',
+        title: null, category: null, start_date: null, end_date: null,
+        venue: null, venue_address: null, organizer: null, description: null,
+        ticket_url: null, ticket_open_date: null, admission_fee: null,
+        website: null, tags: null,
+      },
+    })
   }
-  await processTextCandidates('라운지', '네이버라운지', loungeItems)
 
   // 공식 행사 사이트 직접 수집 — 뉴스/카페보다 날짜가 정확하고 빠름. 별도 환경변수 불필요.
   let officialItems = []
