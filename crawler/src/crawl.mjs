@@ -60,6 +60,47 @@ function looksRelevant(item) {
   return KEYWORDS.some(k => text.includes(k))
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const GROQ_MAX_RETRIES = 5 // 무료 티어 분당 토큰 한도(TPM)에 자주 걸려서, 서버가 알려주는
+// 대기 시간만큼 기다렸다가 재시도한다 (고정 딜레이보다 실제 토큰 버킷 상태에 맞게 정확함).
+
+async function callGroq(articleText) {
+  for (let attempt = 0; attempt <= GROQ_MAX_RETRIES; attempt++) {
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        reasoning_effort: 'low', // 내부 사고에 토큰 낭비 안 하고 바로 JSON 출력하게 함
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
+          { role: 'user', content: articleText },
+        ],
+        max_tokens: 1024,
+      }),
+    })
+
+    if (res.ok) return res
+
+    const bodyText = await res.text()
+    if (res.status === 429 && attempt < GROQ_MAX_RETRIES) {
+      const waitSec = parseFloat(bodyText.match(/try again in ([\d.]+)s/i)?.[1] ?? '5')
+      const waitMs = Math.ceil(waitSec * 1000) + 300 // 여유분 300ms
+      console.log(`  -> Groq 분당 한도 초과, ${(waitMs / 1000).toFixed(1)}초 대기 후 재시도`)
+      await sleep(waitMs)
+      continue
+    }
+    throw new Error(`Groq 요청 실패: HTTP ${res.status} ${bodyText}`)
+  }
+}
+
 async function extractEvent(item) {
   const articleText = [
     `제목: ${item.title}`,
@@ -68,26 +109,7 @@ async function extractEvent(item) {
     `링크: ${item.link}`,
   ].filter(Boolean).join('\n')
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      reasoning_effort: 'low', // 내부 사고에 토큰 낭비 안 하고 바로 JSON 출력하게 함
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
-        { role: 'user', content: articleText },
-      ],
-      max_tokens: 1024,
-    }),
-  })
-
-  if (!res.ok) throw new Error(`Groq 요청 실패: HTTP ${res.status} ${await res.text()}`)
-
+  const res = await callGroq(articleText)
   const data = await res.json()
   const content = data.choices?.[0]?.message?.content
   if (!content) throw new Error('Groq 응답에 content 없음')
