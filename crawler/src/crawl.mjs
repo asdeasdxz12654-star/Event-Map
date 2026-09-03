@@ -35,6 +35,7 @@ const KEYWORDS = [
   '전시', '박람회', '페스티벌', '코스프레', '콘서트', '공연', '오케스트라',
   '축제', '행사', '개최', '개막', '티켓', '예매', '지스타', '부스', '컨벤션',
   '팝업스토어', '팝업', '동인', '체험전', '굿즈전', '원화전', '컬래버',
+  '호요버스', '호요랜드', '명조', '띵조', 'AGF',
 ]
 
 const FEED_ITEM_LIMIT = 30 // 피드당 최신 N개까지만 검사
@@ -48,6 +49,10 @@ const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악
 주어진 기사 제목과 요약을 보고, 이 기사가 "특정 행사(전시회, 코스프레 행사, 콘서트 등)를 구체적으로 소개/공지"하는 기사인지 판단해라.
 신작 게임 리뷰, 업데이트 소식, 순위 기사 등 특정 행사 공지가 아니면 is_event를 false로 하고 나머지 필드는 null로 둔다.
 행사 공지가 맞으면 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
+title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지스타 2026"). 기사 헤드라인이나
+"OO사, 지스타 참가" 같은 참가사 중심 문장을 그대로 title로 쓰지 마라 — 같은 행사를 다루는
+기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
+참가하는 기사여도 title/start_date/venue는 그 행사 자체의 정보로 통일해서 채워라.
 반드시 아래 JSON 형식으로만 답해라 (설명 문장 없이 JSON 객체 하나만):
 {"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}`
 
