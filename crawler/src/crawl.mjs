@@ -101,6 +101,8 @@ async function callGroq(articleText) {
   }
 }
 
+const VALID_CATEGORIES = ['게임전시', '코스프레', '게임음악']
+
 async function extractEvent(item) {
   const articleText = [
     `제목: ${item.title}`,
@@ -114,7 +116,12 @@ async function extractEvent(item) {
   const content = data.choices?.[0]?.message?.content
   if (!content) throw new Error('Groq 응답에 content 없음')
 
-  return EventExtractionSchema.parse(JSON.parse(content))
+  const raw = JSON.parse(content)
+  // Anthropic의 tool-use와 달리 Groq는 enum을 강제하지 못해서, 가끔 셋 중 하나가 아닌 값을
+  // 뱉을 때가 있다 (예: "콘서트"). 그 필드 하나 때문에 통째로 버리지 않고 null로 완화한다.
+  if (raw.category && !VALID_CATEGORIES.includes(raw.category)) raw.category = null
+
+  return EventExtractionSchema.parse(raw)
 }
 
 async function alreadyCollected(sourceUrl) {
