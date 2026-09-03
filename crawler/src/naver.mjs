@@ -16,10 +16,16 @@ const NAVER_CAFE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/cafeartic
 // 응답에 같이 오는 cafeurl로 실제 확인한 공식 카페 글만 신뢰하고 나머지(팬카페 등)는 버린다.
 // 명조/이환은 공식 채널이 네이버카페가 아니라 "네이버 라운지"인데, 라운지는 게임사가 자기
 // 게임 클라이언트에 심는 SDK 기반 기능이라 외부에서 검색/조회하는 공개 API가 없다 (확인함).
-// 젠레스 존 제로는 검색해봐도 공식 카페를 못 찾았음 — 라운지를 쓰는 것으로 추정, 목록에서 뺌.
+// 젠레스 존 제로는 네이버 라운지(game.naver.com/lounge/ZZZ) 사용 확인 — 외부 API 없어서 접근 불가, 목록에서 뺌.
 const CAFE_SEARCH_QUERIES = [
   { query: '원신 공지', officialCafeUrl: 'cafe.naver.com/genshin' },
   { query: '붕괴 스타레일 공지', officialCafeUrl: 'cafe.naver.com/honkaistarrail' },
+  // 호요랜드는 각 게임 공식 카페에서 공지됨 — 두 카페에서 동시에 잡혀도 promote_event_draft()가 (title+start_date)로 dedup 처리
+  { query: '호요랜드', officialCafeUrl: 'cafe.naver.com/genshin' },
+  { query: '호요랜드', officialCafeUrl: 'cafe.naver.com/honkaistarrail' },
+  // 블루아카이브 팝업/행사 — 구 카페(bluearchive)에서 bluearchive2로 이전됨
+  { query: '블루아카이브 팝업', officialCafeUrl: 'cafe.naver.com/bluearchive2' },
+  { query: '블루아카이브 행사', officialCafeUrl: 'cafe.naver.com/bluearchive2' },
 ]
 
 // RSS로는 잘 안 잡히는, 자체 API 없는 고정/연례 행사 이름들. 필요하면 이 목록만 늘리면 된다.

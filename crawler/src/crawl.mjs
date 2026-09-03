@@ -15,6 +15,8 @@ import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
+import { fetchOfficialSiteCandidates } from './official-sites.mjs'
+import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -47,9 +49,14 @@ const parser = new Parser()
 // Groq는 Anthropic의 zodOutputFormat 같은 스키마 강제 기능이 없어서, JSON 모양을 프롬프트에
 // 직접 명시한다 (schema.mjs의 EventExtractionSchema와 필드가 어긋나지 않게 같이 고칠 것).
 const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악 행사 뉴스를 분류·추출하는 도우미다.
-주어진 기사 제목과 요약을 보고, 이 기사가 "특정 행사(전시회, 코스프레 행사, 콘서트 등)를 구체적으로 소개/공지"하는 기사인지 판단해라.
-신작 게임 리뷰, 업데이트 소식, 순위 기사 등 특정 행사 공지가 아니면 is_event를 false로 하고 나머지 필드는 null로 둔다.
-행사 공지가 맞으면 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
+주어진 기사 제목과 요약을 보고, 이 기사가 행사(전시회, 코스프레 행사, 콘서트 등)와 관련된 기사인지 판단해라.
+신작 게임 리뷰, 업데이트 소식, 순위 기사 등 행사와 무관한 기사는 is_event를 false로 하고 나머지 필드는 null로 둔다.
+행사를 직접 소개하는 기사뿐 아니라, 'OO사가 지스타 2026에 참가한다', 'PlayX4에 부스를 운영한다'처럼
+특정 업체의 행사 참가를 알리는 기사도 is_event를 true로 하고, 그 기사로 알 수 있는 행사 자체의
+정보(title, 날짜, 장소)를 추출해라. 참가하는 회사명은 organizer 대신 tags에 담아라.
+제목이 '[공식]'으로 시작하는 항목은 행사 공식 웹사이트에서 가져온 내용이므로 is_event는 항상 true다.
+페이지에서 파악되는 가장 가까운 예정 또는 진행 중인 행사 일정을 추출해라.
+알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
 title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지스타 2026"). 기사 헤드라인이나
 "OO사, 지스타 참가" 같은 참가사 중심 문장을 그대로 title로 쓰지 마라 — 같은 행사를 다루는
 기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
@@ -326,6 +333,24 @@ async function main() {
     }
     await processTextCandidates('네이버카페', '네이버카페', cafeItems)
   }
+
+  // 네이버 게임 라운지 공지 — 젠레스 존 제로·이환·명조 운영자 공지에서 오프라인 행사만 수집
+  let loungeItems = []
+  try {
+    loungeItems = await fetchNaverLoungeCandidates()
+  } catch (err) {
+    console.error('[라운지] 후보 조회 실패:', err.message)
+  }
+  await processTextCandidates('라운지', '네이버라운지', loungeItems)
+
+  // 공식 행사 사이트 직접 수집 — 뉴스/카페보다 날짜가 정확하고 빠름. 별도 환경변수 불필요.
+  let officialItems = []
+  try {
+    officialItems = await fetchOfficialSiteCandidates()
+  } catch (err) {
+    console.error('[공식사이트] 후보 조회 실패:', err.message)
+  }
+  await processTextCandidates('공식사이트', '공식사이트', officialItems)
 }
 
 main().catch(err => {
