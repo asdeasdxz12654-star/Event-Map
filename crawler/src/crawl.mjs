@@ -2,14 +2,18 @@
 // Claude로 구조화 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기" 상태로 저장한다.
 // KOPIS(공연예술통합전산망) 공식 API에서 게임음악 관련 공연도 같은 큐에 합류시킨다 (kopis.mjs).
 // KOPIS는 이미 구조화된 공식 데이터라 Claude 없이 필드를 그대로 매핑한다 (LLM 비용 없음).
+// 네이버 뉴스 검색으로 지스타/코믹월드처럼 자체 API 없는 고정 행사도 능동적으로 찾는다
+// (naver.mjs) — 이쪽은 RSS와 마찬가지로 자유 텍스트라 Claude 추출을 그대로 거친다.
 // 실행: node src/crawl.mjs
-// 환경변수: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KOPIS_API_KEY(선택)
+// 환경변수: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+//         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택)
 import Parser from 'rss-parser'
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
+import { fetchNaverCandidates } from './naver.mjs'
 
 const FEEDS = [
   { name: '게임메카', url: 'https://www.gamemeca.com/rss.php' },
@@ -79,6 +83,19 @@ async function alreadyCollected(sourceUrl) {
   return !!data
 }
 
+// RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false
+async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
+  const { error } = await supabase.from('event_drafts').insert({
+    source_name, source_url, source_title, published_at, extracted,
+  })
+  if (error) {
+    console.error('  -> 저장 실패:', error.message)
+    return false
+  }
+  console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
+  return true
+}
+
 async function main() {
   let scanned = 0
   let candidates = 0
@@ -115,20 +132,14 @@ async function main() {
         continue
       }
 
-      const { error } = await supabase.from('event_drafts').insert({
+      const ok = await saveDraft({
         source_name: feed.name,
         source_url: item.link,
         source_title: item.title,
         published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
         extracted,
       })
-
-      if (error) {
-        console.error('  -> 저장 실패:', error.message)
-      } else {
-        saved++
-        console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
-      }
+      if (ok) saved++
     }
   }
 
@@ -165,23 +176,64 @@ async function main() {
         continue
       }
 
-      const { error } = await supabase.from('event_drafts').insert({
+      const ok = await saveDraft({
         source_name: candidate.source_name,
         source_url: candidate.source_url,
         source_title: candidate.source_title,
         published_at: candidate.published_at,
         extracted,
       })
-
-      if (error) {
-        console.error('  -> 저장 실패:', error.message)
-      } else {
-        kopisSaved++
-        console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
-      }
+      if (ok) kopisSaved++
     }
 
     console.log(`[KOPIS] 조회 ${kopisScanned}건 / 새로 저장 ${kopisSaved}건`)
+  }
+
+  // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Claude 추출)
+  let naverScanned = 0
+  let naverSaved = 0
+
+  if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
+    console.log('NAVER_CLIENT_ID/NAVER_CLIENT_SECRET 미설정, 네이버 검색 스킵')
+  } else {
+    let naverItems = []
+    try {
+      naverItems = await fetchNaverCandidates()
+    } catch (err) {
+      console.error('[네이버] 후보 조회 실패:', err.message)
+    }
+
+    for (const item of naverItems) {
+      naverScanned++
+      if (!item.link || !item.title) continue
+      if (await alreadyCollected(item.link)) continue
+
+      console.log(`[네이버] 후보: ${item.title}`)
+
+      let extracted
+      try {
+        extracted = await extractEvent(item)
+      } catch (err) {
+        console.error('  -> 추출 실패:', err.message)
+        continue
+      }
+
+      if (!extracted || !extracted.is_event) {
+        console.log('  -> 행사 소개 기사 아님, 스킵')
+        continue
+      }
+
+      const ok = await saveDraft({
+        source_name: '네이버검색',
+        source_url: item.link,
+        source_title: item.title,
+        published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+        extracted,
+      })
+      if (ok) naverSaved++
+    }
+
+    console.log(`[네이버] 조회 ${naverScanned}건 / 새로 저장 ${naverSaved}건`)
   }
 }
 
