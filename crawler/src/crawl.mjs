@@ -6,6 +6,7 @@
 // KOPIS는 이미 구조화된 공식 데이터라 LLM 없이 필드를 그대로 매핑한다.
 // 네이버 뉴스 검색으로 지스타/코믹월드처럼 자체 API 없는 고정 행사도 능동적으로 찾는다
 // (naver.mjs) — 이쪽은 RSS와 마찬가지로 자유 텍스트라 Groq 추출을 그대로 거친다.
+// confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택)
@@ -138,16 +139,35 @@ async function alreadyCollected(sourceUrl) {
   return !!data
 }
 
-// RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false
+// RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
+// confidence:high는 검수 없이 바로 승인해서 events에 반영한다 (medium/low는 계속 pending으로
+// 남아 /admin/drafts에서 사람이 검수). high조차 가끔 틀릴 수 있지만, 매번 전부 검수하는
+// 부담보다 안전하다고 판단해서 절충함 — 잘못됐을 때는 events에서 직접 지우면 된다.
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
-  const { error } = await supabase.from('event_drafts').insert({
-    source_name, source_url, source_title, published_at, extracted,
-  })
+  const { data, error } = await supabase
+    .from('event_drafts')
+    .insert({ source_name, source_url, source_title, published_at, extracted })
+    .select('id')
+    .single()
+
   if (error) {
     console.error('  -> 저장 실패:', error.message)
     return false
   }
   console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
+
+  if (extracted.confidence === 'high') {
+    const { error: approveError } = await supabase
+      .from('event_drafts')
+      .update({ status: 'approved' }) // promote_event_draft() 트리거가 events에 반영
+      .eq('id', data.id)
+    if (approveError) {
+      console.error('  -> 자동 승인 실패(검수 대기로 남음):', approveError.message)
+    } else {
+      console.log('  -> confidence:high -> 자동 승인됨')
+    }
+  }
+
   return true
 }
 
