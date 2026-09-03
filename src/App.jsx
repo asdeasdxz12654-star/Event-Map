@@ -6,6 +6,7 @@ import BookmarksPage from './pages/BookmarksPage'
 import EventDetailPage from './pages/EventDetailPage'
 import CosplayerDirectoryPage from './pages/CosplayerDirectoryPage'
 import CosplayerRegisterPage from './pages/CosplayerRegisterPage'
+import AdminDraftsPage from './pages/AdminDraftsPage'
 
 function NotFoundPage() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/events/:id" element={<EventDetailPage />} />
             <Route path="/cosplayers" element={<CosplayerDirectoryPage />} />
             <Route path="/cosplayers/register" element={<CosplayerRegisterPage />} />
+            <Route path="/admin/drafts" element={<AdminDraftsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

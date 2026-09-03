@@ -16,10 +16,10 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signInWithGoogle = () =>
+  const signInWithGoogle = (redirectPath = '/cosplayers/register') =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/cosplayers/register` },
+      options: { redirectTo: `${window.location.origin}${redirectPath}` },
     })
 
   const signOut = () => supabase.auth.signOut()
