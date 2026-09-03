@@ -57,6 +57,11 @@ const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악
 제목이 '[공식]'으로 시작하는 항목은 행사 공식 웹사이트에서 가져온 내용이므로 is_event는 항상 true다.
 페이지에서 파악되는 가장 가까운 예정 또는 진행 중인 행사 일정을 추출해라.
 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
+confidence 기준 — 아래를 엄격히 따라라:
+- "high"  : title·start_date·venue 세 가지가 모두 기사에서 명확히 확인됨
+- "medium": title은 확실하지만 start_date 또는 venue 중 하나가 불확실하거나 null
+- "low"   : start_date·venue 둘 다 불확실하거나 미정
+티켓·입장료·웹사이트 등 다른 필드가 null이어도 위 세 가지만 있으면 "high"로 줘라.
 title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지스타 2026"). 기사 헤드라인이나
 "OO사, 지스타 참가" 같은 참가사 중심 문장을 그대로 title로 쓰지 마라 — 같은 행사를 다루는
 기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
@@ -147,9 +152,17 @@ async function alreadyCollected(sourceUrl) {
 }
 
 // RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
-// confidence:high는 검수 없이 바로 승인해서 events에 반영한다 (medium/low는 계속 pending으로
-// 남아 /admin/drafts에서 사람이 검수). high조차 가끔 틀릴 수 있지만, 매번 전부 검수하는
-// 부담보다 안전하다고 판단해서 절충함 — 잘못됐을 때는 events에서 직접 지우면 된다.
+// 자동 승인 조건:
+//   1) confidence:high — Groq가 title·start_date·venue 모두 확인했다고 판단
+//   2) confidence:medium이어도 start_date·venue 둘 다 null이 아닌 경우
+//      (티켓·입장료 등 부가 정보가 없어서 medium이 된 케이스를 구제)
+// 잘못 승인된 경우 events에서 직접 삭제하면 된다.
+function shouldAutoApprove(extracted) {
+  if (extracted.confidence === 'high') return true
+  if (extracted.confidence === 'medium' && extracted.start_date && extracted.venue) return true
+  return false
+}
+
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
   const { data, error } = await supabase
     .from('event_drafts')
@@ -163,7 +176,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
   }
   console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
 
-  if (extracted.confidence === 'high') {
+  if (shouldAutoApprove(extracted)) {
     const { error: approveError } = await supabase
       .from('event_drafts')
       .update({ status: 'approved' }) // promote_event_draft() 트리거가 events에 반영
@@ -171,7 +184,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     if (approveError) {
       console.error('  -> 자동 승인 실패(검수 대기로 남음):', approveError.message)
     } else {
-      console.log('  -> confidence:high -> 자동 승인됨')
+      console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
     }
   }
 
