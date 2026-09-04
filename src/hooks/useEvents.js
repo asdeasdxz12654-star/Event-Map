@@ -41,9 +41,15 @@ export function useEvents() {
   useEffect(() => {
     let cancelled = false
 
+    const year = new Date().getFullYear()
+    const yearStart = `${year}-01-01`
+    const yearEnd = `${year}-12-31`
+
     supabase
       .from('events')
       .select('*')
+      .gte('start_date', yearStart)
+      .lte('start_date', yearEnd)
       .then(({ data, error: fetchError }) => {
         if (cancelled) return
         if (fetchError) {
@@ -62,6 +68,7 @@ export function useEvents() {
             return current.filter(e => e.id !== payload.old.id)
           }
           const updated = mapEvent(payload.new)
+          if (updated.startDate?.slice(0, 4) !== String(year)) return current
           const withoutOld = current.filter(e => e.id !== updated.id)
           return sortByStartDate([...withoutOld, updated])
         })
