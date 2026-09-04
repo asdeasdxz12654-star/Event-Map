@@ -87,6 +87,24 @@ export const NAVER_SEARCH_QUERIES = [
   q('띵조 페스티벌'),           // '명조'의 팬 애칭 표기
 ]
 
+// 검색 결과 제목 기반 사전 필터. 게임 특화 쿼리를 써도 Naver API가 관련 기사를
+// 함께 반환하는 경우가 있어, 게임·행사와 무관한 제목을 Groq 호출 전에 걷어낸다.
+// ⚠️ 위 NAVER_SEARCH_QUERIES에 새 프랜차이즈/행사명을 추가할 땐 여기도 같이 추가할 것 —
+// 안 하면 그 쿼리의 결과가 전부 조용히 필터링돼서 사라진다(아래 fetchNaverCandidates()의
+// 쿼리별 0건 경고 로그로만 알아챌 수 있음).
+const NAVER_GAME_TITLE_KEYWORDS = [
+  '게임', '코스프레', '코스튬', '동인', '서브컬처',
+  '블루아카이브', '니케', '원신', '붕괴', '스타레일',
+  '명조', '띵조', '호요버스', '호요랜드', '젠레스', '쿠로게임즈',
+  '코믹월드', '코스앤코믹', '일러스타', '지스타', 'AGF',
+  '팝업스토어', '굿즈',
+]
+
+function naverLooksRelevant(item) {
+  const title = item.title ?? ''
+  return NAVER_GAME_TITLE_KEYWORDS.some(k => title.includes(k))
+}
+
 // 검색어가 많아서 20건씩 다 가져오면 후보가 너무 늘어 Groq 무료 티어 분당 한도에 계속 걸려
 // 실행 시간이 길어진다. sort=date라 최신순이니 10건이면 충분히 최신 유지.
 const DISPLAY_PER_QUERY = 10 // 검색어당 최신 N건
@@ -165,6 +183,8 @@ export async function fetchNaverCafeCandidates() {
 }
 
 // crawl.mjs의 RSS 아이템과 동일한 모양으로 정규화해서 반환한다.
+// 제목 필터(naverLooksRelevant)를 여기서 바로 적용한다 — 필터 키워드가 같은 파일의
+// NAVER_SEARCH_QUERIES 바로 아래 있어서, 쿼리를 추가하면서 필터를 깜빡할 위험을 줄인다.
 export async function fetchNaverCandidates() {
   const currentMonth = new Date().getMonth() + 1
   const results = []
@@ -179,7 +199,15 @@ export async function fetchNaverCandidates() {
       console.error(`[네이버] "${query}" 검색 실패:`, err.message)
       continue
     }
-    for (const item of items) {
+
+    const relevant = items.filter(naverLooksRelevant)
+    // 검색은 됐는데 전부 필터에 걸렸으면, 이 쿼리에 맞는 키워드가 NAVER_GAME_TITLE_KEYWORDS에
+    // 없어서 새는 중일 수 있다 — 조용히 사라지지 않도록 경고를 남긴다.
+    if (items.length > 0 && relevant.length === 0) {
+      console.warn(`[네이버] "${query}" 검색 결과 ${items.length}건이 전부 제목 필터에 걸러짐 — NAVER_GAME_TITLE_KEYWORDS 확인 필요`)
+    }
+
+    for (const item of relevant) {
       results.push({
         title: stripTags(item.title),
         contentSnippet: stripTags(item.description),

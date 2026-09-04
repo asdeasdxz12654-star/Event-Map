@@ -12,8 +12,8 @@
 //             TELNO, FAXNO, HMPG_URL(홈페이지)
 // 주의: User-Agent 없이 요청하면 WAF에 "보안 정책에 의해 차단" 되어 막힌다 (확인함) — 반드시
 // 브라우저처럼 보이는 User-Agent를 붙일 것.
-import { XMLParser } from 'fast-xml-parser'
 import { EventExtractionSchema } from './schema.mjs'
+import { xmlParser, asArray } from './xml-utils.mjs'
 
 const KINTEX_API_URL = 'https://openapi.gg.go.kr/KintexEventFixatn'
 const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
@@ -36,10 +36,6 @@ const FRANCHISE_KEYWORDS = [
   '카카오게임즈', '위메이드', '그라비티', '호요버스',
 ]
 
-// FRANCHISE_KEYWORDS 매칭 없이 '게임'만 단독으로 걸리는 경우 신뢰도를 높여줄 명확한 신호.
-// (KOPIS와 동일한 이유 — '게임'만으로는 보드게임 등 무관한 행사가 섞일 수 있어 보수적으로 간다.)
-const STRONG_GAME_SIGNALS = ['게임쇼', '게임전시', '이스포츠', 'e스포츠', '지스타', '코믹월드', 'AGF', '일러스타페스']
-
 const COSPLAY_SIGNALS = ['코스프레', '코스튬', '서브컬처', '애니메이션', '코믹월드', 'AGF', '일러스타페스']
 
 function rowText(row) {
@@ -51,17 +47,14 @@ function looksLikeGameEvent(row) {
   return GENERIC_KEYWORDS.some(k => text.includes(k)) || FRANCHISE_KEYWORDS.some(k => text.includes(k))
 }
 
+// saveDraft()의 shouldAutoApprove()는 confidence:'medium'도 start_date·venue만
+// 있으면 바로 승인하는데, KINTEX는 EVENT_PLC가 없으면 venue를 'KINTEX'로 채우고
+// EVENT_PERD도 항상 있어서 둘 다 항상 참이 된다 — 즉 'medium'을 쓰면 'high'와
+// 다를 바 없이 항상 자동 승인돼버린다. 그래서 확실한 신호(FRANCHISE_KEYWORDS)만
+// 자동 승인(high)하고, 나머지는 전부 검수로 보낸다(low) — 중간 등급을 두지 않는다.
 function estimateConfidence(text) {
   if (FRANCHISE_KEYWORDS.some(k => text.includes(k))) return 'high'
-  if (STRONG_GAME_SIGNALS.some(k => text.includes(k))) return 'medium'
-  return 'low' // '게임'만 걸린 경우 등 — 사람 검수로 최종 판단 필요
-}
-
-const xmlParser = new XMLParser({ ignoreAttributes: false })
-
-function asArray(value) {
-  if (value === undefined || value === null) return []
-  return Array.isArray(value) ? value : [value]
+  return 'low' // 일반 키워드만 걸린 경우 — 사람 검수로 최종 판단 필요
 }
 
 // "2026-01-16~2026-01-25" -> { start: '2026-01-16', end: '2026-01-25' }

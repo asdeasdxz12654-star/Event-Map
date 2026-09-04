@@ -13,8 +13,8 @@
 // 목록 응답: mt20id, prfnm, prfpdfrom, prfpdto, fcltynm, poster, area, genrenm, openrun, prfstate
 // 상세 응답: 위 필드 + prfcast, entrpsnmP/H/A/S, pcseguidance, sty(줄거리/프로그램), mt10id,
 //           relates.relate.relateurl (최상위 필드가 아니라 중첩 객체/배열 안에 있음, 아래 getRelateUrl 참고)
-import { XMLParser } from 'fast-xml-parser'
 import { EventExtractionSchema } from './schema.mjs'
+import { xmlParser, asArray, formatDateCompact } from './xml-utils.mjs'
 
 const KOPIS_BASE_URL = 'https://kopis.or.kr/openApi/restful/pblprfr'
 const KOPIS_DETAIL_VIEW_URL = 'https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do'
@@ -51,24 +51,9 @@ function estimateConfidence(text) {
   return 'low' // '게임'만 걸린 경우 — 사람 검수로 최종 판단 필요
 }
 
-const xmlParser = new XMLParser({ ignoreAttributes: false })
-
-function formatDate(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}${m}${d}`
-}
-
 // "2026.10.09" -> "2026-10-09" (event_drafts.extracted.start_date/end_date 형식에 맞춤)
 function parseKopisDate(d) {
   return d ? d.replaceAll('.', '-') : null
-}
-
-// fast-xml-parser는 항목이 1개면 객체, 여러 개면 배열로 반환한다 -> 항상 배열로 정규화
-function asArray(value) {
-  if (value === undefined || value === null) return []
-  return Array.isArray(value) ? value : [value]
 }
 
 // relateurl은 최상위 필드가 아니라 relates.relate(단일 객체 또는 배열) 안에 중첩되어 있다.
@@ -114,8 +99,8 @@ async function fetchKopisDetail(mt20id) {
 export async function fetchKopisCandidates() {
   const today = new Date()
   const to = new Date(today.getTime() + LOOKAHEAD_DAYS * 86400000)
-  const stdate = formatDate(today)
-  const eddate = formatDate(to)
+  const stdate = formatDateCompact(today)
+  const eddate = formatDateCompact(to)
 
   const matched = []
   for (let cpage = 1; cpage <= MAX_PAGES; cpage++) {
