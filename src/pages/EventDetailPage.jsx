@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { getEventStatus } from '../data/events'
@@ -9,15 +9,31 @@ import TrustScore from '../components/TrustScore'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { downloadEventIcs } from '../utils/ics'
+import { useAdmin } from '../contexts/AdminContext'
+import { adminApi } from '../lib/adminApi'
+import AdminEventForm from '../components/AdminEventForm'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 
 export default function EventDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { events, loading, error } = useEvents()
   const event = events.find(e => e.id === id)
   const { isBookmarked, toggleBookmark } = useBookmarks()
+  const { isAdmin } = useAdmin()
   const [imgError, setImgError] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm(`"${event?.title}" 행사를 삭제하시겠습니까?`)) return
+    try {
+      await adminApi.deleteEvent(event.id)
+      navigate('/')
+    } catch (err) {
+      alert(`삭제 실패: ${err.message}`)
+    }
+  }
 
   if (loading) {
     return (
@@ -96,18 +112,42 @@ export default function EventDetailPage() {
               <StatusBadge status={status} />
               <CategoryBadge category={event.category} />
             </div>
-            <button
-              onClick={() => toggleBookmark(event.id)}
-              aria-pressed={bookmarked}
-              className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border text-lg transition-colors ${
-                bookmarked
-                  ? 'bg-indigo-600/80 border-indigo-500/50 text-white'
-                  : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-              }`}
-            >
-              {bookmarked ? '⭐' : '☆'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toggleBookmark(event.id)}
+                aria-pressed={bookmarked}
+                className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border text-lg transition-colors ${
+                  bookmarked
+                    ? 'bg-indigo-600/80 border-indigo-500/50 text-white'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                }`}
+              >
+                {bookmarked ? '⭐' : '☆'}
+              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setShowEditForm(true)}
+                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border bg-indigo-600/20 border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/40 text-sm transition-colors"
+                    title="행사 수정"
+                  >
+                    ✏
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border bg-red-600/20 border-red-500/30 text-red-400 hover:bg-red-600/40 text-sm transition-colors"
+                    title="행사 삭제"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          {showEditForm && (
+            <AdminEventForm event={event} onClose={() => setShowEditForm(false)} />
+          )}
           <h1 className="text-2xl font-bold text-white mb-1">{event.title}</h1>
           <p className="text-zinc-400 text-sm mb-6">{event.description}</p>
 

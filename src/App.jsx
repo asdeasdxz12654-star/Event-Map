@@ -5,6 +5,7 @@ import CalendarPage from './pages/CalendarPage'
 import BookmarksPage from './pages/BookmarksPage'
 import EventDetailPage from './pages/EventDetailPage'
 import AdminDraftsPage from './pages/AdminDraftsPage'
+import { AdminProvider } from './contexts/AdminContext'
 
 function NotFoundPage() {
   return (
@@ -21,6 +22,7 @@ function NotFoundPage() {
 
 export default function App() {
   return (
+    <AdminProvider>
     <BrowserRouter>
       <div className="min-h-screen bg-[#0f0f1a]">
         <Navbar />
@@ -36,5 +38,6 @@ export default function App() {
         </main>
       </div>
     </BrowserRouter>
+    </AdminProvider>
   )
 }

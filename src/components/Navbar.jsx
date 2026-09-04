@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import NotificationBell from './NotificationBell'
+import AdminModal from './AdminModal'
+import { useAdmin } from '../contexts/AdminContext'
 
 const tabs = [
   { to: '/', label: '홈', icon: '🏠' },
@@ -8,6 +11,9 @@ const tabs = [
 ]
 
 export default function Navbar() {
+  const [showAdmin, setShowAdmin] = useState(false)
+  const { isAdmin } = useAdmin()
+
   return (
     <header className="sticky top-0 z-50 bg-[#0f0f1a]/90 backdrop-blur border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 lg:px-8 h-14 lg:h-16 flex items-center justify-between">
@@ -33,8 +39,20 @@ export default function Navbar() {
             </NavLink>
           ))}
           <NotificationBell />
+          <button
+            onClick={() => setShowAdmin(true)}
+            title="관리자"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-colors ${
+              isAdmin
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+            }`}
+          >
+            ⚙
+          </button>
         </nav>
       </div>
+      {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
     </header>
   )
 }

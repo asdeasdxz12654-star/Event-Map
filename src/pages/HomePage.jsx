@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import EventCard from '../components/EventCard'
 import { filterByStatus, filterByCategory, filterBySearch, sortByNewest, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useHomeFilters } from '../hooks/useHomeFilters'
+import { useAdmin } from '../contexts/AdminContext'
+import AdminEventForm from '../components/AdminEventForm'
 
 const STATUS_TABS = [
   { key: STATUS.UPCOMING, label: '예정',  icon: '🕐' },
@@ -38,6 +41,8 @@ function SkeletonCard() {
 
 export default function HomePage() {
   const { events, loading, error } = useEvents()
+  const { isAdmin } = useAdmin()
+  const [showAddForm, setShowAddForm] = useState(false)
   const {
     status: activeStatus,
     category: activeCategory,
@@ -67,10 +72,24 @@ export default function HomePage() {
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       {/* 헤더 */}
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 정보</h1>
-        <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악 행사를 한눈에</p>
+      <div className="flex items-start justify-between mb-6 lg:mb-8">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 정보</h1>
+          <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악 행사를 한눈에</p>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            + 행사 추가
+          </button>
+        )}
       </div>
+
+      {showAddForm && (
+        <AdminEventForm onClose={() => setShowAddForm(false)} />
+      )}
 
       {/* 상태 탭 */}
       <div className="flex gap-2 lg:gap-3 mb-4 lg:mb-5">

@@ -6,6 +6,8 @@ import StatusBadge from './StatusBadge'
 import CategoryBadge from './CategoryBadge'
 import { getEventStatus, getDaysUntil } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
+import { useAdmin } from '../contexts/AdminContext'
+import { adminApi } from '../lib/adminApi'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
@@ -13,9 +15,21 @@ const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
 export default function EventCard({ event }) {
   const status = getEventStatus(event)
   const { isBookmarked, toggleBookmark } = useBookmarks()
+  const { isAdmin } = useAdmin()
   const bookmarked = isBookmarked(event.id)
   const [imgError, setImgError] = useState(false)
   const showPoster = !!event.posterUrl && !imgError
+
+  const handleDelete = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(`"${event.title}" 행사를 삭제하시겠습니까?`)) return
+    try {
+      await adminApi.deleteEvent(event.id)
+    } catch (err) {
+      alert(`삭제 실패: ${err.message}`)
+    }
+  }
 
   // 날짜 문자열을 로컬 자정으로 파싱 (UTC 파싱 시 타임존 오차 방지)
   const [sy, sm, sd] = event.startDate.split('-').map(Number)
@@ -58,6 +72,16 @@ export default function EventCard({ event }) {
       >
         {bookmarked ? '⭐' : '☆'}
       </button>
+
+      {isAdmin && (
+        <button
+          onClick={handleDelete}
+          aria-label="행사 삭제"
+          className="absolute top-3 left-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold backdrop-blur transition-colors"
+        >
+          ×
+        </button>
+      )}
 
       {/* 포스터 */}
       <div className="relative mb-3">
