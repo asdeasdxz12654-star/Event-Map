@@ -84,6 +84,8 @@ async function handleAdmin(request, env, pathname) {
   // DELETE /admin/events/:id — 행사 삭제
   if (idMatch && request.method === 'DELETE') {
     const id = decodeURIComponent(idMatch[1])
+    // FK 제약 해제: event_drafts.promoted_event_id 참조 먼저 NULL 처리
+    await supabase(env, 'PATCH', `event_drafts?promoted_event_id=eq.${encodeURIComponent(id)}`, { promoted_event_id: null })
     await supabase(env, 'DELETE', `events?id=eq.${encodeURIComponent(id)}`)
     return new Response(null, { status: 204, headers: corsHeaders(env) })
   }
