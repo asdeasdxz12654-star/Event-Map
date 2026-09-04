@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === 'true' ? '/Event-Map/' : '/',
   plugins: [
     react(),
     tailwindcss(),
