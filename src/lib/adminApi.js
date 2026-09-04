@@ -1,6 +1,6 @@
 import { getAdminToken } from '../contexts/AdminContext'
 
-const BASE = import.meta.env.VITE_ADMIN_API_URL ?? ''
+const BASE = import.meta.env.VITE_ADMIN_API_URL || 'https://event-map-api-proxy.asdeasdxz12654.workers.dev'
 
 function hdrs() {
   return {
@@ -10,7 +10,6 @@ function hdrs() {
 }
 
 async function req(method, path, body) {
-  if (!BASE) throw new Error('관리자 API URL이 설정되지 않았습니다 (VITE_ADMIN_API_URL 환경변수 확인)')
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: hdrs(),
