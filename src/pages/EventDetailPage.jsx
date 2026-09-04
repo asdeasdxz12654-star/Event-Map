@@ -8,8 +8,6 @@ import CategoryBadge from '../components/CategoryBadge'
 import TrustScore from '../components/TrustScore'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
-import { useCosplayersByEvent } from '../hooks/useCosplayers'
-import CosplayerCard from '../components/CosplayerCard'
 import { downloadEventIcs } from '../utils/ics'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
@@ -19,7 +17,6 @@ export default function EventDetailPage() {
   const { events, loading, error } = useEvents()
   const event = events.find(e => e.id === id)
   const { isBookmarked, toggleBookmark } = useBookmarks()
-  const { cosplayers, loading: cosplayersLoading } = useCosplayersByEvent(id)
   const [imgError, setImgError] = useState(false)
 
   if (loading) {
@@ -134,24 +131,6 @@ export default function EventDetailPage() {
             <h2 className="text-sm font-semibold text-white mb-2">행사 신뢰도</h2>
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
           </div>
-
-          {/* 참가 코스어 */}
-          {(cosplayersLoading || cosplayers.length > 0) && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-              <h2 className="text-sm font-semibold text-white mb-3">
-                🎭 참가 코스어 {!cosplayersLoading && `(${cosplayers.length})`}
-              </h2>
-              {cosplayersLoading ? (
-                <p className="text-xs text-zinc-500 animate-pulse">불러오는 중...</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {cosplayers.map(c => (
-                    <CosplayerCard key={c.id} cosplayer={c} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* 위치 & 경로 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">

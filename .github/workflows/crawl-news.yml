@@ -29,3 +29,5 @@ jobs:
           KOPIS_API_KEY: ${{ secrets.KOPIS_API_KEY }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          KINTEX_API_KEY: ${{ secrets.KINTEX_API_KEY }}
+          KMRB_API_KEY: ${{ secrets.KMRB_API_KEY }}

@@ -17,16 +17,54 @@ const NAVER_CAFE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/cafeartic
 // 명조/이환은 공식 채널이 네이버카페가 아니라 "네이버 라운지"인데, 라운지는 게임사가 자기
 // 게임 클라이언트에 심는 SDK 기반 기능이라 외부에서 검색/조회하는 공개 API가 없다 (확인함).
 // 젠레스 존 제로는 네이버 라운지(game.naver.com/lounge/ZZZ) 사용 확인 — 외부 API 없어서 접근 불가, 목록에서 뺌.
-const CAFE_SEARCH_QUERIES = [
-  { query: '원신 공지', officialCafeUrl: 'cafe.naver.com/genshin' },
-  { query: '붕괴 스타레일 공지', officialCafeUrl: 'cafe.naver.com/honkaistarrail' },
-  // 호요랜드는 각 게임 공식 카페에서 공지됨 — 두 카페에서 동시에 잡혀도 promote_event_draft()가 (title+start_date)로 dedup 처리
-  { query: '호요랜드', officialCafeUrl: 'cafe.naver.com/genshin' },
-  { query: '호요랜드', officialCafeUrl: 'cafe.naver.com/honkaistarrail' },
-  // 블루아카이브 팝업/행사 — 구 카페(bluearchive)에서 bluearchive2로 이전됨
-  { query: '블루아카이브 팝업', officialCafeUrl: 'cafe.naver.com/bluearchive2' },
-  { query: '블루아카이브 행사', officialCafeUrl: 'cafe.naver.com/bluearchive2' },
+//
+// 원신/붕괴 스타레일 두 카페는 공지 담당 매니저 계정으로 실제 공식 카페임을 확인함:
+// 원신: https://cafe.naver.com/f-e/cafes/29893655/members/moLCYG3NoF2zo4i4wq7c1RsnSkqIzMomnIlUgK9GOVY
+// 붕괴 스타레일: https://cafe.naver.com/f-e/cafes/30487825/members/H11u1fdSGPn2eqLR8avQzUx0zA_O4GmzgLGIGacRqsY
+const GENSHIN_CAFE = 'cafe.naver.com/genshin'
+const HONKAI_CAFE = 'cafe.naver.com/honkaistarrail'
+
+// 언제 열릴지 예측할 수 없는 수시 오프라인 행사 — 매일 검색한다.
+const COMMON_CAFE_KEYWORDS = [
+  '전시회', '팝업스토어', '콜라보', '콘서트', '굿즈', '오프라인', '퍼레이드',
 ]
+
+function cafeQuery(query, officialCafeUrl, activeWindow = null) {
+  return { query, officialCafeUrl, activeWindow }
+}
+
+// 매년 시기가 정해진 행사라, 정보가 실제로 올라오는 기간에만 검색해서 평소엔 무의미한
+// 후보(Groq 호출)를 줄인다. activeWindow는 fetchNaverCafeCandidates()의 isActiveNow()가 검사.
+// - 호요랜드: 매년 10월경 개최, 8/20~9/30 사이에 굿즈·무대 시간표 등 상세 정보가 먼저 공개됨
+//   (두 게임 공용 행사라 원신·붕괴 스타레일 카페 모두에서 검색).
+// - 원신 "주년 기념": 원신 주년 행사가 9월에 시작돼서 9월만 검색.
+// - 붕괴 스타레일 "주년 축제": 붕괴 스타레일 주년 행사가 4월에 시작돼서 4월만 검색.
+const HOYOLAND_WINDOW = { fromMonthDay: '08-20', toMonthDay: '09-30' }
+
+const SEASONAL_CAFE_QUERIES = [
+  cafeQuery('호요랜드', GENSHIN_CAFE, HOYOLAND_WINDOW),
+  cafeQuery('호요랜드', HONKAI_CAFE, HOYOLAND_WINDOW),
+  cafeQuery('주년 기념', GENSHIN_CAFE, { months: [9] }),
+  cafeQuery('주년 축제', HONKAI_CAFE, { months: [4] }),
+]
+
+const CAFE_SEARCH_QUERIES = [
+  ...[GENSHIN_CAFE, HONKAI_CAFE].flatMap(officialCafeUrl =>
+    COMMON_CAFE_KEYWORDS.map(query => cafeQuery(query, officialCafeUrl))
+  ),
+  ...SEASONAL_CAFE_QUERIES,
+]
+
+function isActiveNow(activeWindow) {
+  if (!activeWindow) return true // 기간 제한 없음 — 상시 검색
+  const now = new Date()
+  if (activeWindow.months) return activeWindow.months.includes(now.getMonth() + 1)
+  if (activeWindow.fromMonthDay && activeWindow.toMonthDay) {
+    const monthDay = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    return monthDay >= activeWindow.fromMonthDay && monthDay <= activeWindow.toMonthDay
+  }
+  return true
+}
 
 // official-sites.mjs에 이미 등록된 정기 행사(지스타·코믹월드·AGF·일러스타페스·
 // PlayX4·BIC)는 여기서 제거하고, 공식 사이트가 없거나 일정이 수시로 바뀌는
@@ -103,7 +141,9 @@ async function searchNaverCafe(query) {
 // 카페글 검색 응답에는 발행일(pubDate)이 없어서 published_at은 null로 둔다.
 export async function fetchNaverCafeCandidates() {
   const results = []
-  for (const { query, officialCafeUrl } of CAFE_SEARCH_QUERIES) {
+  for (const { query, officialCafeUrl, activeWindow } of CAFE_SEARCH_QUERIES) {
+    if (!isActiveNow(activeWindow)) continue
+
     let items
     try {
       items = await searchNaverCafe(query)

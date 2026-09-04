@@ -1,19 +1,27 @@
-// 게임 뉴스 RSS를 훑어서 행사(전시회/코스프레/콘서트) 소개 기사로 보이는 것만 골라
-// Groq(무료 티어)로 구조화 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기"
-// 상태로 저장한다. 원래 Anthropic Claude를 썼는데, 유료 크레딧 없이도 돌리고 싶어서 Groq의
-// 무료 오픈모델(openai/gpt-oss-20b)로 교체했다 — 실제 한글 기사로 구조화 추출 품질 확인함.
+// 게임 행사(전시회/코스프레/콘서트) 소개 기사로 보이는 것만 골라 Groq(무료 티어)로 구조화
+// 정보를 추출하고, Supabase의 event_drafts 테이블에 "검수 대기" 상태로 저장한다. 원래
+// Anthropic Claude를 썼는데, 유료 크레딧 없이도 돌리고 싶어서 Groq의 무료 오픈모델
+// (openai/gpt-oss-20b)로 교체했다 — 실제 한글 기사로 구조화 추출 품질 확인함.
 // KOPIS(공연예술통합전산망) 공식 API에서 게임음악 관련 공연도 같은 큐에 합류시킨다 (kopis.mjs).
-// KOPIS는 이미 구조화된 공식 데이터라 LLM 없이 필드를 그대로 매핑한다.
+// KINTEX(경기데이터드림 오픈API)의 행사 일정도 게임/애니/코스프레 키워드로 걸러 같은 방식으로
+// 합류시킨다 (kintex.mjs). 영등위 "외국인 국내 공연추천"에서는 일본 애니송/J-POP 아티스트
+// 내한공연과 게임/애니 콘서트를 찾는다 (kmrb.mjs). 셋 다 이미 구조화된 공식 데이터라 LLM
+// 없이 필드를 그대로 매핑한다.
 // 네이버 뉴스 검색으로 지스타/코믹월드처럼 자체 API 없는 고정 행사도 능동적으로 찾는다
-// (naver.mjs) — 이쪽은 RSS와 마찬가지로 자유 텍스트라 Groq 추출을 그대로 거친다.
+// (naver.mjs) — 자유 텍스트라 Groq 추출을 거친다. 게임메카·루리웹·인벤 등 개별 매체 RSS는
+// 쓰지 않는다 — 네이버가 이 매체들을 포함해 전부 색인하므로, 매체별 RSS/스크래핑을 유지
+// 보수하는 대신 naver.mjs의 검색어에 원하는 키워드를 추가하는 쪽이 훨씬 안정적이다
+// (매체 사이트 개편에 안 깨지고, 원문 링크도 그대로 나옴).
 // confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-//         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택)
-import Parser from 'rss-parser'
+//         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택), KINTEX_API_KEY(선택),
+//         KMRB_API_KEY(선택)
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
+import { fetchKintexCandidates, buildKintexDraft } from './kintex.mjs'
+import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
@@ -24,26 +32,7 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // 내부 사고 과정에 토큰을 낭비하지 않고 바로 JSON을 뱉게 한다.
 const GROQ_MODEL = 'openai/gpt-oss-20b'
 
-const FEEDS = [
-  { name: '게임메카', url: 'https://www.gamemeca.com/rss.php' },
-  { name: '루리웹', url: 'https://bbs.ruliweb.com/news/rss' },
-  { name: '게임뷰', url: 'https://www.gamevu.co.kr/rss/allArticle.xml' },
-  { name: '게임톡', url: 'https://www.gametoc.co.kr/rss/allArticle.xml' },
-  { name: '인벤', url: 'https://webzine.inven.co.kr/news/rss.php' },
-  { name: '게임인사이트', url: 'https://www.gameinsight.co.kr/rss/allArticle.xml' },
-]
-
-// RSS 요약만으로는 정보가 부족한 기사가 많아서, LLM 호출 전에 1차로 걸러내는 키워드.
-// (리뷰/업데이트/공략 기사 등은 대부분 여기 안 걸림 -> API 비용 절감)
-const KEYWORDS = [
-  '지스타', '팝업스토어', '팝업', '굿즈전', '원화전',
-  '호요버스', '호요랜드', '명조', '띵조', 'AGF',
-]
-
-const FEED_ITEM_LIMIT = 30 // 피드당 최신 N개까지만 검사
-
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-const parser = new Parser()
 
 // Groq는 Anthropic의 zodOutputFormat 같은 스키마 강제 기능이 없어서, JSON 모양을 프롬프트에
 // 직접 명시한다 (schema.mjs의 EventExtractionSchema와 필드가 어긋나지 않게 같이 고칠 것).
@@ -70,11 +59,6 @@ title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지�
 
 function stripHtml(html = '') {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-function looksRelevant(item) {
-  const text = `${item.title ?? ''} ${item.contentSnippet ?? item.content ?? ''}`
-  return KEYWORDS.some(k => text.includes(k))
 }
 
 // 네이버 검색 결과 제목 기반 사전 필터.
@@ -207,8 +191,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
 }
 
 // 네이버 뉴스/카페 검색 결과처럼 "RSS 아이템과 같은 모양의 자유 텍스트 후보"를 공통으로
-// 처리한다 (자유 텍스트라 KOPIS와 달리 Groq 추출이 필요함). RSS는 피드별 looksRelevant
-// 사전 필터가 있어서 이 헬퍼를 쓰지 않고 별도 루프를 유지한다.
+// 처리한다 (자유 텍스트라 KOPIS와 달리 Groq 추출이 필요함).
 async function processTextCandidates(label, sourceName, items) {
   let scanned = 0
   let saved = 0
@@ -249,54 +232,6 @@ async function processTextCandidates(label, sourceName, items) {
 async function main() {
   // 날짜 공식으로 계산 가능한 정기 행사를 LLM 없이 먼저 등록
   await upsertKnownEvents(supabase)
-
-  let scanned = 0
-  let candidates = 0
-  let saved = 0
-
-  for (const feed of FEEDS) {
-    let parsed
-    try {
-      parsed = await parser.parseURL(feed.url)
-    } catch (err) {
-      console.error(`[${feed.name}] RSS 조회 실패:`, err.message)
-      continue
-    }
-
-    for (const item of parsed.items.slice(0, FEED_ITEM_LIMIT)) {
-      scanned++
-      if (!item.link || !item.title) continue
-      if (!looksRelevant(item)) continue
-      if (await alreadyCollected(item.link)) continue
-
-      candidates++
-      console.log(`[${feed.name}] 후보: ${item.title}`)
-
-      let extracted
-      try {
-        extracted = await extractEvent(item)
-      } catch (err) {
-        console.error('  -> 추출 실패:', err.message)
-        continue
-      }
-
-      if (!extracted || !extracted.is_event) {
-        console.log('  -> 행사 소개 기사 아님, 스킵')
-        continue
-      }
-
-      const ok = await saveDraft({
-        source_name: feed.name,
-        source_url: item.link,
-        source_title: item.title,
-        published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-        extracted,
-      })
-      if (ok) saved++
-    }
-  }
-
-  console.log(`\n검사한 기사 ${scanned}건 / 키워드 후보 ${candidates}건 / 새로 저장 ${saved}건`)
 
   // KOPIS(공연예술통합전산망) 게임음악 공연 수집 — 키가 없으면 조용히 스킵 (로컬/부분 실행 지원)
   let kopisScanned = 0
@@ -340,6 +275,92 @@ async function main() {
     }
 
     console.log(`[KOPIS] 조회 ${kopisScanned}건 / 새로 저장 ${kopisSaved}건`)
+  }
+
+  // KINTEX(킨텍스) 행사 일정 — 경기데이터드림 오픈API, 게임/애니/코스프레 키워드로만 필터링
+  let kintexScanned = 0
+  let kintexSaved = 0
+
+  if (!process.env.KINTEX_API_KEY) {
+    console.log('KINTEX_API_KEY 미설정, 킨텍스 수집 스킵')
+  } else {
+    let kintexCandidates = []
+    try {
+      kintexCandidates = await fetchKintexCandidates()
+    } catch (err) {
+      console.error('[킨텍스] 후보 조회 실패:', err.message)
+    }
+
+    for (const candidate of kintexCandidates) {
+      kintexScanned++
+      if (!candidate.source_url || !candidate.source_title) continue
+      if (await alreadyCollected(candidate.source_url)) continue
+
+      console.log(`[킨텍스] 후보: ${candidate.source_title}`)
+
+      // Groq 호출 없이 KINTEX 원본 필드를 기계적으로 매핑 (비용 없음, 대신 confidence로
+      // 신뢰도를 표시해 관리자 검수 페이지에서 최종 판단하도록 함)
+      let extracted
+      try {
+        extracted = buildKintexDraft(candidate)
+      } catch (err) {
+        console.error('  -> 매핑 실패:', err.message)
+        continue
+      }
+
+      const ok = await saveDraft({
+        source_name: candidate.source_name,
+        source_url: candidate.source_url,
+        source_title: candidate.source_title,
+        published_at: candidate.published_at,
+        extracted,
+      })
+      if (ok) kintexSaved++
+    }
+
+    console.log(`[킨텍스] 조회 ${kintexScanned}건 / 새로 저장 ${kintexSaved}건`)
+  }
+
+  // 영등위 "외국인 국내 공연추천" — 일본 애니송/J-POP 아티스트 내한, 게임/애니 콘서트
+  let kmrbScanned = 0
+  let kmrbSaved = 0
+
+  if (!process.env.KMRB_API_KEY) {
+    console.log('KMRB_API_KEY 미설정, 영등위 공연추천 수집 스킵')
+  } else {
+    let kmrbCandidates = []
+    try {
+      kmrbCandidates = await fetchKmrbCandidates()
+    } catch (err) {
+      console.error('[영등위] 후보 조회 실패:', err.message)
+    }
+
+    for (const candidate of kmrbCandidates) {
+      kmrbScanned++
+      if (!candidate.source_url || !candidate.source_title) continue
+      if (await alreadyCollected(candidate.source_url)) continue
+
+      console.log(`[영등위] 후보: ${candidate.source_title}`)
+
+      let extracted
+      try {
+        extracted = buildKmrbDraft(candidate)
+      } catch (err) {
+        console.error('  -> 매핑 실패:', err.message)
+        continue
+      }
+
+      const ok = await saveDraft({
+        source_name: candidate.source_name,
+        source_url: candidate.source_url,
+        source_title: candidate.source_title,
+        published_at: candidate.published_at,
+        extracted,
+      })
+      if (ok) kmrbSaved++
+    }
+
+    console.log(`[영등위] 조회 ${kmrbScanned}건 / 새로 저장 ${kmrbSaved}건`)
   }
 
   // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Groq 추출)
