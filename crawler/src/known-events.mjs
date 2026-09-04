@@ -14,11 +14,15 @@ function nthWeekday(year, month, weekday, n) {
   return new Date(Date.UTC(year, month, 1 + daysToFirst + (n - 1) * 7))
 }
 
-// 항상 현재 연도 + 내년도를 모두 시도한다.
+// 기본은 "올해" 회차만 등록한다. 올해 행사가 아직 남았는데 내년 회차를 미리 노출하면
+// 사용자가 헷갈리므로, 올해 행사가 이미 끝난 뒤에만 내년 회차를 추가로 등록한다.
 // source_url dedup이 있으므로 이미 등록된 연도는 자동으로 스킵된다.
-function targetYears() {
+function targetYears(build) {
   const year = new Date().getUTCFullYear()
-  return [year, year + 1]
+  const today = toDateStr(new Date())
+  const thisYear = build(year)
+  if (thisYear.end_date && today > thisYear.end_date) return [year, year + 1]
+  return [year]
 }
 
 const KNOWN_EVENTS = [
@@ -126,7 +130,7 @@ const KNOWN_EVENTS = [
 
 export async function upsertKnownEvents(supabase) {
   for (const { slug, build } of KNOWN_EVENTS) {
-    for (const year of targetYears()) {
+    for (const year of targetYears(build)) {
       const sourceUrl = `known-event://${slug}/${year}`
 
       const { data: existing } = await supabase
