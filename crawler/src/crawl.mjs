@@ -61,22 +61,6 @@ function stripHtml(html = '') {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-// 네이버 검색 결과 제목 기반 사전 필터.
-// 게임 특화 쿼리를 써도 Naver API가 관련 기사를 함께 반환하는 경우가 있어,
-// 게임·행사와 무관한 제목을 Groq 호출 전에 걷어낸다.
-const NAVER_GAME_TITLE_KEYWORDS = [
-  '게임', '코스프레', '코스튬', '동인', '서브컬처',
-  '블루아카이브', '니케', '원신', '붕괴', '스타레일',
-  '명조', '띵조', '호요버스', '호요랜드', '젠레스', '쿠로게임즈',
-  '코믹월드', '코스앤코믹', '일러스타', '지스타', 'AGF',
-  '팝업스토어', '굿즈',
-]
-
-function naverLooksRelevant(item) {
-  const title = item.title ?? ''
-  return NAVER_GAME_TITLE_KEYWORDS.some(k => title.includes(k))
-}
-
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -190,8 +174,56 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
   return true
 }
 
+// KOPIS/KINTEX/KMRB처럼 이미 구조화된 공식 데이터 소스를 공통으로 처리한다 — Groq 호출 없이
+// buildFn이 원본 필드를 그대로 매핑하고(비용 없음), "진짜 관련 행사인지"는 confidence로
+// 표시해 관리자 검수 페이지에서 최종 판단하도록 한다. envVar가 없으면 조용히 스킵한다
+// (로컬/부분 실행 지원).
+async function processStructuredSource({ label, envVar, fetchFn, buildFn }) {
+  if (!process.env[envVar]) {
+    console.log(`${envVar} 미설정, ${label} 수집 스킵`)
+    return
+  }
+
+  let candidates = []
+  try {
+    candidates = await fetchFn()
+  } catch (err) {
+    console.error(`[${label}] 후보 조회 실패:`, err.message)
+  }
+
+  let scanned = 0
+  let saved = 0
+
+  for (const candidate of candidates) {
+    scanned++
+    if (!candidate.source_url || !candidate.source_title) continue
+    if (await alreadyCollected(candidate.source_url)) continue
+
+    console.log(`[${label}] 후보: ${candidate.source_title}`)
+
+    let extracted
+    try {
+      extracted = buildFn(candidate)
+    } catch (err) {
+      console.error('  -> 매핑 실패:', err.message)
+      continue
+    }
+
+    const ok = await saveDraft({
+      source_name: candidate.source_name,
+      source_url: candidate.source_url,
+      source_title: candidate.source_title,
+      published_at: candidate.published_at,
+      extracted,
+    })
+    if (ok) saved++
+  }
+
+  console.log(`[${label}] 조회 ${scanned}건 / 새로 저장 ${saved}건`)
+}
+
 // 네이버 뉴스/카페 검색 결과처럼 "RSS 아이템과 같은 모양의 자유 텍스트 후보"를 공통으로
-// 처리한다 (자유 텍스트라 KOPIS와 달리 Groq 추출이 필요함).
+// 처리한다 (자유 텍스트라 위 구조화 소스와 달리 Groq 추출이 필요함).
 async function processTextCandidates(label, sourceName, items) {
   let scanned = 0
   let saved = 0
@@ -233,134 +265,16 @@ async function main() {
   // 날짜 공식으로 계산 가능한 정기 행사를 LLM 없이 먼저 등록
   await upsertKnownEvents(supabase)
 
-  // KOPIS(공연예술통합전산망) 게임음악 공연 수집 — 키가 없으면 조용히 스킵 (로컬/부분 실행 지원)
-  let kopisScanned = 0
-  let kopisSaved = 0
-
-  if (!process.env.KOPIS_API_KEY) {
-    console.log('KOPIS_API_KEY 미설정, KOPIS 수집 스킵')
-  } else {
-    let kopisCandidates = []
-    try {
-      kopisCandidates = await fetchKopisCandidates()
-    } catch (err) {
-      console.error('[KOPIS] 후보 조회 실패:', err.message)
-    }
-
-    for (const candidate of kopisCandidates) {
-      kopisScanned++
-      if (!candidate.source_url || !candidate.source_title) continue
-      if (await alreadyCollected(candidate.source_url)) continue
-
-      console.log(`[KOPIS] 후보: ${candidate.source_title}`)
-
-      // Claude 호출 없이 KOPIS 원본 필드를 기계적으로 매핑 (비용 없음, 대신 confidence로
-      // 신뢰도를 표시해 관리자 검수 페이지에서 최종 판단하도록 함)
-      let extracted
-      try {
-        extracted = buildKopisDraft(candidate)
-      } catch (err) {
-        console.error('  -> 매핑 실패:', err.message)
-        continue
-      }
-
-      const ok = await saveDraft({
-        source_name: candidate.source_name,
-        source_url: candidate.source_url,
-        source_title: candidate.source_title,
-        published_at: candidate.published_at,
-        extracted,
-      })
-      if (ok) kopisSaved++
-    }
-
-    console.log(`[KOPIS] 조회 ${kopisScanned}건 / 새로 저장 ${kopisSaved}건`)
-  }
-
-  // KINTEX(킨텍스) 행사 일정 — 경기데이터드림 오픈API, 게임/애니/코스프레 키워드로만 필터링
-  let kintexScanned = 0
-  let kintexSaved = 0
-
-  if (!process.env.KINTEX_API_KEY) {
-    console.log('KINTEX_API_KEY 미설정, 킨텍스 수집 스킵')
-  } else {
-    let kintexCandidates = []
-    try {
-      kintexCandidates = await fetchKintexCandidates()
-    } catch (err) {
-      console.error('[킨텍스] 후보 조회 실패:', err.message)
-    }
-
-    for (const candidate of kintexCandidates) {
-      kintexScanned++
-      if (!candidate.source_url || !candidate.source_title) continue
-      if (await alreadyCollected(candidate.source_url)) continue
-
-      console.log(`[킨텍스] 후보: ${candidate.source_title}`)
-
-      // Groq 호출 없이 KINTEX 원본 필드를 기계적으로 매핑 (비용 없음, 대신 confidence로
-      // 신뢰도를 표시해 관리자 검수 페이지에서 최종 판단하도록 함)
-      let extracted
-      try {
-        extracted = buildKintexDraft(candidate)
-      } catch (err) {
-        console.error('  -> 매핑 실패:', err.message)
-        continue
-      }
-
-      const ok = await saveDraft({
-        source_name: candidate.source_name,
-        source_url: candidate.source_url,
-        source_title: candidate.source_title,
-        published_at: candidate.published_at,
-        extracted,
-      })
-      if (ok) kintexSaved++
-    }
-
-    console.log(`[킨텍스] 조회 ${kintexScanned}건 / 새로 저장 ${kintexSaved}건`)
-  }
-
-  // 영등위 "외국인 국내 공연추천" — 일본 애니송/J-POP 아티스트 내한, 게임/애니 콘서트
-  let kmrbScanned = 0
-  let kmrbSaved = 0
-
-  if (!process.env.KMRB_API_KEY) {
-    console.log('KMRB_API_KEY 미설정, 영등위 공연추천 수집 스킵')
-  } else {
-    let kmrbCandidates = []
-    try {
-      kmrbCandidates = await fetchKmrbCandidates()
-    } catch (err) {
-      console.error('[영등위] 후보 조회 실패:', err.message)
-    }
-
-    for (const candidate of kmrbCandidates) {
-      kmrbScanned++
-      if (!candidate.source_url || !candidate.source_title) continue
-      if (await alreadyCollected(candidate.source_url)) continue
-
-      console.log(`[영등위] 후보: ${candidate.source_title}`)
-
-      let extracted
-      try {
-        extracted = buildKmrbDraft(candidate)
-      } catch (err) {
-        console.error('  -> 매핑 실패:', err.message)
-        continue
-      }
-
-      const ok = await saveDraft({
-        source_name: candidate.source_name,
-        source_url: candidate.source_url,
-        source_title: candidate.source_title,
-        published_at: candidate.published_at,
-        extracted,
-      })
-      if (ok) kmrbSaved++
-    }
-
-    console.log(`[영등위] 조회 ${kmrbScanned}건 / 새로 저장 ${kmrbSaved}건`)
+  // 구조화된 공식 데이터 소스 3종 — KOPIS(게임음악 공연), KINTEX(경기데이터드림, 게임/애니/
+  // 코스프레 행사), 영등위(외국인 국내 공연추천, 일본 애니송/J-POP 내한). 각 API 키가 없으면
+  // 해당 소스만 조용히 스킵된다 (로컬/부분 실행 지원).
+  const STRUCTURED_SOURCES = [
+    { label: 'KOPIS', envVar: 'KOPIS_API_KEY', fetchFn: fetchKopisCandidates, buildFn: buildKopisDraft },
+    { label: '킨텍스', envVar: 'KINTEX_API_KEY', fetchFn: fetchKintexCandidates, buildFn: buildKintexDraft },
+    { label: '영등위', envVar: 'KMRB_API_KEY', fetchFn: fetchKmrbCandidates, buildFn: buildKmrbDraft },
+  ]
+  for (const source of STRUCTURED_SOURCES) {
+    await processStructuredSource(source)
   }
 
   // 네이버 뉴스 검색 — 지스타/코믹월드처럼 자체 API 없는 고정 행사 보완 (RSS와 동일하게 Groq 추출)
@@ -369,9 +283,8 @@ async function main() {
   } else {
     let naverItems = []
     try {
-      const all = await fetchNaverCandidates()
-      naverItems = all.filter(naverLooksRelevant)
-      console.log(`[네이버] 제목 필터 후 ${naverItems.length}건 / 전체 ${all.length}건`)
+      naverItems = await fetchNaverCandidates() // 제목 필터는 naver.mjs 안에서 적용됨
+      console.log(`[네이버] 제목 필터 후 후보 ${naverItems.length}건`)
     } catch (err) {
       console.error('[네이버] 후보 조회 실패:', err.message)
     }
@@ -396,28 +309,39 @@ async function main() {
     console.log('[라운지] 오늘 이미 조회됨, 스킵')
   } else {
     let loungeItems = []
+    let loungeFetchOk = false
     try {
       loungeItems = await fetchNaverLoungeCandidates()
+      loungeFetchOk = true
     } catch (err) {
       console.error('[라운지] 후보 조회 실패:', err.message)
     }
     await processTextCandidates('라운지', '네이버라운지', loungeItems)
 
-    // 조회 완료 sentinel 삽입 — 다음 실행에서 alreadyCollected()가 true를 반환하게 됨
-    await supabase.from('event_drafts').insert({
-      source_name: '네이버라운지',
-      source_url: loungeDailyKey,
-      source_title: `[라운지 일일 조회 완료] ${today}`,
-      published_at: new Date().toISOString(),
-      status: 'rejected',
-      extracted: {
-        is_event: false, confidence: 'low',
-        title: null, category: null, start_date: null, end_date: null,
-        venue: null, venue_address: null, organizer: null, description: null,
-        ticket_url: null, ticket_open_date: null, admission_fee: null,
-        website: null, tags: null,
-      },
-    })
+    if (!loungeFetchOk) {
+      // 조회 자체가 실패했으면 sentinel을 남기지 않는다 — 남기면 오늘 재시도해도
+      // alreadyCollected()가 true를 반환해서 실제로는 한 번도 성공 못 한 채 스킵된다.
+      console.log('[라운지] 조회 실패로 오늘의 sentinel은 남기지 않음 (다음 실행에서 재시도)')
+    } else {
+      // 조회 완료 sentinel 삽입 — 다음 실행에서 alreadyCollected()가 true를 반환하게 됨
+      const { error: sentinelError } = await supabase.from('event_drafts').insert({
+        source_name: '네이버라운지',
+        source_url: loungeDailyKey,
+        source_title: `[라운지 일일 조회 완료] ${today}`,
+        published_at: new Date().toISOString(),
+        status: 'rejected',
+        extracted: {
+          is_event: false, confidence: 'low',
+          title: null, category: null, start_date: null, end_date: null,
+          venue: null, venue_address: null, organizer: null, description: null,
+          ticket_url: null, ticket_open_date: null, admission_fee: null,
+          website: null, tags: null,
+        },
+      })
+      if (sentinelError) {
+        console.error('[라운지] 일일 sentinel 저장 실패:', sentinelError.message)
+      }
+    }
   }
 
   // 공식 행사 사이트 직접 수집 — 뉴스/카페보다 날짜가 정확하고 빠름. 별도 환경변수 불필요.

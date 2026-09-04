@@ -20,8 +20,8 @@
 // 응답 필드(item): oriTitle(공연명), PfmPlaceName(공연장소), contrStartDate/contrEndDate
 //   (공연기간, "YYYY-MM-DD"), rtNo(추천번호, dedup 키로 사용), rtDate(추천일자), kindName
 //   (공연물 종류), Gubun(분류), minorMalefYn(연소자유해여부)
-import { XMLParser } from 'fast-xml-parser'
 import { EventExtractionSchema } from './schema.mjs'
+import { xmlParser, asArray, formatDateCompact } from './xml-utils.mjs'
 
 const KMRB_API_URL = 'https://apis.data.go.kr/B551008/pfm/v1/pfm_search'
 const ROWS_PER_PAGE = 100
@@ -61,24 +61,14 @@ function looksRelevant(row) {
   return JAPANESE_ARTIST_KEYWORDS.some(k => text.includes(k)) || GAME_ANIME_KEYWORDS.some(k => text.includes(k))
 }
 
+// saveDraft()의 shouldAutoApprove()는 confidence:'medium'도 start_date·venue만
+// 있으면 바로 승인하는데, 이 API는 공연장(PfmPlaceName)·공연일이 거의 항상 채워져
+// 있어서 'medium'을 쓰면 'high'와 다를 바 없이 자동 승인돼버린다. 그래서 확실한
+// 신호(아티스트 실명)만 자동 승인(high)하고, 일반 게임/애니 키워드만 걸린 경우는
+// 전부 검수로 보낸다(low) — 중간 등급을 두지 않는다 (kintex.mjs와 동일한 이유).
 function estimateConfidence(text) {
   if (JAPANESE_ARTIST_KEYWORDS.some(k => text.includes(k))) return 'high'
-  if (GAME_ANIME_KEYWORDS.some(k => text.includes(k))) return 'medium'
-  return 'low'
-}
-
-const xmlParser = new XMLParser({ ignoreAttributes: false })
-
-function asArray(value) {
-  if (value === undefined || value === null) return []
-  return Array.isArray(value) ? value : [value]
-}
-
-function formatDate(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}${m}${d}`
+  return 'low' // GAME_ANIME_KEYWORDS만 걸린 경우 — 사람 검수로 최종 판단 필요
 }
 
 function buildSourceUrl(row) {
@@ -114,8 +104,8 @@ async function fetchKmrbPage(pIndex, stDate, edDate) {
 export async function fetchKmrbCandidates() {
   const today = new Date()
   const from = new Date(today.getTime() - LOOKBACK_DAYS * 86400000)
-  const stDate = formatDate(from)
-  const edDate = formatDate(today)
+  const stDate = formatDateCompact(from)
+  const edDate = formatDateCompact(today)
   const todayStr = edDate
 
   const matched = []

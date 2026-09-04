@@ -61,6 +61,7 @@ function extractText(contentsJson) {
 
 export async function fetchNaverLoungeCandidates() {
   const results = []
+  let succeeded = 0
 
   for (const { name, loungeId, boardId } of LOUNGES) {
     const url = `${LOUNGE_API}/${loungeId}/feed?boardId=${boardId}&buffFilteringYN=N&limit=25&offset=0&order=NEW`
@@ -73,6 +74,7 @@ export async function fetchNaverLoungeCandidates() {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       data = await res.json()
+      succeeded++
     } catch (err) {
       console.error(`[라운지] "${name}" 조회 실패:`, err.message)
       continue
@@ -97,6 +99,13 @@ export async function fetchNaverLoungeCandidates() {
         pubDate: parseNaverDate(feed.createdDate),
       })
     }
+  }
+
+  // 라운지가 하나도 조회 안 됐으면(전체 네트워크 장애 등) 예외를 던져서 crawl.mjs가
+  // "오늘 조회 완료" sentinel을 남기지 않게 한다 — 일부만 실패한 경우는 부분 결과라도
+  // 반환한다 (라운지별로 개별 실패는 위에서 이미 로그를 남겼음).
+  if (succeeded === 0) {
+    throw new Error('모든 라운지 조회 실패')
   }
 
   return results

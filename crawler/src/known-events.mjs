@@ -6,6 +6,14 @@ function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
 }
 
+// 이 행사들(지스타 등)은 한국 기준(KST) 행사라 "오늘"도 KST로 계산한다 — UTC로 계산하면
+// 자정 근처(00:00~08:59 KST, 전날 UTC) 9시간 동안 하루 전으로 잘못 판단해서 연도 계산이
+// 어긋날 수 있다 (notifier/send-notifications.mjs의 todayKST()와 동일한 이유/방식).
+function todayKST() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().slice(0, 10)
+}
+
 // 해당 연도·월의 N번째 특정 요일을 반환한다 (n: 1-indexed).
 // month: 0-indexed (0=1월 … 11=12월), weekday: 0=일, 1=월 … 5=금, 6=토
 function nthWeekday(year, month, weekday, n) {
@@ -18,8 +26,8 @@ function nthWeekday(year, month, weekday, n) {
 // 사용자가 헷갈리므로, 올해 행사가 이미 끝난 뒤에만 내년 회차를 추가로 등록한다.
 // source_url dedup이 있으므로 이미 등록된 연도는 자동으로 스킵된다.
 function targetYears(build) {
-  const year = new Date().getUTCFullYear()
-  const today = toDateStr(new Date())
+  const today = todayKST()
+  const year = Number(today.slice(0, 4))
   const thisYear = build(year)
   if (thisYear.end_date && today > thisYear.end_date) return [year, year + 1]
   return [year]
