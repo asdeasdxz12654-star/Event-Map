@@ -67,9 +67,8 @@ function isActiveNow(activeWindow) {
 }
 
 // official-sites.mjs에 이미 등록된 정기 행사(지스타·코믹월드·AGF·일러스타페스·
-// PlayX4·BIC)는 여기서 제거하고, 공식 사이트가 없거나 일정이 수시로 바뀌는
-// 팝업·단발 행사만 능동적으로 찾는다.
-// 효과: 23 → 8 쿼리, 최대 후보 230 → 80건으로 Groq TPD 부담 대폭 감소.
+// PlayX4·BIC)는 여기서 제거하고, 공식 사이트가 없는 행사만 능동적으로 찾는다.
+// 게임사 팝업/페스티벌 쿼리는 네이버카페(CAFE_SEARCH_QUERIES)가 더 정확히 잡아서 제거함.
 function q(text, activeMonths = null) {
   return { text, activeMonths }
 }
@@ -77,14 +76,6 @@ function q(text, activeMonths = null) {
 export const NAVER_SEARCH_QUERIES = [
   // 코스프레 행사 — 공식 사이트 미등록
   q('코스앤코믹'),
-  // 수시 팝업 / 게임사 오프라인 행사
-  q('블루아카이브 팝업'),
-  q('승리의여신니케 팝업'),
-  q('호요랜드'),
-  q('호요버스 팝업'),
-  q('젠레스존제로 팝업'),
-  q('명조 페스티벌'),
-  q('띵조 페스티벌'),           // '명조'의 팬 애칭 표기
 ]
 
 // 검색 결과 제목 기반 사전 필터. 게임 특화 쿼리를 써도 Naver API가 관련 기사를
@@ -94,8 +85,6 @@ export const NAVER_SEARCH_QUERIES = [
 // 쿼리별 0건 경고 로그로만 알아챌 수 있음).
 const NAVER_GAME_TITLE_KEYWORDS = [
   '게임', '코스프레', '코스튬', '동인', '서브컬처',
-  '블루아카이브', '니케', '원신', '붕괴', '스타레일',
-  '명조', '띵조', '호요버스', '호요랜드', '젠레스', '쿠로게임즈',
   '코믹월드', '코스앤코믹', '일러스타', '지스타', 'AGF',
   '팝업스토어', '굿즈',
 ]
