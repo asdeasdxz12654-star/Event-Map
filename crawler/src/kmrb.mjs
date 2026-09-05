@@ -139,6 +139,13 @@ export async function fetchKmrbCandidates() {
   }))
 }
 
+// KMRB PfmPlaceName에 "장충체육관(09/13)"처럼 날짜가 괄호 안에 붙어 오는 경우가 있다.
+// 공연장 이름만 남기고 날짜 표기를 제거한다.
+function cleanVenueName(name) {
+  if (!name) return null
+  return name.replace(/\s*\(\d{1,2}\/\d{1,2}\)/g, '').trim() || null
+}
+
 // KMRB 원본 필드를 event_drafts.extracted 스키마로 기계적으로 매핑한다 (LLM 호출 없음).
 export function buildKmrbDraft(candidate) {
   const raw = candidate.raw
@@ -150,7 +157,7 @@ export function buildKmrbDraft(candidate) {
     category: '게임음악',
     start_date: raw.contrStartDate ?? null,
     end_date: raw.contrEndDate ?? raw.contrStartDate ?? null,
-    venue: raw.PfmPlaceName ?? null,
+    venue: cleanVenueName(raw.PfmPlaceName),
     venue_address: null,
     organizer: null,
     description: null,

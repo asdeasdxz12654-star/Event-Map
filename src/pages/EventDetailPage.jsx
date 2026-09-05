@@ -67,11 +67,11 @@ export default function EventDetailPage() {
 
   const hasCoords = event.venueLat != null && event.venueLng != null
 
-  // 지도 검색은 도로명 주소만 사용한다.
-  // venue_name에는 "7·8홀"처럼 홀 번호가 포함되는 경우가 있어 지도 검색 결과가 부정확해진다.
   const venueAddress = event.venueAddress ?? ''
   const venueName = event.venue ?? ''
-  const mapSearch = encodeURIComponent(venueAddress || venueName)
+  // 지도 검색은 도로명 주소를 우선한다. 주소가 없으면 장소명에서 홀·층 정보를 제거하고 사용한다.
+  // (홀 번호가 포함된 채로 검색하면 지오코딩이 실패해 지도가 표시되지 않는다.)
+  const mapSearch = encodeURIComponent(venueAddress || stripHallInfo(venueName))
 
 
   const naverMapUrl = `https://map.naver.com/v5/search/${mapSearch}`
@@ -235,6 +235,18 @@ export default function EventDetailPage() {
       </div>
     </div>
   )
+}
+
+// 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.
+// 예: "KINTEX 제2전시장 7·8홀" → "KINTEX", "코엑스 3층 D홀" → "코엑스"
+function stripHallInfo(name) {
+  return name
+    .replace(/\s+제\d+전시장/g, '')
+    .replace(/\s+[^\s]+홀/g, '')
+    .replace(/\s+\d+층/g, '')
+    .replace(/\s+B\d+\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function InfoRow({ icon, label, value }) {

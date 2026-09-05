@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import EventCard from '../components/EventCard'
-import { filterByStatus, filterByCategory, filterBySearch, sortByNewest, STATUS, CATEGORIES } from '../data/events'
+import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useHomeFilters } from '../hooks/useHomeFilters'
 import { useAdmin } from '../contexts/AdminContext'
@@ -49,11 +49,13 @@ export default function HomePage() {
     hideSoldout,
     search,
     sort,
+    month: activeMonth,
     setStatus: setActiveStatus,
     setCategory: setActiveCategory,
     setHideSoldout,
     setSearch,
     setSort,
+    setMonth: setActiveMonth,
   } = useHomeFilters()
 
   const statusCounts = {
@@ -62,11 +64,13 @@ export default function HomePage() {
     [STATUS.ENDED]:    filterByStatus(events, STATUS.ENDED).length,
   }
 
-  const base = filterBySearch(
+  const baseBeforeMonth = filterBySearch(
     filterByCategory(filterByStatus(events, activeStatus), activeCategory),
     search
   ).filter(e => !hideSoldout || e.ticketStatus !== 'soldout')
 
+  const activeMonths = getActiveMonths(baseBeforeMonth)
+  const base = filterByMonth(baseBeforeMonth, activeMonth)
   const filtered = sort === 'newest' ? sortByNewest(base) : base
 
   return (
@@ -136,7 +140,7 @@ export default function HomePage() {
       </div>
 
       {/* 카테고리 필터 + 정렬 + 매진 제외 */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 lg:mb-5">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         {CATEGORY_FILTERS.map(({ key, label }) => (
           <button
             key={String(key)}
@@ -185,6 +189,35 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
+      {/* 월 필터 */}
+      {activeMonths.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 lg:mb-5 scrollbar-hide">
+          <button
+            onClick={() => setActiveMonth(null)}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+              activeMonth === null
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            전체
+          </button>
+          {activeMonths.map(m => (
+            <button
+              key={m}
+              onClick={() => setActiveMonth(activeMonth === m ? null : m)}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+                activeMonth === m
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {m}월
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 건수 표시 */}
       {!loading && !error && (

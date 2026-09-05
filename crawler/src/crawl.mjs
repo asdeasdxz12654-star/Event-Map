@@ -24,6 +24,7 @@ import { fetchKintexCandidates, buildKintexDraft } from './kintex.mjs'
 import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
+import { fetchEventPosterUrl } from './naver-image.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -163,6 +164,20 @@ async function attachCoords(eventId, venue, venueAddress) {
   else console.log(`  -> 좌표 설정: ${coords.lat}, ${coords.lng}`)
 }
 
+// 네이버 이미지 검색으로 포스터를 찾아 events에 업데이트한다.
+// 이미 포스터가 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
+async function attachPosterImage(eventId, title) {
+  if (!eventId) return
+  const posterUrl = await fetchEventPosterUrl(title)
+  if (!posterUrl) return
+  const { error } = await supabase
+    .from('events')
+    .update({ poster_url: posterUrl })
+    .eq('id', eventId)
+    .is('poster_url', null) // 이미 포스터가 있으면 덮어쓰지 않음
+  if (error) console.warn('  [이미지] 포스터 저장 실패:', error.message)
+}
+
 // RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
 // 자동 승인 조건:
 //   1) confidence:high — Groq가 title·start_date·venue 모두 확인했다고 판단
@@ -200,6 +215,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     } else {
       console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
       await attachCoords(approved?.promoted_event_id, extracted.venue, extracted.venue_address)
+      await attachPosterImage(approved?.promoted_event_id, extracted.title)
     }
   }
 

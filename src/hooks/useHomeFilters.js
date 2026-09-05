@@ -7,6 +7,7 @@ const useHomeFiltersStore = createLocalStorageHook('gameEventHub.homeFilters', {
   hideSoldout: false,
   search: '',
   sort: 'date', // 'date' | 'newest'
+  month: null,  // null = 전체, 1~12 = 해당 월
 })
 
 export function useHomeFilters() {
@@ -18,10 +19,12 @@ export function useHomeFilters() {
     hideSoldout: filters.hideSoldout ?? false,
     search:      filters.search      ?? '',
     sort:        filters.sort        ?? 'date',
-    setStatus:      status      => setFilters({ ...filters, status }),
-    setCategory:    category    => setFilters({ ...filters, category }),
+    month:       filters.month       ?? null,
+    setStatus:      status   => setFilters({ ...filters, status, month: null }),
+    setCategory:    category => setFilters({ ...filters, category }),
     setHideSoldout: hideSoldout => setFilters({ ...filters, hideSoldout }),
     setSearch:      search      => setFilters({ ...filters, search }),
     setSort:        sort        => setFilters({ ...filters, sort }),
+    setMonth:       month       => setFilters({ ...filters, month }),
   }
 }
