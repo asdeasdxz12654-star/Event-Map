@@ -7,10 +7,8 @@
 // 시크릿 등록:
 //   npx wrangler secret put SUPABASE_URL
 //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-//   npx wrangler secret put ADMIN_TOKEN_HASH      (값: adb9e48ae90664c4d7922aa850587360cff32781a14c3474d616b5ade016d621)
-//   npx wrangler secret put ALLOWED_ORIGIN        (값: 프론트엔드 도메인, ex: https://your-site.pages.dev)
-//   npx wrangler secret put NAVER_MAPS_CLIENT_ID  (네이버 Maps API Client ID)
-//   npx wrangler secret put NAVER_MAPS_CLIENT_SECRET (네이버 Maps API Client Secret)
+//   npx wrangler secret put ADMIN_TOKEN_HASH   (값: adb9e48ae90664c4d7922aa850587360cff32781a14c3474d616b5ade016d621)
+//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://your-site.pages.dev)
 
 function corsHeaders(env = {}) {
   return {
@@ -95,42 +93,6 @@ async function handleAdmin(request, env, pathname) {
   return json({ error: 'not_found' }, env, { status: 404 })
 }
 
-async function naverStaticMap(request, env) {
-  const url = new URL(request.url)
-  const lat = parseFloat(url.searchParams.get('lat'))
-  const lng = parseFloat(url.searchParams.get('lng'))
-
-  if (isNaN(lat) || isNaN(lng) || lat < 33 || lat > 39 || lng < 124 || lng > 132) {
-    return new Response('Invalid coordinates', { status: 400, headers: corsHeaders(env) })
-  }
-
-  const mapUrl = new URL('https://naveropenapi.apigw.ntruss.com/map-static/v2/raster')
-  mapUrl.searchParams.set('w', '640')
-  mapUrl.searchParams.set('h', '320')
-  mapUrl.searchParams.set('center', `${lng},${lat}`)
-  mapUrl.searchParams.set('level', '15')
-  mapUrl.searchParams.set('scale', '2')
-  mapUrl.searchParams.set('markers', `type:d|size:mid|pos:${lng} ${lat}`)
-
-  const res = await fetch(mapUrl.toString(), {
-    headers: {
-      'X-NCP-APIGW-API-KEY-ID': env.NAVER_MAPS_CLIENT_ID ?? '',
-      'X-NCP-APIGW-API-KEY': env.NAVER_MAPS_CLIENT_SECRET ?? '',
-    },
-  })
-
-  if (!res.ok) return new Response('Map unavailable', { status: res.status, headers: corsHeaders(env) })
-
-  const img = await res.arrayBuffer()
-  return new Response(img, {
-    headers: {
-      ...corsHeaders(env),
-      'Content-Type': res.headers.get('Content-Type') || 'image/jpeg',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  })
-}
-
 const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
 
@@ -140,8 +102,6 @@ const routes = {
       env,
       { status: 501 }
     ),
-
-  '/api/naver-static-map': naverStaticMap,
 }
 
 export default {
