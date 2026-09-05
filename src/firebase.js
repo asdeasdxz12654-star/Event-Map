@@ -11,10 +11,13 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-export const app = initializeApp(firebaseConfig)
+// projectId 등 필수 값이 빠진 환경(로컬 개발, 시크릿 미설정)에서는 초기화하지 않는다.
+const isConfigured = !!(firebaseConfig.projectId && firebaseConfig.apiKey && firebaseConfig.appId)
+export const app = isConfigured ? initializeApp(firebaseConfig) : null
 
 // 브라우저가 지원할 때만(사파리 구버전, 인앱 브라우저 등은 미지원) messaging 인스턴스를 만든다.
 export async function getMessagingIfSupported() {
+  if (!app) return null
   if (!(await isSupported())) return null
   return getMessaging(app)
 }
