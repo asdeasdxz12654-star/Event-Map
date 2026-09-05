@@ -13,7 +13,7 @@ function loadScript(cb) {
   if (scriptState === 'loading') return
   scriptState = 'loading'
   const s = document.createElement('script')
-  s.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${CLIENT_ID}`
+  s.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${CLIENT_ID}`
   s.onload = () => { scriptState = 'ready'; pending.splice(0).forEach(fn => fn(null)) }
   s.onerror = () => { scriptState = 'error'; pending.splice(0).forEach(fn => fn(new Error('failed'))) }
   document.head.appendChild(s)
