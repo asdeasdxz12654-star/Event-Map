@@ -7,8 +7,10 @@
 // 시크릿 등록:
 //   npx wrangler secret put SUPABASE_URL
 //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-//   npx wrangler secret put ADMIN_TOKEN_HASH   (값: adb9e48ae90664c4d7922aa850587360cff32781a14c3474d616b5ade016d621)
-//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://your-site.pages.dev)
+//   npx wrangler secret put ADMIN_TOKEN_HASH      (값: adb9e48ae90664c4d7922aa850587360cff32781a14c3474d616b5ade016d621)
+//   npx wrangler secret put ALLOWED_ORIGIN        (값: 프론트엔드 도메인, ex: https://your-site.pages.dev)
+//   npx wrangler secret put NAVER_MAPS_CLIENT_ID  (네이버 Maps API Client ID)
+//   npx wrangler secret put NAVER_MAPS_CLIENT_SECRET (네이버 Maps API Client Secret)
 
 function corsHeaders(env = {}) {
   return {
@@ -102,7 +104,7 @@ async function naverStaticMap(request, env) {
     return new Response('Invalid coordinates', { status: 400, headers: corsHeaders(env) })
   }
 
-  const mapUrl = new URL('https://naverapihub.apigw.ntruss.com/map-static/v2/raster')
+  const mapUrl = new URL('https://naveropenapi.apigw.ntruss.com/map-static/v2/raster')
   mapUrl.searchParams.set('w', '640')
   mapUrl.searchParams.set('h', '320')
   mapUrl.searchParams.set('center', `${lng},${lat}`)
@@ -112,8 +114,8 @@ async function naverStaticMap(request, env) {
 
   const res = await fetch(mapUrl.toString(), {
     headers: {
-      'X-NCP-APIGW-API-KEY-ID': env.NAVER_CLIENT_ID ?? '',
-      'X-NCP-APIGW-API-KEY': env.NAVER_CLIENT_SECRET ?? '',
+      'X-NCP-APIGW-API-KEY-ID': env.NAVER_MAPS_CLIENT_ID ?? '',
+      'X-NCP-APIGW-API-KEY': env.NAVER_MAPS_CLIENT_SECRET ?? '',
     },
   })
 
