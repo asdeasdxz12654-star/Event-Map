@@ -45,6 +45,7 @@ const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악
 정보(title, 날짜, 장소)를 추출해라. 참가하는 회사명은 organizer 대신 tags에 담아라.
 제목이 '[공식]'으로 시작하는 항목은 행사 공식 웹사이트에서 가져온 내용이므로 is_event는 항상 true다.
 페이지에서 파악되는 가장 가까운 예정 또는 진행 중인 행사 일정을 추출해라.
+한국 국내에서 개최되는 행사만 is_event를 true로 한다. 해외(일본·중국·대만·미국 등)에서 열리는 행사는 is_event를 false로 한다.
 알 수 있는 정보만 채우고, 확실하지 않은 필드는 반드시 null로 남겨라 (추측해서 채우지 말 것).
 confidence 기준 — 아래를 엄격히 따라라:
 - "high"  : title·start_date·venue 세 가지가 모두 기사에서 명확히 확인됨
@@ -104,6 +105,18 @@ async function callGroq(articleText) {
 }
 
 const VALID_CATEGORIES = ['게임전시', '코스프레', '게임음악']
+
+const OVERSEAS_KEYWORDS = [
+  '타이베이', '도쿄', '오사카', '교토', '나고야', '요코하마', '삿포로', '후쿠오카',
+  '상하이', '베이징', '광저우', '청두', '홍콩', '마카오', '싱가포르', '방콕',
+  '뉴욕', '로스앤젤레스', '라스베가스', '런던', '파리', 'taipei', 'tokyo',
+  'osaka', 'shanghai', 'beijing', 'hongkong', 'singapore', 'bangkok',
+]
+
+function isOverseasVenue(venue, venueAddress) {
+  const text = `${venue ?? ''} ${venueAddress ?? ''}`.toLowerCase()
+  return OVERSEAS_KEYWORDS.some(kw => text.includes(kw.toLowerCase()))
+}
 
 async function extractEvent(item) {
   const articleText = [
@@ -264,6 +277,11 @@ async function processTextCandidates(label, sourceName, items) {
 
     if (!extracted || !extracted.is_event) {
       console.log('  -> 행사 소개 기사 아님, 스킵')
+      continue
+    }
+
+    if (isOverseasVenue(extracted.venue, extracted.venue_address)) {
+      console.log(`  -> 해외 행사(${extracted.venue}), 스킵`)
       continue
     }
 
