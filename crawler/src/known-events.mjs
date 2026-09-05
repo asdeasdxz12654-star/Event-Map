@@ -1,4 +1,5 @@
 // 날짜를 공식으로 계산할 수 있는 정기 행사를 LLM 없이 event_drafts에 직접 삽입한다.
+import { lookupVenueCoords } from './naver-local.mjs'
 // source_url: known-event://{slug}/{year} 형식으로 연도별 중복 삽입을 방지한다.
 // promote_event_draft() 트리거의 title+start_date dedup으로 events 테이블 중복도 방지된다.
 
@@ -172,15 +173,27 @@ export async function upsertKnownEvents(supabase) {
 
       console.log(`[known-events] ${extracted.title} 저장 (${extracted.start_date} ~ ${extracted.end_date})`)
 
-      const { error: approveError } = await supabase
+      const { data: approved, error: approveError } = await supabase
         .from('event_drafts')
         .update({ status: 'approved' })
         .eq('id', data.id)
+        .select('promoted_event_id')
+        .single()
 
       if (approveError) {
         console.error(`[known-events] ${slug}/${year} 자동 승인 실패:`, approveError.message)
       } else {
         console.log(`[known-events] ${extracted.title} 자동 승인됨`)
+        const coords = await lookupVenueCoords(extracted.venue, extracted.venue_address)
+        if (coords && approved?.promoted_event_id) {
+          const { error: coordError } = await supabase
+            .from('events')
+            .update({ venue_lat: coords.lat, venue_lng: coords.lng })
+            .eq('id', approved.promoted_event_id)
+            .is('venue_lat', null)
+          if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
+          else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
+        }
       }
     }
   }

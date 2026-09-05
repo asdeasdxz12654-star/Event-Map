@@ -23,6 +23,7 @@ import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
 import { fetchKintexCandidates, buildKintexDraft } from './kintex.mjs'
 import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
+import { lookupVenueCoords } from './naver-local.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -134,6 +135,21 @@ async function alreadyCollected(sourceUrl) {
   return !!data
 }
 
+// 행사 ID가 있고 venue 정보가 있을 때만 네이버 지역 API로 좌표를 조회해 events에 업데이트한다.
+// 좌표가 이미 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
+async function attachCoords(eventId, venue, venueAddress) {
+  if (!eventId) return
+  const coords = await lookupVenueCoords(venue, venueAddress)
+  if (!coords) return
+  const { error } = await supabase
+    .from('events')
+    .update({ venue_lat: coords.lat, venue_lng: coords.lng })
+    .eq('id', eventId)
+    .is('venue_lat', null) // 이미 좌표가 있으면 덮어쓰지 않음
+  if (error) console.warn('  [지역검색] 좌표 저장 실패:', error.message)
+  else console.log(`  -> 좌표 설정: ${coords.lat}, ${coords.lng}`)
+}
+
 // RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
 // 자동 승인 조건:
 //   1) confidence:high — Groq가 title·start_date·venue 모두 확인했다고 판단
@@ -160,14 +176,17 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
   console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
 
   if (shouldAutoApprove(extracted)) {
-    const { error: approveError } = await supabase
+    const { data: approved, error: approveError } = await supabase
       .from('event_drafts')
       .update({ status: 'approved' }) // promote_event_draft() 트리거가 events에 반영
       .eq('id', data.id)
+      .select('promoted_event_id')
+      .single()
     if (approveError) {
       console.error('  -> 자동 승인 실패(검수 대기로 남음):', approveError.message)
     } else {
       console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
+      await attachCoords(approved?.promoted_event_id, extracted.venue, extracted.venue_address)
     }
   }
 
