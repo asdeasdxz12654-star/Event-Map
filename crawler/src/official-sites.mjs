@@ -16,14 +16,9 @@ function site(name, url, activeMonths = null, checkInterval = 'yearly') {
 }
 
 export const OFFICIAL_SITES = [
-  // 게임 전시
-  site('지스타',       'https://www.gstar.or.kr/',                          [8, 9, 10, 11]),
-  site('플레이엑스포', 'https://www.playx4.or.kr/b2c/main/main.php',        [3, 4, 5]),
-  site('BIC페스티벌',  'https://www.bicfest.org/tickets',                   [6, 7, 8]),
-  // 애니/코스프레
-  site('코믹월드',     'https://comicw.net/c',                              null, 'monthly'),
-  site('AGF',          'https://www.agfkorea.com/exhibition?idx=1',         [10, 11, 12]),
-  site('일러스타페스', 'https://illustar.net/',                             null, 'monthly'),
+  // 애니/코스프레 — 자체 API/정기 행사 등록이 없어서 공식 사이트로 직접 확인
+  site('코믹월드',     'https://comicw.net/c',   null, 'monthly'),
+  site('일러스타페스', 'https://illustar.net/',  null, 'monthly'),
 ]
 
 // script·style 제거 후 태그 걷어내고 공백 정리
