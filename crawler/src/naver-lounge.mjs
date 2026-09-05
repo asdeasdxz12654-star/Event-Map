@@ -12,15 +12,15 @@ const LOUNGE_API = 'https://comm-api.game.naver.com/nng_main/v1/community/lounge
 const LOUNGES = [
   {
     name: '젠레스 존 제로', loungeId: 'ZZZ', boardId: 11,
-    keywords: ['호요랜드', '콜라보', '팝업스토어', '축제', '콘서트', '굿즈', '오프라인'],
+    keywords: ['호요랜드', '콜라보', '팝업스토어', '축제', '콘서트', '음악회', '공연', '굿즈', '오프라인'],
   },
   {
     name: '이환', loungeId: 'NTE', boardId: 1,
-    keywords: ['콜라보', '굿즈', '오프라인', '공연', '콘서트', '팝업스토어'],
+    keywords: ['콜라보', '굿즈', '오프라인', '공연', '콘서트', '음악회', '팝업스토어'],
   },
   {
     name: '명조', loungeId: 'WutheringWaves', boardId: 1,
-    keywords: ['콜라보', '띵조 페스티벌', '월드 투어', '띵조카니발', '띵조파크', '띵조마켓', '굿즈', '띵조월드', '띵조'],
+    keywords: ['콜라보', '띵조 페스티벌', '월드 투어', '띵조카니발', '띵조파크', '띵조마켓', '굿즈', '띵조월드', '띵조', '콘서트', '음악회', '공연'],
   },
 ]
 
