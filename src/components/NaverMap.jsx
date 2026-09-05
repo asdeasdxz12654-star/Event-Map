@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const CLIENT_ID = import.meta.env.VITE_NAVER_MAPS_CLIENT_ID ?? '1whplxsqes'
+const CLIENT_ID = import.meta.env.VITE_NAVER_MAPS_CLIENT_ID ?? 'x7c8jim104'
 
 // 모듈 스코프에서 스크립트 로딩 상태를 관리 — 여러 컴포넌트가 중복 로드하지 않도록
 let scriptState = 'idle' // 'idle' | 'loading' | 'ready' | 'error'
