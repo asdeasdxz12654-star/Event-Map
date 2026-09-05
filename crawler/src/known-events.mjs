@@ -49,6 +49,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: 'BEXCO 제1전시장',
         venue_address: '부산광역시 해운대구 APEC로 55',
+        venue_lat: 35.1688,
+        venue_lng: 129.1363,
         organizer: '한국게임산업협회',
         description: '국내 최대 게임 전시회. 매년 11월 셋째 주 목~일, 부산 BEXCO 개최.',
         ticket_url: 'https://www.gstar.or.kr/',
@@ -74,6 +76,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: 'KINTEX 제1전시장',
         venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+        venue_lat: 37.6727,
+        venue_lng: 126.7560,
         organizer: '경기콘텐츠진흥원',
         description: '경기도 고양 KINTEX에서 열리는 게임·콘텐츠 박람회. 매년 5월 넷째 주 목~일 개최.',
         ticket_url: 'https://www.playx4.or.kr/',
@@ -99,6 +103,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: '코엑스',
         venue_address: '서울특별시 강남구 영동대로 513',
+        venue_lat: 37.5119,
+        venue_lng: 127.0591,
         organizer: null,
         description: '국내 최대 서브컬처·코스프레 행사. 매년 12월 첫째 주 토~일, 코엑스 개최.',
         ticket_url: 'https://www.agfkorea.com/',
@@ -124,6 +130,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: 'BEXCO',
         venue_address: '부산광역시 해운대구 APEC로 55',
+        venue_lat: 35.1688,
+        venue_lng: 129.1363,
         organizer: '부산정보산업진흥원',
         description: '국내 인디게임 개발자를 위한 축제. 매년 8월 둘째 주 금~일, 부산 BEXCO 개최.',
         ticket_url: 'https://www.bicfest.org/',
@@ -184,7 +192,11 @@ export async function upsertKnownEvents(supabase) {
         console.error(`[known-events] ${slug}/${year} 자동 승인 실패:`, approveError.message)
       } else {
         console.log(`[known-events] ${extracted.title} 자동 승인됨`)
-        const coords = await lookupVenueCoords(extracted.venue, extracted.venue_address)
+        // 하드코딩 좌표를 우선 사용, 없으면 Nominatim 조회
+        const hardcodedCoords = (extracted.venue_lat && extracted.venue_lng)
+          ? { lat: extracted.venue_lat, lng: extracted.venue_lng }
+          : null
+        const coords = hardcodedCoords ?? await lookupVenueCoords(extracted.venue, extracted.venue_address)
         if (coords && approved?.promoted_event_id) {
           const { error: coordError } = await supabase
             .from('events')
