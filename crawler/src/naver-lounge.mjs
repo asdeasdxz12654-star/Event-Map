@@ -10,20 +10,23 @@
 const LOUNGE_API = 'https://comm-api.game.naver.com/nng_main/v1/community/lounge'
 
 const LOUNGES = [
-  { name: '젠레스 존 제로', loungeId: 'ZZZ',            boardId: 11 },
-  { name: '이환',           loungeId: 'NTE',            boardId: 1  },
-  { name: '명조',           loungeId: 'WutheringWaves', boardId: 1  },
+  {
+    name: '젠레스 존 제로', loungeId: 'ZZZ', boardId: 11,
+    keywords: ['호요랜드', '콜라보', '팝업스토어', '축제', '콘서트', '굿즈', '오프라인'],
+  },
+  {
+    name: '이환', loungeId: 'NTE', boardId: 1,
+    keywords: ['콜라보', '굿즈', '오프라인', '공연', '콘서트', '팝업스토어'],
+  },
+  {
+    name: '명조', loungeId: 'WutheringWaves', boardId: 1,
+    keywords: ['콜라보', '띵조 페스티벌', '월드 투어', '띵조카니발', '띵조파크', '띵조마켓', '굿즈', '띵조월드', '띵조'],
+  },
 ]
 
-// 이 키워드가 제목·본문에 없으면 Groq에 보내지 않는다 (인게임 이벤트 공지가 훨씬 많아서 필수).
-const OFFLINE_KEYWORDS = [
-  '팝업', '오프라인', '행사', '전시', '페스티벌', '콘서트',
-  '호요랜드', '현장', '굿즈', '축제', '투어',
-]
-
-function looksOfflineEvent(title, text) {
+function looksOfflineEvent(title, text, keywords) {
   const combined = `${title} ${text}`
-  return OFFLINE_KEYWORDS.some(k => combined.includes(k))
+  return keywords.some(k => combined.includes(k))
 }
 
 // "20260831130036" → ISO 문자열 (KST)
@@ -63,7 +66,7 @@ export async function fetchNaverLoungeCandidates() {
   const results = []
   let succeeded = 0
 
-  for (const { name, loungeId, boardId } of LOUNGES) {
+  for (const { name, loungeId, boardId, keywords } of LOUNGES) {
     const url = `${LOUNGE_API}/${loungeId}/feed?boardId=${boardId}&buffFilteringYN=N&limit=25&offset=0&order=NEW`
 
     let data
@@ -87,7 +90,7 @@ export async function fetchNaverLoungeCandidates() {
       const title = feed?.title ?? ''
       const text = extractText(feed?.contents ?? '')
 
-      if (!looksOfflineEvent(title, text)) continue // 오프라인 행사 아니면 스킵
+      if (!looksOfflineEvent(title, text, keywords)) continue // 오프라인 행사 아니면 스킵
 
       const link = feedLink?.pc
       if (!link) continue
