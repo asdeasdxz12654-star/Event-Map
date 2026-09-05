@@ -15,11 +15,7 @@ function site(name, url, activeMonths = null, checkInterval = 'yearly') {
   return { name, url, activeMonths, checkInterval }
 }
 
-export const OFFICIAL_SITES = [
-  // 애니/코스프레 — 자체 API/정기 행사 등록이 없어서 공식 사이트로 직접 확인
-  site('코믹월드',     'https://comicw.net/c',   null, 'monthly'),
-  site('일러스타페스', 'https://illustar.net/',  null, 'monthly'),
-]
+export const OFFICIAL_SITES = []
 
 // script·style 제거 후 태그 걷어내고 공백 정리
 function stripTags(html = '') {
