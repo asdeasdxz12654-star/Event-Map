@@ -2,25 +2,35 @@
 // comm-api.game.naver.com 내부 JSON API를 직접 호출하며, 인증 없이 공개 접근 가능 (확인됨).
 // 게임사 운영자(game_manager) 글만 수집하고, 오프라인 행사 키워드 사전 필터 후 Groq로 추출한다.
 //
-// 확인된 라운지/boardId:
-//   ZZZ(젠레스 존 제로): boardId=11 "🔊공지사항"
-//   NTE(이환):           boardId=1  "📢공지사항"
-//   WutheringWaves(명조): boardId=1 "📢공지사항"
+// URL 형식: /nng_main/v1/user/{userIdHash}/feeds?limit=20&loungeId={loungeId}&offset=0&order=NEW
+// 응답 구조: data.content.feeds[] — 각 항목: feed(title/contents/createdDate), user(userRoleCode), feedLink(pc)
 
-const LOUNGE_API = 'https://comm-api.game.naver.com/nng_main/v1/community/lounge'
+const USER_FEEDS_API = 'https://comm-api.game.naver.com/nng_main/v1/user'
 
 const LOUNGES = [
   {
-    name: '젠레스 존 제로', loungeId: 'ZZZ', boardId: 11,
+    name: '젠레스 존 제로',
+    userId: '9186dc92e8c6dda1f94af1c7d82a07ec',
+    loungeId: 'ZZZ',
     keywords: ['호요랜드', '콜라보', '팝업스토어', '축제', '콘서트', '음악회', '공연', '굿즈', '오프라인'],
   },
   {
-    name: '이환', loungeId: 'NTE', boardId: 1,
-    keywords: ['콜라보', '굿즈', '오프라인', '공연', '콘서트', '음악회', '팝업스토어'],
+    name: '승리의 여신: 니케',
+    userId: '6cd045bd8eedfccc068bd0e70a81ea26',
+    loungeId: 'NIKKE_The_Goddess_of_Victory',
+    keywords: ['콜라보', '콘서트', '음악회', '무대', '공연', '오프라인', '팝업스토어', '굿즈', '현장'],
   },
   {
-    name: '명조', loungeId: 'WutheringWaves', boardId: 1,
+    name: '명조',
+    userId: '682d60022b932fdd0264e843596ba233',
+    loungeId: 'WutheringWaves',
     keywords: ['콜라보', '띵조 페스티벌', '월드 투어', '띵조카니발', '띵조파크', '띵조마켓', '굿즈', '띵조월드', '띵조', '콘서트', '음악회', '공연'],
+  },
+  {
+    name: '이환',
+    userId: '75e5b10204562ac8c168240d3a5546cf',
+    loungeId: 'NTE',
+    keywords: ['콜라보', '굿즈', '오프라인', '공연', '콘서트', '음악회', '팝업스토어'],
   },
 ]
 
@@ -66,8 +76,8 @@ export async function fetchNaverLoungeCandidates() {
   const results = []
   let succeeded = 0
 
-  for (const { name, loungeId, boardId, keywords } of LOUNGES) {
-    const url = `${LOUNGE_API}/${loungeId}/feed?boardId=${boardId}&buffFilteringYN=N&limit=25&offset=0&order=NEW`
+  for (const { name, userId, loungeId, keywords } of LOUNGES) {
+    const url = `${USER_FEEDS_API}/${userId}/feeds?limit=20&loungeId=${loungeId}&offset=0&order=NEW`
 
     let data
     try {
