@@ -22,6 +22,7 @@ function loadScript(cb) {
 export default function NaverMap({ lat, lng, venueName, linkUrl }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
+  const markerRef = useRef(null)
   const [ready, setReady] = useState(scriptState === 'ready')
   const [failed, setFailed] = useState(scriptState === 'error')
 
@@ -35,7 +36,11 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
     const nv = window.naver?.maps
     if (!nv) return
 
-    mapRef.current?.destroy()
+    try { markerRef.current?.setMap(null) } catch (_) {}
+    markerRef.current = null
+    try { mapRef.current?.destroy() } catch (_) {}
+    mapRef.current = null
+
     const center = new nv.LatLng(lat, lng)
     const map = new nv.Map(containerRef.current, {
       center,
@@ -45,10 +50,15 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
       scaleControl: false,
       mapDataControl: false,
     })
-    new nv.Marker({ position: center, map, title: venueName })
+    markerRef.current = new nv.Marker({ position: center, map, title: venueName })
     mapRef.current = map
 
-    return () => { mapRef.current?.destroy(); mapRef.current = null }
+    return () => {
+      try { markerRef.current?.setMap(null) } catch (_) {}
+      markerRef.current = null
+      try { mapRef.current?.destroy() } catch (_) {}
+      mapRef.current = null
+    }
   }, [ready, lat, lng, venueName])
 
   if (failed) {
