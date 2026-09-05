@@ -66,22 +66,25 @@ export default function EventDetailPage() {
 
   const hasCoords = event.venueLat != null && event.venueLng != null
 
-  // 지도 보기 링크
+  // 지도 검색은 도로명 주소만 사용한다.
+  // venue_name에는 "7·8홀"처럼 홀 번호가 포함되는 경우가 있어 지도 검색 결과가 부정확해진다.
   const venueAddress = event.venueAddress ?? ''
   const venueName = event.venue ?? ''
-  const naverMapUrl = `https://map.naver.com/v5/search/${encodeURIComponent(venueAddress || venueName)}`
+  const mapSearch = encodeURIComponent(venueAddress || venueName)
+
+  const naverMapUrl = `https://map.naver.com/v5/search/${mapSearch}`
   const kakaoMapUrl = hasCoords
     ? `https://map.kakao.com/link/to/${encodeURIComponent(venueName)},${event.venueLat},${event.venueLng}`
-    : `https://map.kakao.com/link/search/${encodeURIComponent([venueName, venueAddress].filter(Boolean).join(' '))}`
+    : `https://map.kakao.com/link/search/${mapSearch}`
 
-  // 대중교통 길찾기 링크 (현재 위치 → 행사장)
+  // 대중교통 길찾기 — 목적지 레이블도 주소로 통일해 홀 번호가 노출되지 않게 한다.
   // 네이버 방향 URL: directions/{from}/{to}/{경유}/{mode}, 좌표 순서는 경도,위도
   const naverTransitUrl = hasCoords
-    ? `https://map.naver.com/v5/directions/-/-/${encodeURIComponent(venueName)},${event.venueLng},${event.venueLat}/transit`
-    : `https://map.naver.com/v5/search/${encodeURIComponent(venueAddress || venueName)}`
+    ? `https://map.naver.com/v5/directions/-/-/${mapSearch},${event.venueLng},${event.venueLat}/transit`
+    : `https://map.naver.com/v5/search/${mapSearch}`
   const googleTransitUrl = hasCoords
     ? `https://www.google.com/maps/dir/?api=1&destination=${event.venueLat},${event.venueLng}&travelmode=transit`
-    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(venueAddress || venueName)}&travelmode=transit`
+    : `https://www.google.com/maps/dir/?api=1&destination=${mapSearch}&travelmode=transit`
 
   return (
     <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
