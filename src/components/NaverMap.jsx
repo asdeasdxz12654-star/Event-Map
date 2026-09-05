@@ -51,7 +51,23 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
     return () => { mapRef.current?.destroy(); mapRef.current = null }
   }, [ready, lat, lng, venueName])
 
-  if (failed) return null
+  if (failed) {
+    return (
+      <a
+        href={linkUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center w-full h-[220px] bg-zinc-800/60 hover:bg-zinc-700/60 transition-colors group"
+      >
+        <div className="text-center">
+          <div className="text-3xl mb-2">🗺</div>
+          <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
+            네이버 지도에서 보기 →
+          </span>
+        </div>
+      </a>
+    )
+  }
 
   return (
     <div className="relative">
