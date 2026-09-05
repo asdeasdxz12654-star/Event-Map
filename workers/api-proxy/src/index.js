@@ -93,6 +93,42 @@ async function handleAdmin(request, env, pathname) {
   return json({ error: 'not_found' }, env, { status: 404 })
 }
 
+async function naverStaticMap(request, env) {
+  const url = new URL(request.url)
+  const lat = parseFloat(url.searchParams.get('lat'))
+  const lng = parseFloat(url.searchParams.get('lng'))
+
+  if (isNaN(lat) || isNaN(lng) || lat < 33 || lat > 39 || lng < 124 || lng > 132) {
+    return new Response('Invalid coordinates', { status: 400, headers: corsHeaders(env) })
+  }
+
+  const mapUrl = new URL('https://naverapihub.apigw.ntruss.com/map-static/v2/raster')
+  mapUrl.searchParams.set('w', '640')
+  mapUrl.searchParams.set('h', '320')
+  mapUrl.searchParams.set('center', `${lng},${lat}`)
+  mapUrl.searchParams.set('level', '15')
+  mapUrl.searchParams.set('scale', '2')
+  mapUrl.searchParams.set('markers', `type:d|size:mid|pos:${lng} ${lat}`)
+
+  const res = await fetch(mapUrl.toString(), {
+    headers: {
+      'X-NCP-APIGW-API-KEY-ID': env.NAVER_CLIENT_ID ?? '',
+      'X-NCP-APIGW-API-KEY': env.NAVER_CLIENT_SECRET ?? '',
+    },
+  })
+
+  if (!res.ok) return new Response('Map unavailable', { status: res.status, headers: corsHeaders(env) })
+
+  const img = await res.arrayBuffer()
+  return new Response(img, {
+    headers: {
+      ...corsHeaders(env),
+      'Content-Type': res.headers.get('Content-Type') || 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  })
+}
+
 const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
 
@@ -102,6 +138,8 @@ const routes = {
       env,
       { status: 501 }
     ),
+
+  '/api/naver-static-map': naverStaticMap,
 }
 
 export default {

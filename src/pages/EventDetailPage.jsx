@@ -72,6 +72,11 @@ export default function EventDetailPage() {
   const venueName = event.venue ?? ''
   const mapSearch = encodeURIComponent(venueAddress || venueName)
 
+  const WORKER_BASE = import.meta.env.VITE_ADMIN_API_URL ?? 'https://event-map-api-proxy.asdeasdxz12654.workers.dev'
+  const staticMapSrc = hasCoords
+    ? `${WORKER_BASE}/api/naver-static-map?lat=${event.venueLat}&lng=${event.venueLng}`
+    : null
+
   const naverMapUrl = `https://map.naver.com/v5/search/${mapSearch}`
   const kakaoMapUrl = hasCoords
     ? `https://map.kakao.com/link/to/${encodeURIComponent(venueName)},${event.venueLat},${event.venueLng}`
@@ -176,47 +181,49 @@ export default function EventDetailPage() {
           </div>
 
           {/* 위치 & 경로 */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-            <h2 className="text-sm font-semibold text-white mb-3">위치 & 경로</h2>
-
-            <p className="text-xs text-zinc-500 mb-1.5">지도에서 보기</p>
-            <div className="flex gap-2 mb-3">
+          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
+            {staticMapSrc && (
               <a
                 href={naverMapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 py-2.5 bg-green-600/80 hover:bg-green-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
+                title="네이버 지도에서 보기"
+                className="block relative"
               >
-                네이버 지도
+                <img
+                  src={staticMapSrc}
+                  alt={`${venueName} 위치 지도`}
+                  loading="lazy"
+                  className="w-full object-cover"
+                  style={{ height: '200px' }}
+                  onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+                />
+                <span className="absolute bottom-2 right-2 text-xs bg-black/60 text-white px-2 py-0.5 rounded-full">
+                  네이버 지도에서 보기 →
+                </span>
               </a>
-              <a
-                href={kakaoMapUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-2.5 bg-yellow-500/80 hover:bg-yellow-500 text-black text-sm font-medium rounded-xl text-center transition-colors"
-              >
-                카카오맵
-              </a>
-            </div>
-
-            <p className="text-xs text-zinc-500 mb-1.5">대중교통 길찾기</p>
-            <div className="flex gap-2">
-              <a
-                href={naverTransitUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl text-center transition-colors"
-              >
-                🚇 네이버
-              </a>
-              <a
-                href={googleTransitUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
-              >
-                🗺 구글 맵
-              </a>
+            )}
+            <div className="p-4">
+              <h2 className="text-sm font-semibold text-white mb-3">위치 & 경로</h2>
+              <p className="text-xs text-zinc-500 mb-1.5">대중교통 길찾기</p>
+              <div className="flex gap-2">
+                <a
+                  href={naverTransitUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl text-center transition-colors"
+                >
+                  🚇 네이버
+                </a>
+                <a
+                  href={googleTransitUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
+                >
+                  🗺 구글 맵
+                </a>
+              </div>
             </div>
           </div>
 
