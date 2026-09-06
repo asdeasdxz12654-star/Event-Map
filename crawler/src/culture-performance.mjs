@@ -47,12 +47,15 @@ const FRANCHISE_KEYWORDS = [
   '지스타', '코믹월드', 'AGF', '일러스타페스', '원신', '스타레일', '젠레스',
   '블루아카이브', '메이플스토리', '던전앤파이터', '로스트아크', '리니지', '배틀그라운드',
   '검은사막', '쿠키런', '오버워치', '리그오브레전드', '파이널판타지', '젤다', '포켓몬',
+  'WONDERLIVET', '코코페',
+  '부천국제애니메이션페스티벌', 'BIAF', '부천국제만화축제',
 ]
 
 // 게임/코스프레/서브컬처 관련 일반 키워드 — 프랜차이즈명 없이 이 단어만 걸리면 confidence: low
 // (일반 연극·전시 데이터셋이라 '게임' 단독으로는 무관한 결과가 섞일 수 있어 사람 검수로 넘긴다).
 const GENERIC_KEYWORDS = [
   '게임', '게임음악', '코스프레', '코스튬', '서브컬처', '애니메이션', '애니송', '성우', 'e스포츠', '이스포츠',
+  '만화축제', '만화페스티벌',
 ]
 
 function stripHtml(html = '') {
@@ -76,6 +79,19 @@ function rowText(row) {
 function looksRelevant(row) {
   const text = rowText(row)
   return FRANCHISE_KEYWORDS.some(k => text.includes(k)) || GENERIC_KEYWORDS.some(k => text.includes(k))
+}
+
+// 코스프레·서브컬처 행사 신호 — FRANCHISE_KEYWORDS 중 코스프레 계열만 별도 분리
+const COSPLAY_SIGNALS = ['코스프레', '코스튬', '서브컬처', '코믹월드', 'AGF', '일러스타페스']
+// 게임전시 신호 — 지스타 등 게임쇼·전시 계열
+const GAME_EXPO_SIGNALS = ['지스타', '게임 전시', '게임쇼']
+
+// KINTEX와 동일한 방식으로 category를 결정한다. KCISA는 공연·전시 6만여 건을 아우르는
+// 일반 데이터셋이라 '게임음악' 하드코딩이 아니라 키워드로 구분해야 한다.
+function estimateCategory(text) {
+  if (COSPLAY_SIGNALS.some(k => text.includes(k))) return '코스프레'
+  if (GAME_EXPO_SIGNALS.some(k => text.includes(k))) return '게임전시'
+  return '게임음악'
 }
 
 function estimateConfidence(text) {
@@ -178,7 +194,7 @@ export function buildCulturePerformanceDraft(candidate) {
   return EventExtractionSchema.parse({
     is_event: true,
     title: raw.title ?? null,
-    category: '게임음악',
+    category: estimateCategory(text),
     start_date: start,
     end_date: end,
     venue: raw.eventSite ?? null,
