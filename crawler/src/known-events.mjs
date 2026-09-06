@@ -3,6 +3,12 @@ import { lookupVenueCoords } from './naver-local.mjs'
 // source_url: known-event://{slug}/{year} 형식으로 연도별 중복 삽입을 방지한다.
 // promote_event_draft() 트리거의 title+start_date dedup으로 events 테이블 중복도 방지된다.
 
+// 행사 유형별 고정 대표 포스터 — 회차마다 검색하지 않고 하나로 통일한다.
+// 교체 시 이 상수만 수정하면 이후 새 회차에 자동 반영된다.
+const COMICWORLD_POSTER = 'https://pup-post-phinf.pstatic.net/MjAyNjAzMTRfMTcg/MDAxNzczNDgxMDcyMDIw.f35-iPvMcNWo1hSMJRcL49uVBFp-W5uEtsguEJu9oBQg.25vv9T5oJRQTbDIxlKoXsq40Sq6w5mUZwqdtRuWruWUg.JPEG/POST_IMAGE_ENCODING_20260314_183749_530.jpg'
+const COSANDCOMIC_POSTER = 'https://cos.guide/img/x-card-and-ogp.jpg?ver=2026061402'
+const ILLUSTARFES_POSTER = 'http://imgnews.naver.net/image/5401/2026/05/20/0000387802_001_20260520085212709.jpeg'
+
 function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
 }
@@ -153,6 +159,7 @@ const ONE_OFF_EVENTS = [
   // ── 2026년 하반기 (web 검색 기반 확인, 2026-09-06 조사) ──
   {
     slug: 'comicworld-336-ilsan', year: 2026,
+    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 336 일산', category: '코스프레',
       start_date: '2026-09-12', end_date: '2026-09-13',
@@ -182,6 +189,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'cosandcomic-94', year: 2026,
+    posterUrl: COSANDCOMIC_POSTER,
     data: {
       is_event: true, title: '제94회 코스앤코믹 페스티벌', category: '코스프레',
       start_date: '2026-09-19', end_date: '2026-09-20',
@@ -196,6 +204,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'comicworld-337-ulsan', year: 2026,
+    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 337 울산', category: '코스프레',
       start_date: '2026-10-03', end_date: '2026-10-04',
@@ -210,6 +219,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'illustarfes-12-kintex', year: 2026,
+    posterUrl: ILLUSTARFES_POSTER,
     data: {
       is_event: true, title: '일러스타 페스 12', category: '코스프레',
       start_date: '2026-10-10', end_date: '2026-10-11',
@@ -224,6 +234,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'cosandcomic-95', year: 2026,
+    posterUrl: COSANDCOMIC_POSTER,
     data: {
       is_event: true, title: '제95회 코스앤코믹 페스티벌', category: '코스프레',
       start_date: '2026-10-17', end_date: '2026-10-18',
@@ -252,6 +263,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'comicworld-338-suwon', year: 2026,
+    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 338 수원', category: '코스프레',
       start_date: '2026-10-24', end_date: '2026-10-25',
@@ -281,7 +293,7 @@ const ONE_OFF_EVENTS = [
   },
 ]
 
-async function upsertOneEvent(supabase, slug, year, extracted) {
+async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null) {
   const sourceUrl = `known-event://${slug}/${year}`
 
   const { data: existing } = await supabase
@@ -338,6 +350,15 @@ async function upsertOneEvent(supabase, slug, year, extracted) {
       if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
       else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
     }
+    if (posterUrl && approved?.promoted_event_id) {
+      const { error: posterError } = await supabase
+        .from('events')
+        .update({ poster_url: posterUrl })
+        .eq('id', approved.promoted_event_id)
+        .is('poster_url', null)
+      if (posterError) console.warn(`[known-events] 포스터 저장 실패:`, posterError.message)
+      else console.log(`[known-events] 포스터 설정됨`)
+    }
   }
 }
 
@@ -349,7 +370,7 @@ export async function upsertKnownEvents(supabase) {
     }
   }
   // 회차별 확정 행사 (ONE_OFF_EVENTS)
-  for (const { slug, year, data } of ONE_OFF_EVENTS) {
-    await upsertOneEvent(supabase, slug, year, data)
+  for (const { slug, year, data, posterUrl } of ONE_OFF_EVENTS) {
+    await upsertOneEvent(supabase, slug, year, data, posterUrl ?? null)
   }
 }
