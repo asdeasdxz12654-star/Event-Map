@@ -76,14 +76,12 @@ function buildSourceUrl(row) {
 }
 
 async function fetchKmrbPage(pIndex, stDate, edDate) {
-  const url = new URL(KMRB_API_URL)
-  url.searchParams.set('serviceKey', process.env.KMRB_API_KEY)
-  url.searchParams.set('pageNo', String(pIndex))
-  url.searchParams.set('numOfRows', String(ROWS_PER_PAGE))
-  url.searchParams.set('stDate', stDate)
-  url.searchParams.set('edDate', edDate)
+  // serviceKey는 data.go.kr에서 받은 URL 인코딩된 키 — searchParams.set()을 쓰면
+  // %2B가 %252B로 이중 인코딩되어 인증 실패함. 수동으로 query string에 붙인다.
+  const params = new URLSearchParams({ pageNo: String(pIndex), numOfRows: String(ROWS_PER_PAGE), stDate, edDate })
+  const fullUrl = `${KMRB_API_URL}?serviceKey=${process.env.KMRB_API_KEY}&${params.toString()}`
 
-  const res = await fetch(url)
+  const res = await fetch(fullUrl)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const xml = await res.text()
