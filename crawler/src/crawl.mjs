@@ -187,15 +187,20 @@ async function attachPosterImage(eventId, title) {
 //      (티켓·입장료 등 부가 정보가 없어서 medium이 된 케이스를 구제)
 // 잘못 승인된 경우 events에서 직접 삭제하면 된다.
 function shouldAutoApprove(extracted) {
+  if (!extracted.category) return false // events.category NOT NULL — category 없으면 승인 불가
   if (extracted.confidence === 'high') return true
   if (extracted.confidence === 'medium' && extracted.start_date && extracted.venue) return true
   return false
 }
 
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
+  // tags: null → [] 정규화 — DB 트리거가 json_array_elements(tags)를 쓰므로
+  // null이면 "cannot extract elements from a scalar" 에러 발생
+  const normalizedExtracted = extracted.tags == null ? { ...extracted, tags: [] } : extracted
+
   const { data, error } = await supabase
     .from('event_drafts')
-    .insert({ source_name, source_url, source_title, published_at, extracted })
+    .insert({ source_name, source_url, source_title, published_at, extracted: normalizedExtracted })
     .select('id')
     .single()
 
