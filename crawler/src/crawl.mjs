@@ -5,8 +5,9 @@
 // KOPIS(공연예술통합전산망) 공식 API에서 게임음악 관련 공연도 같은 큐에 합류시킨다 (kopis.mjs).
 // KINTEX(경기데이터드림 오픈API)의 행사 일정도 게임/애니/코스프레 키워드로 걸러 같은 방식으로
 // 합류시킨다 (kintex.mjs). 영등위 "외국인 국내 공연추천"에서는 일본 애니송/J-POP 아티스트
-// 내한공연과 게임/애니 콘서트를 찾는다 (kmrb.mjs). 셋 다 이미 구조화된 공식 데이터라 LLM
-// 없이 필드를 그대로 매핑한다.
+// 내한공연과 게임/애니 콘서트를 찾는다 (kmrb.mjs). 문화체육관광부(KCISA) "문화예술공연(통합)"
+// 오픈API에서도 같은 방식으로 게임/코스프레 관련 공연을 찾는다 (culture-performance.mjs).
+// 넷 다 이미 구조화된 공식 데이터라 LLM 없이 필드를 그대로 매핑한다.
 // 네이버 뉴스 검색으로 지스타/코믹월드처럼 자체 API 없는 고정 행사도 능동적으로 찾는다
 // (naver.mjs) — 자유 텍스트라 Groq 추출을 거친다. 게임메카·루리웹·인벤 등 개별 매체 RSS는
 // 쓰지 않는다 — 네이버가 이 매체들을 포함해 전부 색인하므로, 매체별 RSS/스크래핑을 유지
@@ -16,12 +17,13 @@
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택), KINTEX_API_KEY(선택),
-//         KMRB_API_KEY(선택)
+//         KMRB_API_KEY(선택), CULTURE_PERFORMANCE_API_KEY(선택)
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
 import { fetchKintexCandidates, buildKintexDraft } from './kintex.mjs'
 import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
+import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from './culture-performance.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 import { fetchEventPosterUrl } from './naver-image.mjs'
@@ -318,13 +320,15 @@ async function main() {
   // 날짜 공식으로 계산 가능한 정기 행사를 LLM 없이 먼저 등록
   await upsertKnownEvents(supabase)
 
-  // 구조화된 공식 데이터 소스 3종 — KOPIS(게임음악 공연), KINTEX(경기데이터드림, 게임/애니/
-  // 코스프레 행사), 영등위(외국인 국내 공연추천, 일본 애니송/J-POP 내한). 각 API 키가 없으면
-  // 해당 소스만 조용히 스킵된다 (로컬/부분 실행 지원).
+  // 구조화된 공식 데이터 소스 4종 — KOPIS(게임음악 공연), KINTEX(경기데이터드림, 게임/애니/
+  // 코스프레 행사), 영등위(외국인 국내 공연추천, 일본 애니송/J-POP 내한), 문화예술공연통합
+  // (KCISA, 전국 문화기관 공연 통합). 각 API 키가 없으면 해당 소스만 조용히 스킵된다
+  // (로컬/부분 실행 지원).
   const STRUCTURED_SOURCES = [
     { label: 'KOPIS', envVar: 'KOPIS_API_KEY', fetchFn: fetchKopisCandidates, buildFn: buildKopisDraft },
     { label: '킨텍스', envVar: 'KINTEX_API_KEY', fetchFn: fetchKintexCandidates, buildFn: buildKintexDraft },
     { label: '영등위', envVar: 'KMRB_API_KEY', fetchFn: fetchKmrbCandidates, buildFn: buildKmrbDraft },
+    { label: '문화예술공연통합', envVar: 'CULTURE_PERFORMANCE_API_KEY', fetchFn: fetchCulturePerformanceCandidates, buildFn: buildCulturePerformanceDraft },
   ]
   for (const source of STRUCTURED_SOURCES) {
     await processStructuredSource(source)
