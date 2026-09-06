@@ -7,7 +7,7 @@ function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
 }
 
-// 이 행사들(지스타 등)은 한국 기준(KST) 행사라 "오늘"도 KST로 계산한다 — UTC로 계산하면
+// 이 행사들은 한국 기준(KST) 행사라 "오늘"도 KST로 계산한다 — UTC로 계산하면
 // 자정 근처(00:00~08:59 KST, 전날 UTC) 9시간 동안 하루 전으로 잘못 판단해서 연도 계산이
 // 어긋날 수 있다 (notifier/send-notifications.mjs의 todayKST()와 동일한 이유/방식).
 function todayKST() {
@@ -34,6 +34,7 @@ function targetYears(build) {
   return [year]
 }
 
+// 날짜를 요일 공식으로 계산할 수 있는 연간 정기 행사
 const KNOWN_EVENTS = [
   {
     slug: 'gstar',
@@ -92,26 +93,26 @@ const KNOWN_EVENTS = [
   {
     slug: 'agf',
     build: (year) => {
-      // 12월 첫째 주 토요일 ~ 일요일 (6=토)
-      const start = nthWeekday(year, 11, 6, 1)
-      const end   = new Date(Date.UTC(year, 11, start.getUTCDate() + 1))
+      // 12월 첫째 주 금요일 ~ 일요일 (5=금) — 2026부터 KINTEX 이전·3일 개최로 변경
+      const start = nthWeekday(year, 11, 5, 1)
+      const end   = new Date(Date.UTC(year, 11, start.getUTCDate() + 2))
       return {
         is_event: true,
         title: `AGF ${year}`,
         category: '코스프레',
         start_date: toDateStr(start),
         end_date: toDateStr(end),
-        venue: '코엑스',
-        venue_address: '서울특별시 강남구 영동대로 513',
-        venue_lat: 37.5119,
-        venue_lng: 127.0591,
+        venue: 'KINTEX 제1전시장',
+        venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+        venue_lat: 37.6727,
+        venue_lng: 126.7560,
         organizer: null,
-        description: '국내 최대 서브컬처·코스프레 행사. 매년 12월 첫째 주 토~일, 코엑스 개최.',
+        description: '국내 최대 서브컬처·코스프레 행사. 매년 12월 첫째 주 금~일, KINTEX 개최.',
         ticket_url: 'https://www.agfkorea.com/',
         ticket_open_date: null,
         admission_fee: null,
         website: 'https://www.agfkorea.com/',
-        tags: ['코스프레', 'AGF', '서울', '코엑스', '서브컬처'],
+        tags: ['코스프레', 'AGF', '고양', 'KINTEX', '서브컬처'],
         confidence: 'high',
       }
     },
@@ -145,68 +146,210 @@ const KNOWN_EVENTS = [
   },
 ]
 
+// 날짜가 확정된 특정 회차 행사 — 정기 공식으로 계산이 어렵거나 회차별로 개최지·날짜가
+// 다른 행사를 직접 입력한다. source_url dedup이 있으므로 크롤러가 반복 실행돼도
+// 중복 삽입되지 않는다. 다음 회차가 확정되면 아래에 항목을 추가한다.
+const ONE_OFF_EVENTS = [
+  // ── 2026년 하반기 (web 검색 기반 확인, 2026-09-06 조사) ──
+  {
+    slug: 'comicworld-336-ilsan', year: 2026,
+    data: {
+      is_event: true, title: '코믹월드 336 일산', category: '코스프레',
+      start_date: '2026-09-12', end_date: '2026-09-13',
+      venue: 'KINTEX 제1전시장', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+      venue_lat: 37.6727, venue_lng: 126.7560,
+      organizer: null,
+      description: '국내 최대 2차 창작 동인·코스프레 행사.',
+      ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: null,
+      website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'bicof-2026', year: 2026,
+    data: {
+      is_event: true, title: '제29회 부천국제만화축제', category: '게임전시',
+      start_date: '2026-09-18', end_date: '2026-09-20',
+      venue: '한국만화박물관 일원', venue_address: '경기도 부천시 길주로 1',
+      venue_lat: null, venue_lng: null,
+      organizer: '부천문화재단',
+      description: '만화·웹툰 중심의 국제 문화축제. 야외 만화카페·마켓, 작가 대담·사인회 등.',
+      ticket_url: 'https://www.bicof.com/', ticket_open_date: null,
+      admission_fee: '일반 5,000원 / 부천시민 2,500원 / 19세 이하 무료',
+      website: 'https://www.bicof.com/', tags: ['부천국제만화축제', 'BICOF', '부천', '만화', '웹툰'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'cosandcomic-94', year: 2026,
+    data: {
+      is_event: true, title: '제94회 코스앤코믹 페스티벌', category: '코스프레',
+      start_date: '2026-09-19', end_date: '2026-09-20',
+      venue: '서울랜드', venue_address: '경기도 과천시 광명로 181',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null,
+      website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'comicworld-337-ulsan', year: 2026,
+    data: {
+      is_event: true, title: '코믹월드 337 울산', category: '코스프레',
+      start_date: '2026-10-03', end_date: '2026-10-04',
+      venue: '울산전시컨벤션센터', venue_address: '울산광역시 남구 삼산동 1553',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '국내 최대 2차 창작 동인·코스프레 행사.',
+      ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: null,
+      website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '울산'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'illustarfes-12-kintex', year: 2026,
+    data: {
+      is_event: true, title: '일러스타 페스 12', category: '코스프레',
+      start_date: '2026-10-10', end_date: '2026-10-11',
+      venue: 'KINTEX 제1전시장', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+      venue_lat: 37.6727, venue_lng: 126.7560,
+      organizer: '스타라이크',
+      description: '일러스트·서브컬처 종합 이벤트. 동인지·굿즈 판매 부스, 코스프레 포토존 운영.',
+      ticket_url: 'https://illustar.net/', ticket_open_date: null, admission_fee: null,
+      website: 'https://illustar.net/', tags: ['일러스타페스', '서브컬처', '코스프레', '일러스트', 'KINTEX'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'cosandcomic-95', year: 2026,
+    data: {
+      is_event: true, title: '제95회 코스앤코믹 페스티벌', category: '코스프레',
+      start_date: '2026-10-17', end_date: '2026-10-18',
+      venue: '서울랜드', venue_address: '경기도 과천시 광명로 181',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null,
+      website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'biaf-2026', year: 2026,
+    data: {
+      is_event: true, title: 'BIAF 2026 부천국제애니메이션페스티벌', category: '게임전시',
+      start_date: '2026-10-23', end_date: '2026-10-27',
+      venue: '부천 한국만화박물관·CGV 부천', venue_address: '경기도 부천시 길주로 1',
+      venue_lat: null, venue_lng: null,
+      organizer: '부천문화재단',
+      description: '34개국 122편 애니메이션 상영, 콘텐츠마켓·전시·학술포럼 등. 매년 10월 부천 개최.',
+      ticket_url: 'https://www.biaf.or.kr/', ticket_open_date: null, admission_fee: null,
+      website: 'https://www.biaf.or.kr/', tags: ['BIAF', '부천국제애니메이션페스티벌', '부천', '애니메이션'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'comicworld-338-suwon', year: 2026,
+    data: {
+      is_event: true, title: '코믹월드 338 수원', category: '코스프레',
+      start_date: '2026-10-24', end_date: '2026-10-25',
+      venue: '수원메쎄', venue_address: '경기도 수원시 권선구 수성로 89',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '국내 최대 2차 창작 동인·코스프레 행사.',
+      ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: null,
+      website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '수원'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'wonderlivet-2026', year: 2026,
+    data: {
+      is_event: true, title: 'WONDERLIVET 2026', category: '게임음악',
+      start_date: '2026-11-20', end_date: '2026-11-22',
+      venue: 'KINTEX 7·8·9·10홀', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+      venue_lat: 37.6727, venue_lng: 126.7560,
+      organizer: null,
+      description: '국내 최대 J-POP·애니메이션 음악 라이브 페스티벌. 3일간 42팀 출연.',
+      ticket_url: 'https://ticket.yes24.com/Perf/59840', ticket_open_date: null,
+      admission_fee: '3일권 329,000원 / 2일권 229,000원 / 1일권 143,000원',
+      website: null, tags: ['WONDERLIVET', '원더리벳', 'J-POP', '음악페스티벌', 'KINTEX'],
+      confidence: 'high',
+    },
+  },
+]
+
+async function upsertOneEvent(supabase, slug, year, extracted) {
+  const sourceUrl = `known-event://${slug}/${year}`
+
+  const { data: existing } = await supabase
+    .from('event_drafts')
+    .select('id')
+    .eq('source_url', sourceUrl)
+    .maybeSingle()
+
+  if (existing) {
+    console.log(`[known-events] ${slug}/${year} 이미 등록됨, 스킵`)
+    return
+  }
+
+  const { data, error } = await supabase
+    .from('event_drafts')
+    .insert({
+      source_name: 'known-events',
+      source_url: sourceUrl,
+      source_title: extracted.title,
+      published_at: null,
+      extracted,
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error(`[known-events] ${slug}/${year} 저장 실패:`, error.message)
+    return
+  }
+
+  console.log(`[known-events] ${extracted.title} 저장 (${extracted.start_date} ~ ${extracted.end_date})`)
+
+  const { data: approved, error: approveError } = await supabase
+    .from('event_drafts')
+    .update({ status: 'approved' })
+    .eq('id', data.id)
+    .select('promoted_event_id')
+    .single()
+
+  if (approveError) {
+    console.error(`[known-events] ${slug}/${year} 자동 승인 실패:`, approveError.message)
+  } else {
+    console.log(`[known-events] ${extracted.title} 자동 승인됨`)
+    const hardcodedCoords = (extracted.venue_lat && extracted.venue_lng)
+      ? { lat: extracted.venue_lat, lng: extracted.venue_lng }
+      : null
+    const coords = hardcodedCoords ?? await lookupVenueCoords(extracted.venue, extracted.venue_address)
+    if (coords && approved?.promoted_event_id) {
+      const { error: coordError } = await supabase
+        .from('events')
+        .update({ venue_lat: coords.lat, venue_lng: coords.lng })
+        .eq('id', approved.promoted_event_id)
+        .is('venue_lat', null)
+      if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
+      else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
+    }
+  }
+}
+
 export async function upsertKnownEvents(supabase) {
+  // 공식 기반 연간 정기 행사
   for (const { slug, build } of KNOWN_EVENTS) {
     for (const year of targetYears(build)) {
-      const sourceUrl = `known-event://${slug}/${year}`
-
-      const { data: existing } = await supabase
-        .from('event_drafts')
-        .select('id')
-        .eq('source_url', sourceUrl)
-        .maybeSingle()
-
-      if (existing) {
-        console.log(`[known-events] ${slug}/${year} 이미 등록됨, 스킵`)
-        continue
-      }
-
-      const extracted = build(year)
-      const { data, error } = await supabase
-        .from('event_drafts')
-        .insert({
-          source_name: 'known-events',
-          source_url: sourceUrl,
-          source_title: extracted.title,
-          published_at: null,
-          extracted,
-        })
-        .select('id')
-        .single()
-
-      if (error) {
-        console.error(`[known-events] ${slug}/${year} 저장 실패:`, error.message)
-        continue
-      }
-
-      console.log(`[known-events] ${extracted.title} 저장 (${extracted.start_date} ~ ${extracted.end_date})`)
-
-      const { data: approved, error: approveError } = await supabase
-        .from('event_drafts')
-        .update({ status: 'approved' })
-        .eq('id', data.id)
-        .select('promoted_event_id')
-        .single()
-
-      if (approveError) {
-        console.error(`[known-events] ${slug}/${year} 자동 승인 실패:`, approveError.message)
-      } else {
-        console.log(`[known-events] ${extracted.title} 자동 승인됨`)
-        // 하드코딩 좌표를 우선 사용, 없으면 Nominatim 조회
-        const hardcodedCoords = (extracted.venue_lat && extracted.venue_lng)
-          ? { lat: extracted.venue_lat, lng: extracted.venue_lng }
-          : null
-        const coords = hardcodedCoords ?? await lookupVenueCoords(extracted.venue, extracted.venue_address)
-        if (coords && approved?.promoted_event_id) {
-          const { error: coordError } = await supabase
-            .from('events')
-            .update({ venue_lat: coords.lat, venue_lng: coords.lng })
-            .eq('id', approved.promoted_event_id)
-            .is('venue_lat', null)
-          if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
-          else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
-        }
-      }
+      await upsertOneEvent(supabase, slug, year, build(year))
     }
+  }
+  // 회차별 확정 행사 (ONE_OFF_EVENTS)
+  for (const { slug, year, data } of ONE_OFF_EVENTS) {
+    await upsertOneEvent(supabase, slug, year, data)
   }
 }
