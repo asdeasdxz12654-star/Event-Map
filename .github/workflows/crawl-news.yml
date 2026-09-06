@@ -31,3 +31,4 @@ jobs:
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           KINTEX_API_KEY: ${{ secrets.KINTEX_API_KEY }}
           KMRB_API_KEY: ${{ secrets.KMRB_API_KEY }}
+          CULTURE_PERFORMANCE_API_KEY: ${{ secrets.CULTURE_PERFORMANCE_API_KEY }}
