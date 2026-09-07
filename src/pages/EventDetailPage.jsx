@@ -75,9 +75,6 @@ export default function EventDetailPage() {
 
 
   const naverMapUrl = `https://map.naver.com/v5/search/${mapSearch}`
-  const kakaoMapUrl = hasCoords
-    ? `https://map.kakao.com/link/to/${encodeURIComponent(venueName)},${event.venueLat},${event.venueLng}`
-    : `https://map.kakao.com/link/search/${mapSearch}`
 
   // 대중교통 길찾기 — 목적지 레이블도 주소로 통일해 홀 번호가 노출되지 않게 한다.
   // 네이버 방향 URL: directions/{from}/{to}/{경유}/{mode}, 좌표 순서는 경도,위도

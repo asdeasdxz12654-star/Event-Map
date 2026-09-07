@@ -1,6 +1,4 @@
 // 행사 이름으로 Naver 뉴스를 검색해 주최사 단서를 출력한다.
-import { createClient } from '@supabase/supabase-js'
-
 const NAVER_NEWS_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/news'
 function stripHtml(s = '') { return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }
 

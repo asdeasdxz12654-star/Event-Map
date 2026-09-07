@@ -23,7 +23,7 @@ function NotFoundPage() {
 export default function App() {
   return (
     <AdminProvider>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen bg-[#0f0f1a]">
         <Navbar />
         <main>

@@ -7,8 +7,10 @@ function toIcsDate(dateStr) {
   return dateStr.replaceAll('-', '')
 }
 
-function escapeIcsText(text = '') {
-  return text.replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n')
+function escapeIcsText(text) {
+  // 기본 파라미터(text = '')는 인자가 undefined일 때만 적용되고 null에는 안 먹히는데,
+  // event.description 등 DB의 nullable 필드는 null로 넘어오는 경우가 흔하다 (?? 로 둘 다 처리).
+  return (text ?? '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n')
 }
 
 export function downloadEventIcs(event) {

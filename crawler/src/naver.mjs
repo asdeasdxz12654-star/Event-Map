@@ -66,8 +66,9 @@ function isActiveNow(activeWindow) {
   return true
 }
 
-// official-sites.mjs에 이미 등록된 정기 행사(지스타·코믹월드·AGF·일러스타페스·
-// PlayX4·BIC)는 여기서 제거하고, 공식 사이트가 없는 행사만 능동적으로 찾는다.
+// known-events.mjs가 날짜 공식으로 자동 등록하는 정기 행사(지스타·플레이엑스포·AGF·BIC)와
+// official-sites.mjs가 다루던 행사(현재 공식 사이트 크롤링은 전체 제거됨)는 여기서 제외하고,
+// 그 외 자체 API/자동 등록이 없는 행사만 능동적으로 찾는다.
 // 게임사 팝업/페스티벌 쿼리는 네이버카페(CAFE_SEARCH_QUERIES)가 더 정확히 잡아서 제거함.
 function q(text, activeMonths = null) {
   return { text, activeMonths }

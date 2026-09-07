@@ -16,10 +16,13 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // BASE_URL(vite.config의 base와 동일, 예: '/Event-Map/')을 껴서 조합해야 GitHub Pages
+  // 서브패스 배포에서도 실제 앱이 있는 경로로 돌아온다 — origin만 쓰면 서브패스가 빠져
+  // 사이트 루트(존재하지 않는 경로)로 리다이렉트되어 404가 난다.
   const signInWithGoogle = (redirectPath = '/') =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}${redirectPath}` },
+      options: { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}${redirectPath.replace(/^\//, '')}` },
     })
 
   const signOut = () => supabase.auth.signOut()

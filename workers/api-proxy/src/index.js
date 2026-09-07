@@ -1,14 +1,16 @@
 // event-map-api-proxy
 //
-// 프론트엔드(Cloudflare Pages)가 API 키를 노출하지 않고 외부 API를 호출하기 위한 중계 Worker.
+// 프론트엔드(GitHub Pages)가 API 키를 노출하지 않고 외부 API를 호출하기 위한 중계 Worker.
 // 관리자 CRUD 엔드포인트(/admin/events)는 ADMIN_TOKEN_HASH 시크릿으로 검증 후
 // SUPABASE_SERVICE_ROLE_KEY를 사용해 DB에 직접 쓴다.
 //
 // 시크릿 등록:
 //   npx wrangler secret put SUPABASE_URL
 //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-//   npx wrangler secret put ADMIN_TOKEN_HASH   (값: adb9e48ae90664c4d7922aa850587360cff32781a14c3474d616b5ade016d621)
-//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://your-site.pages.dev)
+//   npx wrangler secret put ADMIN_TOKEN_HASH   (값: sha256(관리자 비밀번호의 sha256) — AdminContext.jsx의
+//                                                _d()로 만든 토큰을 다시 sha256한 값. 실제 값은 커밋하지
+//                                                말고 각자 로컬에서만 계산해 등록할 것)
+//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://<user>.github.io)
 
 function corsHeaders(env = {}) {
   return {

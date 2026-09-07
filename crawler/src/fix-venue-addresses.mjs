@@ -1,6 +1,6 @@
-// venue_address가 null인 행사에 주소를 채운 뒤 Nominatim으로 좌표를 설정한다.
+// venue_address가 null인 행사에 주소를 채운 뒤 네이버 지역검색으로 좌표를 설정한다.
 // 실행: node src/fix-venue-addresses.mjs
-// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
 import { lookupVenueCoords } from './naver-local.mjs'
 

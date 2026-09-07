@@ -25,8 +25,11 @@ messaging.onBackgroundMessage(payload => {
   const { title, body, icon } = payload.notification ?? {}
   self.registration.showNotification(title ?? '게임이벤트허브', {
     body,
-    icon: icon ?? '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    // 절대 경로(/icons/...)가 아니라 상대 경로를 쓴다 — 이 파일 자체가 (루트든 GitHub Pages
+    // 서브패스든) usePushNotifications.js가 등록한 위치에서 서빙되므로, 상대 경로가 그 위치
+    // 기준으로 풀려서 배포 경로에 관계없이 항상 올바르게 가리킨다.
+    icon: icon ?? 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
     data: payload.data,
   })
 })
