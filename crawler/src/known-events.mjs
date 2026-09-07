@@ -342,22 +342,38 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       : null
     const coords = hardcodedCoords ?? await lookupVenueCoords(extracted.venue, extracted.venue_address)
     if (coords && approved?.promoted_event_id) {
-      const { error: coordError } = await supabase
+      // .is('venue_lat', null)은 dedup으로 "이미 존재하는(제목+날짜가 같은) 행사"에 연결된
+      // 경우(예: 이 known-events 항목보다 먼저 네이버 크롤러 등이 같은 제목으로 만들어 이미
+      // 좌표가 들어있는 경우) 매칭되는 행이 0개라 조용히 아무것도 안 바뀐다. .select()로 실제
+      // 갱신된 행이 있는지 확인해서, 0건이면 "성공"으로 잘못 로그하지 않고 기존 값과 다를 수
+      // 있다는 경고를 남긴다 — known-events.mjs의 좌표가 더 정확한 값인데도 기존(잘못됐을 수
+      // 있는) 좌표에 가려 반영이 안 될 수 있으므로 사람이 확인할 수 있게 한다.
+      const { data: coordUpdated, error: coordError } = await supabase
         .from('events')
         .update({ venue_lat: coords.lat, venue_lng: coords.lng })
         .eq('id', approved.promoted_event_id)
         .is('venue_lat', null)
+        .select('id')
       if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
-      else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
+      else if (coordUpdated.length === 0) {
+        console.warn(`[known-events] ${extracted.title}: 기존 이벤트에 이미 좌표가 있어 덮어쓰지 않음 — known-events 값(${coords.lat}, ${coords.lng})과 실제 DB 값이 다르면 수동으로 확인/수정 필요`)
+      } else {
+        console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
+      }
     }
     if (posterUrl && approved?.promoted_event_id) {
-      const { error: posterError } = await supabase
+      const { data: posterUpdated, error: posterError } = await supabase
         .from('events')
         .update({ poster_url: posterUrl })
         .eq('id', approved.promoted_event_id)
         .is('poster_url', null)
+        .select('id')
       if (posterError) console.warn(`[known-events] 포스터 저장 실패:`, posterError.message)
-      else console.log(`[known-events] 포스터 설정됨`)
+      else if (posterUpdated.length === 0) {
+        console.warn(`[known-events] ${extracted.title}: 기존 이벤트에 이미 포스터가 있어 덮어쓰지 않음`)
+      } else {
+        console.log(`[known-events] 포스터 설정됨`)
+      }
     }
   }
 }

@@ -157,12 +157,17 @@ async function attachCoords(eventId, venue, venueAddress) {
   if (!eventId) return
   const coords = await lookupVenueCoords(venue, venueAddress)
   if (!coords) return
-  const { error } = await supabase
+  // .is('venue_lat', null)은 dedup으로 기존 행사(이미 좌표가 있는)에 연결된 경우 매칭되는
+  // 행이 0개라 조용히 아무것도 안 바뀐다 — .select()로 실제 갱신 여부를 확인해서 0건일 때
+  // "성공"으로 잘못 로그하지 않고, 새로 찾은 좌표와 기존 값이 다를 수 있다는 경고를 남긴다.
+  const { data: updated, error } = await supabase
     .from('events')
     .update({ venue_lat: coords.lat, venue_lng: coords.lng })
     .eq('id', eventId)
     .is('venue_lat', null) // 이미 좌표가 있으면 덮어쓰지 않음
+    .select('id')
   if (error) console.warn('  [지역검색] 좌표 저장 실패:', error.message)
+  else if (updated.length === 0) console.warn(`  [지역검색] 기존 행사에 이미 좌표가 있어 덮어쓰지 않음 — 새로 찾은 값(${coords.lat}, ${coords.lng})과 다르면 수동 확인 필요`)
   else console.log(`  -> 좌표 설정: ${coords.lat}, ${coords.lng}`)
 }
 
@@ -172,12 +177,14 @@ async function attachPosterImage(eventId, title) {
   if (!eventId) return
   const posterUrl = await fetchEventPosterUrl(title)
   if (!posterUrl) return
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('events')
     .update({ poster_url: posterUrl })
     .eq('id', eventId)
     .is('poster_url', null) // 이미 포스터가 있으면 덮어쓰지 않음
+    .select('id')
   if (error) console.warn('  [이미지] 포스터 저장 실패:', error.message)
+  else if (updated.length === 0) console.warn('  [이미지] 기존 행사에 이미 포스터가 있어 덮어쓰지 않음')
 }
 
 // RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.

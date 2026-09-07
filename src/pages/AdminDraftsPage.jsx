@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
+import { useEvents } from '../hooks/useEvents'
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
@@ -16,6 +17,11 @@ export default function AdminDraftsPage() {
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
   const [status, setStatus] = useState('pending')
   const { drafts, loading, error, refresh } = useEventDrafts(status)
+  // 이미 게시된 행사와 날짜가 겹치는 draft를 찾아 검수 화면에서 경고해주기 위함 —
+  // 크롤러 소스마다 같은 행사를 다른 제목으로 추출하면(예: "코믹월드 336" vs "코믹월드 336
+  // 일산") promote_event_draft()의 제목+날짜 dedup을 피해가서, 승인 시 조용히 중복 행사가
+  // 만들어질 수 있다. 제목이 달라도 여기서는 걸러줘서 검수자가 눈으로 확인할 수 있게 한다.
+  const { events: publishedEvents } = useEvents()
 
   // ── 로딩 ──
   if (authLoading) {
@@ -90,7 +96,7 @@ export default function AdminDraftsPage() {
       {!loading && drafts.length > 0 && (
         <div className="space-y-4">
           {drafts.map(draft => (
-            <DraftCard key={draft.id} draft={draft} onChanged={refresh} />
+            <DraftCard key={draft.id} draft={draft} publishedEvents={publishedEvents} onChanged={refresh} />
           ))}
         </div>
       )}
@@ -98,10 +104,16 @@ export default function AdminDraftsPage() {
   )
 }
 
-function DraftCard({ draft, onChanged }) {
+function DraftCard({ draft, publishedEvents, onChanged }) {
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState(null)
   const e = draft.extracted
+
+  // 제목이 달라도 시작일이 같은 기존 행사가 있으면 같은 행사의 중복일 수 있다 — 승인 전
+  // 검수자가 확인할 수 있게 경고한다. 이미 이 draft로 만들어진 행사 자신은 제외한다.
+  const possibleDuplicates = e.start_date
+    ? (publishedEvents ?? []).filter(ev => ev.startDate === e.start_date && ev.id !== draft.promotedEventId)
+    : []
 
   const act = async newStatus => {
     setSubmitting(true)
@@ -151,6 +163,17 @@ function DraftCard({ draft, onChanged }) {
       >
         원문 보기: {draft.sourceTitle}
       </a>
+
+      {possibleDuplicates.length > 0 && (
+        <div className="text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-xl px-3 py-2 mt-3">
+          ⚠️ 같은 날짜({e.start_date})에 이미 게시된 행사가 있어요 — 제목만 다른 같은 행사일 수 있으니 승인 전에 확인하세요:
+          <ul className="mt-1 space-y-0.5">
+            {possibleDuplicates.map(ev => (
+              <li key={ev.id}>· {ev.title} ({ev.venue ?? '장소 미상'})</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {actionError && (
         <p className="text-sm text-red-400 bg-red-400/10 rounded-xl px-3 py-2 mt-3">{actionError}</p>
