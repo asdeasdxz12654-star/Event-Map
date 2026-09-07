@@ -5,8 +5,8 @@ import { lookupVenueCoords } from './naver-local.mjs'
 
 // 행사 유형별 고정 대표 포스터 — 회차마다 검색하지 않고 하나로 통일한다.
 // 교체 시 이 상수만 수정하면 이후 새 회차에 자동 반영된다.
-const COMICWORLD_POSTER = 'https://pup-post-phinf.pstatic.net/MjAyNjAzMTRfMTcg/MDAxNzczNDgxMDcyMDIw.f35-iPvMcNWo1hSMJRcL49uVBFp-W5uEtsguEJu9oBQg.25vv9T5oJRQTbDIxlKoXsq40Sq6w5mUZwqdtRuWruWUg.JPEG/POST_IMAGE_ENCODING_20260314_183749_530.jpg'
-const COSANDCOMIC_POSTER = 'https://cos.guide/img/x-card-and-ogp.jpg?ver=2026061402'
+const COMICWORLD_POSTER = 'https://tong.visitkorea.or.kr/cms/resource/38/4076738_image2_1.png'
+const COSANDCOMIC_POSTER = 'https://pbs.twimg.com/media/HOo8nV4bUAAdTNo?format=webp&name=medium'
 const ILLUSTARFES_POSTER = 'http://imgnews.naver.net/image/5401/2026/05/20/0000387802_001_20260520085212709.jpeg'
 
 function toDateStr(date) {
