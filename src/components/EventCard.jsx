@@ -147,7 +147,7 @@ export default function EventCard({ event }) {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="shrink-0">💰</span>
-          <span className="truncate">{event.admissionFee}</span>
+          <span className="truncate">{event.admissionFee || '정보 없음'}</span>
         </div>
       </div>
 
