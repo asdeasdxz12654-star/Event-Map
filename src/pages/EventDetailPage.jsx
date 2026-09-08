@@ -157,7 +157,7 @@ export default function EventDetailPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 mb-4">
             <InfoRow icon="📅" label="기간" value={dateStr} />
             <InfoRow icon="📍" label="장소" value={`${event.venue}\n${event.venueAddress}`} />
-            <InfoRow icon="💰" label="입장료" value={event.admissionFee || '정보 없음'} />
+            <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
             <InfoRow icon="🏢" label="주최" value={event.organizer} />
             {event.ticketOpenDate && (
               <InfoRow
