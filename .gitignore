@@ -34,3 +34,6 @@ verify_*.png
 *.njsproj
 *.sln
 *.sw?
+
+# Cloudflare Workers 로컬 배포 캐시
+.wrangler/
