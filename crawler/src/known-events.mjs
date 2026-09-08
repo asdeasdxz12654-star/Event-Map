@@ -300,12 +300,12 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
 
   const { data: existing } = await supabase
     .from('event_drafts')
-    .select('id')
+    .select('id, promoted_event_id')
     .eq('source_url', sourceUrl)
     .maybeSingle()
 
   if (existing) {
-    console.log(`[known-events] ${slug}/${year} 이미 등록됨, 스킵`)
+    await syncExistingEvent(supabase, slug, year, extracted, existing.promoted_event_id)
     return
   }
 
@@ -349,6 +349,7 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
         .update({ venue_lat: coords.lat, venue_lng: coords.lng })
         .eq('id', approved.promoted_event_id)
         .is('venue_lat', null)
+        .is('admin_edited_at', null)
       if (coordError) console.warn(`[known-events] 좌표 저장 실패:`, coordError.message)
       else console.log(`[known-events] 좌표 설정: ${coords.lat}, ${coords.lng}`)
     }
@@ -358,9 +359,49 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
         .update({ poster_url: posterUrl })
         .eq('id', approved.promoted_event_id)
         .is('poster_url', null)
+        .is('admin_edited_at', null)
       if (posterError) console.warn(`[known-events] 포스터 저장 실패:`, posterError.message)
       else console.log(`[known-events] 포스터 설정됨`)
     }
+  }
+}
+
+// 이미 event_drafts에 등록된(=예전에 upsertOneEvent가 한 번 삽입·승인한) 고정 행사를
+// 다시 만났을 때, known-events.mjs에 적힌 최신 값으로 events 테이블을 동기화한다.
+// 단, 관리자가 화면에서 직접 수정해 admin_edited_at이 찍힌 행은 절대 덮어쓰지 않는다.
+async function syncExistingEvent(supabase, slug, year, extracted, promotedEventId) {
+  if (!promotedEventId) {
+    console.log(`[known-events] ${slug}/${year} 이미 등록됨(미승인 상태), 스킵`)
+    return
+  }
+
+  const { data, error } = await supabase
+    .from('events')
+    .update({
+      title: extracted.title,
+      category: extracted.category,
+      start_date: extracted.start_date,
+      end_date: extracted.end_date,
+      venue: extracted.venue,
+      venue_address: extracted.venue_address,
+      organizer: extracted.organizer,
+      description: extracted.description,
+      ticket_url: extracted.ticket_url,
+      ticket_open_date: extracted.ticket_open_date,
+      admission_fee: extracted.admission_fee,
+      website: extracted.website,
+      tags: extracted.tags ?? [],
+    })
+    .eq('id', promotedEventId)
+    .is('admin_edited_at', null)
+    .select('id')
+
+  if (error) {
+    console.error(`[known-events] ${slug}/${year} 동기화 실패:`, error.message)
+  } else if (data.length === 0) {
+    console.log(`[known-events] ${slug}/${year} 이미 등록됨, 관리자가 수정한 행이라 스킵`)
+  } else {
+    console.log(`[known-events] ${slug}/${year} 이미 등록됨, 최신 값으로 동기화함`)
   }
 }
 

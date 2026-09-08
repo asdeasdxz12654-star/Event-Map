@@ -5,6 +5,10 @@ on:
     # 매일 21:00 UTC = 06:00 KST. GitHub Actions 스케줄은 정시 보장이 아니라 몇 분 밀릴 수 있음.
     - cron: '0 21 * * *'
   workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+  push:
+    branches: [master]
+    paths:
+      - 'crawler/**' # 크롤러 코드(예: known-events.mjs 값 수정)가 바뀔 때만 즉시 실행
 
 jobs:
   crawl:

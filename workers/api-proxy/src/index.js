@@ -76,10 +76,15 @@ async function handleAdmin(request, env, pathname) {
   }
 
   // PATCH /admin/events/:id — 행사 수정
+  // admin_edited_at을 항상 서버에서 찍는다 — 이후 known-events.mjs 크롤러 동기화가
+  // 이 행을 건너뛰게 해서, 관리자가 고친 값이 크롤러 값으로 덮어써지지 않게 막는다.
   if (idMatch && request.method === 'PATCH') {
     const id = decodeURIComponent(idMatch[1])
     const body = await request.json()
-    await supabase(env, 'PATCH', `events?id=eq.${encodeURIComponent(id)}`, body)
+    await supabase(env, 'PATCH', `events?id=eq.${encodeURIComponent(id)}`, {
+      ...body,
+      admin_edited_at: new Date().toISOString(),
+    })
     return json({ ok: true }, env)
   }
 
