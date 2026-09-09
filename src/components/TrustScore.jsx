@@ -13,7 +13,7 @@ export default function TrustScore({ score, pastEvents }) {
         </div>
       </div>
       {pastEvents?.length > 0 && (
-        <ul className="text-xs text-zinc-500 space-y-0.5">
+        <ul className="text-xs text-zinc-400 space-y-0.5">
           {pastEvents.map((e, i) => (
             <li key={i} className="flex items-start gap-1">
               <span className={e.includes('취소') || e.includes('연기') ? 'text-red-400' : 'text-green-400'}>

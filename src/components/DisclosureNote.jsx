@@ -8,14 +8,14 @@ export const UNDISCLOSED = '미공개'
 
 export default function DisclosureNote({ note, subject, emptyText }) {
   if (!note) {
-    return <p className="text-xs text-zinc-500">{emptyText}</p>
+    return <p className="text-xs text-zinc-400">{emptyText}</p>
   }
   if (note === UNDISCLOSED) {
     return (
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-zinc-400">
         <span className="text-zinc-400">🚫 미공개</span> — 공식 행사에서 {subject} 정보를 공개하지 않습니다.
       </p>
     )
   }
-  return <p className="text-xs text-zinc-500">ℹ️ {note}</p>
+  return <p className="text-xs text-zinc-400">ℹ️ {note}</p>
 }

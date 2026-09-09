@@ -35,13 +35,13 @@ export default function AdminModal({ onClose }) {
       >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-white font-semibold text-sm">관리자</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
         </div>
 
         {isAdmin ? (
           <div>
             <p className="text-emerald-400 text-sm mb-4">✓ 관리자 모드 활성화됨</p>
-            <p className="text-zinc-500 text-xs mb-4">행사 추가·수정·삭제 기능이 활성화되었습니다.</p>
+            <p className="text-zinc-400 text-xs mb-4">행사 추가·수정·삭제 기능이 활성화되었습니다.</p>
             <button
               onClick={() => { logout(); onClose() }}
               className="w-full py-2.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl text-sm transition-colors"

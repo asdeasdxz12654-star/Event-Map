@@ -25,9 +25,8 @@ export default function EventCard({ event, compact = false }) {
   const [imgError, setImgError] = useState(false)
   const showPoster = !!event.posterUrl && !imgError
 
-  const handleDelete = async (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+  // 카드가 더 이상 링크 안에 있지 않아서 기본 동작을 막을 필요가 없다.
+  const handleDelete = async () => {
     if (!await confirm(`"${event.title}" 행사를 삭제하시겠습니까?`)) return
     try {
       await adminApi.deleteEvent(event.id)
@@ -70,16 +69,19 @@ export default function EventCard({ event, compact = false }) {
   const siteName = ticketSiteName(event.ticketUrl)
 
   return (
-    <Link
-      to={`/events/${event.id}`}
-      className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group"
-    >
+    // 예전엔 카드 전체가 <Link>였고 그 안에 북마크·삭제 <button>이 들어 있었다.
+    // 링크 안에 버튼을 넣는 건 유효하지 않은 HTML이고 키보드·스크린리더 동작도 어그러진다.
+    // 카드는 일반 div로 두고, 카드 전체를 덮는 투명한 링크를 따로 깔았다(z-[1]).
+    // 버튼은 그보다 위(z-10)라 그대로 눌린다.
+    <div className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group">
+      <Link
+        to={`/events/${event.id}`}
+        aria-label={`${event.title} 상세 보기`}
+        className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+      />
+
       <button
-        onClick={e => {
-          e.preventDefault()
-          e.stopPropagation()
-          toggleBookmark(event.id)
-        }}
+        onClick={() => toggleBookmark(event.id)}
         aria-label={bookmarked ? '북마크 해제' : '북마크에 추가'}
         aria-pressed={bookmarked}
         className={`absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full backdrop-blur transition-colors ${
@@ -121,9 +123,10 @@ export default function EventCard({ event, compact = false }) {
             </span>
           </div>
         )}
-        {/* NEW 뱃지 */}
+        {/* NEW 뱃지 — 흰 글씨 + emerald-500은 10px 글씨 기준 대비가 2.5:1뿐이라
+            어두운 글자색으로 바꿨다 */}
         {isNew && (
-          <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-md tracking-wide">
+          <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-400 text-emerald-950 text-[10px] font-bold rounded-md tracking-wide">
             NEW
           </span>
         )}
@@ -191,6 +194,6 @@ export default function EventCard({ event, compact = false }) {
           🎟 예매 중{siteName && ` · ${siteName}`}
         </div>
       )}
-    </Link>
+    </div>
   )
 }

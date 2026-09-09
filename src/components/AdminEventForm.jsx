@@ -132,7 +132,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
       >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-white font-semibold">{isEdit ? '행사 수정' : '행사 추가'}</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
         </div>
 
         <form onSubmit={submit} className="space-y-3">
@@ -196,7 +196,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               <input type="text" value={form.ticket_open_time} onChange={set('ticket_open_time')} className={cls} placeholder="ex) 20:00, 오후 8시" />
             </Field>
           </div>
-          <p className="text-[11px] text-zinc-500 -mt-2">
+          <p className="text-[11px] text-zinc-400 -mt-2">
             예매 사이트명은 별도 입력 없이 예매 URL에서 자동으로 표시됩니다.
           </p>
 
@@ -227,7 +227,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               {CROWD_LEVELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </Field>
-          <p className="text-[11px] text-zinc-500 -mt-2">
+          <p className="text-[11px] text-zinc-400 -mt-2">
             실시간 인원 데이터가 아닙니다 — 매진 여부·과거 참가 규모 등으로 직접 추정해 선택하세요.
           </p>
 
@@ -240,7 +240,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               placeholder="ex) 올림픽공원, 잠실종합운동장"
             />
           </Field>
-          <p className="text-[11px] text-zinc-500 -mt-2">
+          <p className="text-[11px] text-zinc-400 -mt-2">
             서울시 "주요 120장소" 목록과 정확히 일치할 때만 작동합니다 (킨텍스·벡스코 등은
             서울 밖이라 지원 안 됨). 일치하면 예상 혼잡도 대신 실시간 인구 혼잡도가 표시됩니다.
           </p>
@@ -254,7 +254,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               placeholder='ex) 미공개, 또는 "행사 2~3주 전 공개 예상"'
             />
           </Field>
-          <p className="text-[11px] text-zinc-500 -mt-2">
+          <p className="text-[11px] text-zinc-400 -mt-2">
             등록된 부스가 없을 때 이 문구가 대신 표시됩니다. 공식 행사가 참가업체를
             아예 공개 안 하면 정확히 "미공개"라고 입력하세요.
           </p>
@@ -268,7 +268,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               placeholder='ex) 미공개, 또는 "행사 3주 전 공개 예상"'
             />
           </Field>
-          <p className="text-[11px] text-zinc-500 -mt-2">
+          <p className="text-[11px] text-zinc-400 -mt-2">
             부스와 별개입니다 — 코스앤코믹처럼 부스는 미공개인데 무대 라인업은
             공개하는 행사도 있으니 따로 입력하세요.
           </p>

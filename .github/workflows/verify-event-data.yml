@@ -1,0 +1,56 @@
+name: Verify event data
+
+# 이미 저장된 행사 데이터(포스터 이미지 · 행사장 좌표)를 검증한다.
+# 검색 결과 1순위를 검증 없이 저장하던 시절에 들어온 "무관한 썸네일 / 엉뚱한 위치"를
+# 찾아내기 위한 것이라, 정기 실행이 아니라 Actions 탭에서 필요할 때 수동으로 돌린다.
+#
+# 기본값은 "검사만" 이다 — 무엇이 잘못됐는지 로그로 먼저 확인하고,
+# 납득이 되면 apply를 켜서 다시 돌리면 실제로 고친다.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '무엇을 검증할지'
+        type: choice
+        options:
+          - posters
+          - coords
+          - both
+        default: both
+      apply:
+        description: '실제로 수정까지 할지 (끄면 보고만)'
+        type: boolean
+        default: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: 포스터 이미지 검증
+        if: inputs.target == 'posters' || inputs.target == 'both'
+        run: node src/verify-poster-images.mjs ${{ inputs.apply && '--repick' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      - name: 행사장 좌표 검증
+        if: inputs.target == 'coords' || inputs.target == 'both'
+        run: node src/verify-venue-coords.mjs ${{ inputs.apply && '--fix' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}

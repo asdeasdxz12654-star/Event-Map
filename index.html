@@ -26,12 +26,17 @@
     <meta property="og:site_name" content="게임이벤트허브" />
     <meta property="og:title" content="게임이벤트허브 — 국내 게임·코스프레·게임음악 행사 정보" />
     <meta property="og:description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
-    <meta property="og:image" content="https://asdeasdxz12654-star.github.io/Event-Map/icons/icon-192.png" />
-    <meta property="og:url" content="https://asdeasdxz12654-star.github.io/Event-Map/" />
-    <meta name="twitter:card" content="summary" />
+    <!-- %SITE_URL%은 빌드 시 배포 대상 도메인으로 치환된다 (vite.config.js의 siteUrlPlugin).
+         GitHub Pages와 Cloudflare Pages에 같은 코드가 올라가므로 한쪽 도메인을 박아두면
+         다른 쪽에서 공유했을 때 미리보기가 엉뚱한 사이트를 가리킨다. -->
+    <meta property="og:image" content="%SITE_URL%og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="%SITE_URL%" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="게임이벤트허브" />
     <meta name="twitter:description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
-    <meta name="twitter:image" content="https://asdeasdxz12654-star.github.io/Event-Map/icons/icon-192.png" />
+    <meta name="twitter:image" content="%SITE_URL%og-image.png" />
   </head>
   <body>
     <div id="root"></div>

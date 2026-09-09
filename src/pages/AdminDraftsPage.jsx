@@ -22,7 +22,7 @@ export default function AdminDraftsPage() {
 
   // ── 로딩 ──
   if (authLoading) {
-    return <div className="py-20 text-center text-zinc-500 animate-pulse">잠시만요...</div>
+    return <div className="py-20 text-center text-zinc-400 animate-pulse">잠시만요...</div>
   }
 
   // ── 비로그인 ──
@@ -57,7 +57,7 @@ export default function AdminDraftsPage() {
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-white">행사 검수</h1>
-        <button onClick={signOut} className="text-sm text-zinc-500 hover:text-white transition-colors">
+        <button onClick={signOut} className="text-sm text-zinc-400 hover:text-white transition-colors">
           로그아웃
         </button>
       </div>
@@ -79,7 +79,7 @@ export default function AdminDraftsPage() {
       </div>
 
       {loading && (
-        <div className="text-center py-16 text-zinc-500 animate-pulse">불러오는 중...</div>
+        <div className="text-center py-16 text-zinc-400 animate-pulse">불러오는 중...</div>
       )}
 
       {error && (
@@ -87,7 +87,7 @@ export default function AdminDraftsPage() {
       )}
 
       {!loading && !error && drafts.length === 0 && (
-        <div className="text-center py-16 text-zinc-500">검수할 항목이 없습니다</div>
+        <div className="text-center py-16 text-zinc-400">검수할 항목이 없습니다</div>
       )}
 
       {!loading && drafts.length > 0 && (
@@ -131,7 +131,7 @@ function DraftCard({ draft, onChanged }) {
       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
         <div>
           <h2 className="font-semibold text-white">{e.title ?? '(제목 없음)'}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-400 mt-0.5">
             {draft.sourceName} · {new Date(draft.createdAt).toLocaleDateString('ko-KR')}
           </p>
         </div>
@@ -195,7 +195,7 @@ function DraftCard({ draft, onChanged }) {
 function Row({ label, value }) {
   return (
     <div className="flex gap-1">
-      <dt className="text-zinc-500 shrink-0">{label}:</dt>
+      <dt className="text-zinc-400 shrink-0">{label}:</dt>
       <dd className="text-zinc-300">{value}</dd>
     </div>
   )

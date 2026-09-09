@@ -49,6 +49,10 @@ export default function CalendarPage() {
     setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
     setSelectedDay(null)
   }
+  function goToday() {
+    setViewDate(new Date())
+    setSelectedDay(null)
+  }
 
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -63,15 +67,28 @@ export default function CalendarPage() {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={prevMonth}
+              aria-label="이전 달"
               className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 transition-colors"
             >
               ‹
             </button>
-            <span className="text-white font-semibold">
-              {format(viewDate, 'yyyy년 M월', { locale: ko })}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold">
+                {format(viewDate, 'yyyy년 M월', { locale: ko })}
+              </span>
+              {/* 다른 달을 보다가 이번 달로 돌아올 방법이 없어서 화살표를 여러 번 눌러야 했다 */}
+              {!isSameMonth(viewDate, new Date()) && (
+                <button
+                  onClick={goToday}
+                  className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 transition-colors"
+                >
+                  오늘
+                </button>
+              )}
+            </div>
             <button
               onClick={nextMonth}
+              aria-label="다음 달"
               className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 transition-colors"
             >
               ›
@@ -79,7 +96,7 @@ export default function CalendarPage() {
           </div>
 
           {loading && (
-            <p className="text-center text-sm text-zinc-500 py-4">행사 정보를 불러오는 중...</p>
+            <p className="text-center text-sm text-zinc-400 py-4">행사 정보를 불러오는 중...</p>
           )}
           {error && (
             <p className="text-center text-sm text-red-400 py-4">행사 정보를 불러오지 못했습니다</p>
@@ -114,6 +131,11 @@ export default function CalendarPage() {
                   <button
                     key={day.toISOString()}
                     onClick={() => selectDay(day)}
+                    aria-pressed={!!isSelected}
+                    // 스크린리더에는 숫자만 읽혀서 무슨 날짜인지, 행사가 있는지 알 수 없었다
+                    aria-label={`${format(day, 'M월 d일 (eee)', { locale: ko })}${
+                      dayEvents.length > 0 ? `, 행사 ${dayEvents.length}건` : ', 행사 없음'
+                    }`}
                     className={`aspect-square flex flex-col items-center justify-start pt-1.5 px-1 relative transition-colors border border-transparent ${
                       isSelected
                         ? 'bg-indigo-600/30 border-indigo-500/50'
@@ -160,7 +182,7 @@ export default function CalendarPage() {
                 {format(selectedDay, 'M월 d일 (eee)', { locale: ko })} 행사
               </h2>
               {selectedEvents.length === 0 ? (
-                <p className="text-sm text-zinc-500 py-4 text-center">이 날 행사가 없습니다</p>
+                <p className="text-sm text-zinc-400 py-4 text-center">이 날 행사가 없습니다</p>
               ) : (
                 <div className="space-y-2">
                   {selectedEvents.map(event => (
@@ -181,7 +203,7 @@ export default function CalendarPage() {
               )}
             </div>
           ) : (
-            <div className="hidden lg:flex flex-col items-center justify-center text-center gap-2 text-sm text-zinc-500 bg-white/5 border border-white/10 rounded-2xl p-8 min-h-[200px]">
+            <div className="hidden lg:flex flex-col items-center justify-center text-center gap-2 text-sm text-zinc-400 bg-white/5 border border-white/10 rounded-2xl p-8 min-h-[200px]">
               <span className="text-3xl">📅</span>
               <span>날짜를 선택하면<br />그 날의 행사를 보여드려요</span>
             </div>

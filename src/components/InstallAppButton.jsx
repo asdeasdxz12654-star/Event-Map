@@ -98,7 +98,7 @@ export default function InstallAppButton() {
               <button
                 onClick={() => setShowIosGuide(false)}
                 aria-label="닫기"
-                className="text-zinc-500 hover:text-white text-xl leading-none"
+                className="text-zinc-400 hover:text-white text-xl leading-none"
               >
                 ×
               </button>
@@ -108,7 +108,7 @@ export default function InstallAppButton() {
               <li>2. 메뉴를 내려서 <span className="text-white">&quot;홈 화면에 추가&quot;</span>를 선택하세요</li>
               <li>3. 오른쪽 위 <span className="text-white">&quot;추가&quot;</span>를 누르면 끝입니다</li>
             </ol>
-            <p className="text-xs text-zinc-500 mt-4">
+            <p className="text-xs text-zinc-400 mt-4">
               앱처럼 전체 화면으로 열리고, 알림도 받을 수 있습니다.
             </p>
           </div>

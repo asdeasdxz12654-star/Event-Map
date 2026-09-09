@@ -47,7 +47,7 @@ export default function EventDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center text-zinc-500">
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center text-zinc-400">
         <div className="text-4xl mb-3 animate-pulse">⏳</div>
         <p>행사 정보를 불러오는 중...</p>
       </div>
@@ -298,7 +298,7 @@ function InfoRow({ icon, label, value, hint }) {
       <span className="text-zinc-400 shrink-0 w-20 whitespace-nowrap">{label}</span>
       <span className="text-zinc-200 whitespace-pre-line">
         {value}
-        {hint && <span className="block text-xs text-zinc-500 mt-0.5">{hint}</span>}
+        {hint && <span className="block text-xs text-zinc-400 mt-0.5">{hint}</span>}
       </span>
     </div>
   )
@@ -341,7 +341,7 @@ function TicketButton({ event, className }) {
   if (!event.ticketUrl) return null
   if (event.ticketStatus === 'soldout') {
     return (
-      <div className={`bg-zinc-800 text-zinc-500 font-semibold text-center select-none ${className}`}>
+      <div className={`bg-zinc-800 text-zinc-400 font-semibold text-center select-none ${className}`}>
         🎟 매진
       </div>
     )

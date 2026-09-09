@@ -53,7 +53,7 @@ function BoothRow({ booth, isAdmin, onSaved }) {
         <input value={form.booth_no} onChange={set('booth_no')} placeholder="부스 번호" className={cls + ' w-20'} />
         <input value={form.goods} onChange={set('goods')} placeholder="제공/판매 굿즈" className={cls + ' flex-1 min-w-[140px]'} />
         <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
-        <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 hover:text-white">취소</button>
+        <button onClick={() => setEditing(false)} className="text-xs text-zinc-400 hover:text-white">취소</button>
       </div>
     )
   }
@@ -64,14 +64,14 @@ function BoothRow({ booth, isAdmin, onSaved }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-white">{booth.name}</span>
           {booth.boothNo && (
-            <span className="text-xs text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded">{booth.boothNo}</span>
+            <span className="text-xs text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded">{booth.boothNo}</span>
           )}
         </div>
         {booth.goods && <p className="text-xs text-zinc-400 mt-0.5">{booth.goods}</p>}
       </div>
       {isAdmin && (
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => setEditing(true)} className="text-xs text-zinc-500 hover:text-white">수정</button>
+          <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-white">수정</button>
           <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400">삭제</button>
         </div>
       )}

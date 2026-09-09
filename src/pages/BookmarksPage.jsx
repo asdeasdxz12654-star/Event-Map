@@ -23,7 +23,7 @@ export default function BookmarksPage() {
       </div>
 
       {loading && (
-        <div className="text-center py-16 text-zinc-500 animate-pulse">불러오는 중...</div>
+        <div className="text-center py-16 text-zinc-400 animate-pulse">불러오는 중...</div>
       )}
 
       {error && (
@@ -31,7 +31,7 @@ export default function BookmarksPage() {
       )}
 
       {!loading && !error && bookmarked.length === 0 && (
-        <div className="text-center py-16 text-zinc-500">
+        <div className="text-center py-16 text-zinc-400">
           <div className="text-4xl mb-3">☆</div>
           <p className="mb-4">북마크한 행사가 없습니다</p>
           <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm">행사 둘러보기 →</Link>

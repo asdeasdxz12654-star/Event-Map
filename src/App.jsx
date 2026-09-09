@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ScrollToTopButton from './components/ScrollToTopButton'
 import ScrollRestoration from './components/ScrollRestoration'
+import ErrorBoundary from './components/ErrorBoundary'
 import { AdminProvider } from './contexts/AdminContext'
 import { UIFeedbackProvider } from './contexts/UIFeedbackContext'
 
@@ -18,7 +19,7 @@ const AdminDraftsPage = lazy(() => import('./pages/AdminDraftsPage'))
 function PageFallback() {
   return (
     <div className="flex items-center justify-center py-24">
-      <span className="text-zinc-500 text-sm animate-pulse">불러오는 중...</span>
+      <span className="text-zinc-400 text-sm animate-pulse">불러오는 중...</span>
     </div>
   )
 }
@@ -45,6 +46,8 @@ export default function App() {
       <div className="min-h-screen bg-[#0f0f1a]">
         <Navbar />
         <main>
+          {/* 라우트 안에서 예외가 나도 네비게이션은 남기고 본문만 오류 화면으로 바꾼다 */}
+          <ErrorBoundary>
           <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/" element={<HomePage />} />
@@ -55,6 +58,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <ScrollToTopButton />

@@ -3,13 +3,33 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const base = process.env.GITHUB_PAGES === 'true' ? '/Event-Map/' : '/'
+const isGithubPages = process.env.GITHUB_PAGES === 'true'
+const base = isGithubPages ? '/Event-Map/' : '/'
+
+// og:url·og:image는 절대 URL이어야 해서 index.html에 도메인을 박아둘 수밖에 없는데,
+// 같은 코드가 GitHub Pages와 Cloudflare Pages 양쪽에 배포되다 보니 한쪽에 맞춰두면
+// 다른 쪽에서 공유했을 때 미리보기가 엉뚱한 사이트를 가리킨다. 빌드 대상에 맞는 값을
+// 여기서 주입한다. (VITE_SITE_URL로 덮어쓸 수 있음)
+const siteUrl =
+  process.env.VITE_SITE_URL ??
+  (isGithubPages ? 'https://asdeasdxz12654-star.github.io/Event-Map/' : 'https://event-map.pages.dev/')
+
+// index.html의 %SITE_URL% 자리를 위 값으로 바꾼다.
+function siteUrlPlugin() {
+  return {
+    name: 'inject-site-url',
+    transformIndexHtml(html) {
+      return html.replaceAll('%SITE_URL%', siteUrl)
+    },
+  }
+}
 
 export default defineConfig({
   base,
   plugins: [
     react(),
     tailwindcss(),
+    siteUrlPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],

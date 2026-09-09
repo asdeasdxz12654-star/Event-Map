@@ -19,7 +19,7 @@ export default function LiveCongestion({ placeName }) {
 
   if (!placeName) return null
   if (loading && !data) {
-    return <div className="text-xs text-zinc-500 animate-pulse">실시간 혼잡도 불러오는 중...</div>
+    return <div className="text-xs text-zinc-400 animate-pulse">실시간 혼잡도 불러오는 중...</div>
   }
   if (error || !data) return null
 
@@ -30,7 +30,7 @@ export default function LiveCongestion({ placeName }) {
       <div className="flex items-center gap-1.5 mb-2">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
         <h2 className="text-sm font-semibold text-white">실시간 인구 혼잡도</h2>
-        <span className="text-[11px] text-zinc-500">· {data.place}</span>
+        <span className="text-[11px] text-zinc-400">· {data.place}</span>
       </div>
 
       <div className="flex items-center gap-2 mb-2">
@@ -42,20 +42,20 @@ export default function LiveCongestion({ placeName }) {
         </span>
       </div>
 
-      <p className="text-xs text-zinc-500 mb-2">{data.message}</p>
+      <p className="text-xs text-zinc-400 mb-2">{data.message}</p>
 
       {data.forecast?.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {data.forecast.map(f => (
             <div key={f.time} className="shrink-0 text-center bg-white/5 rounded-lg px-2 py-1">
-              <div className="text-[10px] text-zinc-500">{formatTime(f.time)}</div>
+              <div className="text-[10px] text-zinc-400">{formatTime(f.time)}</div>
               <div className="text-[11px] text-zinc-300 whitespace-nowrap">{f.level}</div>
             </div>
           ))}
         </div>
       )}
 
-      <p className="text-[10px] text-zinc-600 mt-2">
+      <p className="text-[10px] text-zinc-400 mt-2">
         {formatTime(data.updatedAt)} 기준 · 서울시 실시간 도시데이터 제공
       </p>
     </div>

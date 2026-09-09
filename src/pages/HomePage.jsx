@@ -114,6 +114,7 @@ export default function HomePage() {
           <button
             key={key}
             onClick={() => setActiveStatus(key)}
+            aria-pressed={activeStatus === key}
             className={`shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl text-sm lg:text-base font-medium transition-all ${
               activeStatus === key
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
@@ -133,7 +134,7 @@ export default function HomePage() {
 
       {/* 검색 */}
       <div className="relative mb-4">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">🔍</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
         <input
           type="search"
           value={search}
@@ -144,7 +145,7 @@ export default function HomePage() {
         {search && (
           <button
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-sm"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-sm"
             aria-label="검색 지우기"
           >
             ✕
@@ -158,6 +159,7 @@ export default function HomePage() {
           <button
             key={String(key)}
             onClick={() => setActiveCategory(key)}
+            aria-pressed={activeCategory === key}
             className={`shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
               activeCategory === key
                 ? 'bg-violet-600/80 text-white'
@@ -194,6 +196,7 @@ export default function HomePage() {
           <div className="flex rounded-lg overflow-hidden border border-white/10">
             <button
               onClick={() => setSort('date')}
+              aria-pressed={sort === 'date'}
               className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 sort === 'date' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
               }`}
@@ -202,6 +205,7 @@ export default function HomePage() {
             </button>
             <button
               onClick={() => setSort('newest')}
+              aria-pressed={sort === 'newest'}
               className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-white/10 ${
                 sort === 'newest' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
               }`}
@@ -213,10 +217,11 @@ export default function HomePage() {
           {/* 매진 제외 */}
           <button
             onClick={() => setHideSoldout(!hideSoldout)}
+            aria-pressed={hideSoldout}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
               hideSoldout
                 ? 'bg-red-600/20 border-red-500/40 text-red-400'
-                : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'
+                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
             }`}
           >
             {hideSoldout ? '매진 숨김 ✓' : '매진 제외'}
@@ -229,6 +234,7 @@ export default function HomePage() {
         <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 lg:mb-5 scrollbar-hide">
           <button
             onClick={() => setActiveMonth(null)}
+            aria-pressed={activeMonth === null}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
               activeMonth === null
                 ? 'bg-indigo-600 text-white'
@@ -241,6 +247,7 @@ export default function HomePage() {
             <button
               key={ym}
               onClick={() => setActiveMonth(activeMonth === ym ? null : ym)}
+              aria-pressed={activeMonth === ym}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 activeMonth === ym
                   ? 'bg-indigo-600 text-white'
@@ -255,7 +262,7 @@ export default function HomePage() {
 
       {/* 건수 표시 */}
       {!loading && !error && (
-        <p className="text-xs text-zinc-500 mb-4">
+        <p className="text-xs text-zinc-400 mb-4">
           {search
             ? `"${search}" 검색 결과 ${filtered.length}건`
             : `${filtered.length}개 행사`}
@@ -273,7 +280,7 @@ export default function HomePage() {
           <p>행사 정보를 불러오지 못했습니다</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-zinc-500">
+        <div className="text-center py-16 text-zinc-400">
           <div className="text-4xl mb-3">{search ? '🔍' : '📭'}</div>
           <p>{search ? `"${search}"에 해당하는 행사가 없습니다` : '해당하는 행사가 없습니다'}</p>
           {search && (

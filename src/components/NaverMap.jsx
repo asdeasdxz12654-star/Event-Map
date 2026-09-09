@@ -83,7 +83,7 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
     <div className="relative">
       {!ready && (
         <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center z-10">
-          <span className="text-zinc-500 text-xs animate-pulse">지도 불러오는 중...</span>
+          <span className="text-zinc-400 text-xs animate-pulse">지도 불러오는 중...</span>
         </div>
       )}
       <div ref={containerRef} className="w-full h-[220px]" />

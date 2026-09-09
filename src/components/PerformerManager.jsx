@@ -75,7 +75,7 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
         />
         <div className="flex gap-2">
           <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
-          <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 hover:text-white">취소</button>
+          <button onClick={() => setEditing(false)} className="text-xs text-zinc-400 hover:text-white">취소</button>
         </div>
       </div>
     )
@@ -92,12 +92,12 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-zinc-500 mt-1">{copy.undisclosed}</p>
+          <p className="text-xs text-zinc-400 mt-1">{copy.undisclosed}</p>
         )}
       </div>
       {isAdmin && (
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => setEditing(true)} className="text-xs text-zinc-500 hover:text-white">수정</button>
+          <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-white">수정</button>
           <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400">삭제</button>
         </div>
       )}
