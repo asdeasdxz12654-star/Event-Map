@@ -48,15 +48,19 @@ export function useEvents() {
   useEffect(() => {
     let cancelled = false
 
+    // 예전엔 "올해 1/1~12/31"만 불러왔는데, 그러면 12월에 접속했을 때 바로 다음 달
+    // (내년 1월) 행사가 통째로 안 보이고, 이미 등록된 내년 행사(지스타 2027 등)도
+    // 영영 안 뜬다. 올해 초부터 내년 말까지로 넓힌다 — 지난 행사는 "종료" 탭에서
+    // 필요하므로 하한은 올해 1/1 그대로 둔다.
     const year = new Date().getFullYear()
-    const yearStart = `${year}-01-01`
-    const yearEnd = `${year}-12-31`
+    const rangeStart = `${year}-01-01`
+    const rangeEnd = `${year + 1}-12-31`
 
     supabase
       .from('events')
       .select('*')
-      .gte('start_date', yearStart)
-      .lte('start_date', yearEnd)
+      .gte('start_date', rangeStart)
+      .lte('start_date', rangeEnd)
       .then(({ data, error: fetchError }) => {
         if (cancelled) return
         if (fetchError) {
@@ -75,7 +79,10 @@ export function useEvents() {
             return current.filter(e => e.id !== payload.old.id)
           }
           const updated = mapEvent(payload.new)
-          if (updated.startDate?.slice(0, 4) !== String(year)) return current
+          // 초기 조회와 같은 범위만 반영한다 (범위 밖 행사가 실시간으로 끼어들지 않게).
+          if (!updated.startDate || updated.startDate < rangeStart || updated.startDate > rangeEnd) {
+            return current
+          }
           const withoutOld = current.filter(e => e.id !== updated.id)
           return sortByStartDate([...withoutOld, updated])
         })

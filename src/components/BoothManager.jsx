@@ -3,6 +3,8 @@ import { useEventBooths } from '../hooks/useEventBooths'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
+import SectionCard from './SectionCard'
+import DisclosureNote from './DisclosureNote'
 
 const EMPTY_FORM = { name: '', booth_no: '', goods: '' }
 
@@ -111,28 +113,20 @@ export default function BoothManager({ eventId, note }) {
   const cls = 'bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500'
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-white">🏢 참가 업체 · 부스</h2>
-        {isAdmin && (
-          <button onClick={() => setShowAddForm(v => !v)} className="text-xs text-indigo-400 hover:text-indigo-300">
-            {showAddForm ? '닫기' : '+ 부스 추가'}
-          </button>
-        )}
-      </div>
-
+    <SectionCard
+      title="🏢 참가 업체 · 부스"
+      action={isAdmin && (
+        <button onClick={() => setShowAddForm(v => !v)} className="text-xs text-indigo-400 hover:text-indigo-300">
+          {showAddForm ? '닫기' : '+ 부스 추가'}
+        </button>
+      )}
+    >
       {booths.length === 0 && !showAddForm && (
-        note ? (
-          note === '미공개' ? (
-            <p className="text-xs text-zinc-500">
-              <span className="text-zinc-400">🚫 미공개</span> — 공식 행사에서 참가업체/부스 정보를 공개하지 않습니다.
-            </p>
-          ) : (
-            <p className="text-xs text-zinc-500">ℹ️ {note}</p>
-          )
-        ) : (
-          <p className="text-xs text-zinc-500">아직 등록된 참가 업체/부스 정보가 없습니다.</p>
-        )
+        <DisclosureNote
+          note={note}
+          subject="참가업체/부스"
+          emptyText="아직 등록된 참가 업체/부스 정보가 없습니다."
+        />
       )}
 
       {booths.map(booth => (
@@ -149,6 +143,6 @@ export default function BoothManager({ eventId, note }) {
           </button>
         </form>
       )}
-    </div>
+    </SectionCard>
   )
 }

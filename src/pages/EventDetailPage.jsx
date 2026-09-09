@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { getEventStatus, STATUS } from '../data/events'
+import { getEventStatus, categoryMeta, STATUS } from '../data/events'
 import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
 import CrowdBadge from '../components/CrowdBadge'
@@ -18,10 +18,9 @@ import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
 import BoothManager from '../components/BoothManager'
 import PerformerManager from '../components/PerformerManager'
+import SectionCard from '../components/SectionCard'
 import LiveCongestion from '../components/LiveCongestion'
 import { ticketSiteName } from '../lib/ticketSite'
-
-const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -116,7 +115,7 @@ export default function EventDetailPage() {
             />
           ) : (
             <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex items-center justify-center text-6xl">
-              {CATEGORY_EMOJI[event.category] ?? '🎪'}
+              {categoryMeta(event.category).emoji}
             </div>
           )}
 
@@ -199,24 +198,22 @@ export default function EventDetailPage() {
           <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
 
           {/* 신뢰도 카드 */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-            <h2 className="text-sm font-semibold text-white mb-2">행사 신뢰도</h2>
+          <SectionCard title="행사 신뢰도">
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
-          </div>
+          </SectionCard>
 
           {/* 출연진 · 세트리스트 / 무대 일정 (전 카테고리 — 콘서트는 세트리스트, 그 외는 무대 프로그램) */}
           <PerformerManager eventId={event.id} category={event.category} note={event.stageInfoNote} />
 
           {/* 부스 배치도 */}
           {event.floorPlanUrl && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
-              <h2 className="text-sm font-semibold text-white mb-3">🗺 부스 배치도</h2>
+            <SectionCard title="🗺 부스 배치도">
               <img
                 src={event.floorPlanUrl}
                 alt={`${event.title} 부스 배치도`}
                 className="w-full rounded-xl object-contain bg-white/5"
               />
-            </div>
+            </SectionCard>
           )}
 
           {/* 참가 업체 · 부스 */}

@@ -71,9 +71,16 @@ export default function HomePage() {
     search
   ).filter(e => !hideSoldout || e.ticketStatus !== 'soldout')
 
-  const activeMonths = getActiveMonths(baseBeforeMonth)
+  const activeMonths = getActiveMonths(baseBeforeMonth) // ['2026-09', '2026-10', ...]
   const base = filterByMonth(baseBeforeMonth, activeMonth)
   const filtered = sort === 'newest' ? sortByNewest(base) : base
+
+  // 한 해 안이면 "9월", 내년 행사까지 섞여 보이면 "26.9월"처럼 연도를 붙여 구분한다.
+  const spansMultipleYears = new Set(activeMonths.map(ym => ym.slice(0, 4))).size > 1
+  const monthLabel = ym => {
+    const [year, month] = ym.split('-')
+    return spansMultipleYears ? `${year.slice(2)}.${Number(month)}월` : `${Number(month)}월`
+  }
 
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
@@ -205,17 +212,17 @@ export default function HomePage() {
           >
             전체
           </button>
-          {activeMonths.map(m => (
+          {activeMonths.map(ym => (
             <button
-              key={m}
-              onClick={() => setActiveMonth(activeMonth === m ? null : m)}
+              key={ym}
+              onClick={() => setActiveMonth(activeMonth === ym ? null : ym)}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
-                activeMonth === m
+                activeMonth === ym
                   ? 'bg-indigo-600 text-white'
                   : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
               }`}
             >
-              {m}월
+              {monthLabel(ym)}
             </button>
           ))}
         </div>

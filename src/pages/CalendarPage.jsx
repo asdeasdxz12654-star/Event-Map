@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, isToday } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import CategoryBadge from '../components/CategoryBadge'
+import { categoryMeta, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
@@ -130,13 +131,7 @@ export default function CalendarPage() {
                     {dayEvents.length > 0 && (
                       <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
                         {dayEvents.slice(0, 3).map(e => (
-                          <div
-                            key={e.id}
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              e.category === '게임전시' ? 'bg-violet-400' :
-                              e.category === '코스프레' ? 'bg-pink-400' : 'bg-amber-400'
-                            }`}
-                          />
+                          <div key={e.id} className={`w-1.5 h-1.5 rounded-full ${categoryMeta(e.category).dotClass}`} />
                         ))}
                       </div>
                     )}
@@ -148,9 +143,12 @@ export default function CalendarPage() {
 
           {/* 범례 */}
           <div className="flex gap-4 mb-6 lg:mb-0 text-xs text-zinc-400">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />게임전시</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-pink-400 inline-block" />코스프레</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />게임음악</span>
+            {Object.values(CATEGORIES).map(category => (
+              <span key={category} className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full inline-block ${categoryMeta(category).dotClass}`} />
+                {category}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -171,9 +169,7 @@ export default function CalendarPage() {
                       to={`/events/${event.id}`}
                       className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors"
                     >
-                      <span className="text-2xl">
-                        {event.category === '게임전시' ? '🎮' : event.category === '코스프레' ? '✨' : '🎵'}
-                      </span>
+                      <span className="text-2xl">{categoryMeta(event.category).emoji}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{event.title}</p>
                         <p className="text-xs text-zinc-400">{event.venue}</p>

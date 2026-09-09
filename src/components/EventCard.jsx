@@ -5,14 +5,13 @@ import { ko } from 'date-fns/locale'
 import StatusBadge from './StatusBadge'
 import CategoryBadge from './CategoryBadge'
 import CrowdBadge from './CrowdBadge'
-import { getEventStatus, getDaysUntil, STATUS } from '../data/events'
+import { getEventStatus, getDaysUntil, categoryMeta, STATUS } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { ticketSiteName } from '../lib/ticketSite'
 
-const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
 
 export default function EventCard({ event }) {
@@ -104,7 +103,7 @@ export default function EventCard({ event }) {
           />
         ) : (
           <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex items-center justify-center text-3xl sm:text-4xl">
-            {CATEGORY_EMOJI[event.category] ?? '🎪'}
+            {categoryMeta(event.category).emoji}
           </div>
         )}
         {event.ticketStatus === 'soldout' && (

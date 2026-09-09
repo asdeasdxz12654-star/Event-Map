@@ -13,6 +13,17 @@ function escapeIcsText(text) {
   return (text ?? '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n')
 }
 
+// 파일명에 쓸 수 없는 문자를 정리한다 — 행사명에 ':'(예: "명조:워더링 웨이브 …")나
+// '/'가 들어있는 경우가 흔한데, 그대로 download 속성에 넣으면 브라우저·OS마다
+// 제각각으로 잘리거나 치환된다.
+function toSafeFileName(title) {
+  return (title ?? 'event')
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80) || 'event'
+}
+
 export function downloadEventIcs(event) {
   // all-day 이벤트의 DTEND는 종료일 "다음날"이어야 캘린더 앱이 마지막 날까지 포함해서 보여준다
   const end = new Date(`${event.endDate}T00:00:00`)
@@ -42,7 +53,7 @@ export function downloadEventIcs(event) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${event.title}.ics`
+  a.download = `${toSafeFileName(event.title)}.ics`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

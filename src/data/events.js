@@ -11,6 +11,27 @@ export const STATUS = {
   ENDED: 'ended',
 }
 
+// 카테고리별 이모지·색상 — 예전엔 CategoryBadge/EventCard/EventDetailPage/CalendarPage가
+// 각자 같은 매핑을 따로 들고 있어서, 카테고리를 추가하거나 색을 바꾸면 네 군데를 모두
+// 고쳐야 했다(=빠뜨리기 쉬움). 여기 하나만 고치면 전부 반영되게 모아둔다.
+const CATEGORY_META = {
+  [CATEGORIES.GAME]:    { emoji: '🎮', badgeClass: 'bg-violet-500/20 text-violet-300', dotClass: 'bg-violet-400' },
+  [CATEGORIES.COSPLAY]: { emoji: '✨', badgeClass: 'bg-pink-500/20 text-pink-300',     dotClass: 'bg-pink-400' },
+  [CATEGORIES.CONCERT]: { emoji: '🎵', badgeClass: 'bg-amber-500/20 text-amber-300',   dotClass: 'bg-amber-400' },
+}
+
+const UNKNOWN_CATEGORY_META = {
+  emoji: '🎪',
+  badgeClass: 'bg-zinc-700/50 text-zinc-300',
+  dotClass: 'bg-zinc-400',
+}
+
+// DB에 check 제약이 걸려 있어 실제로는 세 카테고리뿐이지만, 크롤러가 새 값을 넣는
+// 상황 등을 대비해 기본값을 준다.
+export function categoryMeta(category) {
+  return CATEGORY_META[category] ?? UNKNOWN_CATEGORY_META
+}
+
 function parseLocalDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d)
@@ -59,27 +80,38 @@ export function sortByNewest(list) {
   return [...list].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
 }
 
-// 행사의 시작월~종료월 범위에 target month(1-12)가 포함되면 true.
-// 연도 경계를 넘는 행사(예: 12월 시작 → 1월 종료)는 단순 비교라 제외되지만
-// 현재 데이터셋에는 해당 케이스가 없어 실용상 충분하다.
-export function filterByMonth(eventList, month) {
-  if (!month) return eventList
-  return eventList.filter(e => {
-    const startM = parseInt(e.startDate?.split('-')[1], 10)
-    const endM   = parseInt(e.endDate?.split('-')[1],   10)
-    if (!startM) return false
-    return startM <= month && month <= (endM || startM)
-  })
+// 월 필터는 'YYYY-MM' 문자열을 쓴다. 예전엔 월 숫자(1-12)만 비교해서
+//   1) 2026년 11월과 2027년 11월 행사가 같은 "11월"로 섞이고
+//   2) 연도를 넘기는 행사(12월 시작 → 1월 종료)가 아예 걸러지지 않는
+// 문제가 있었다. 연-월을 통째로 비교하면 둘 다 자연스럽게 해결된다.
+function nextYearMonth(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
 }
 
-// eventList에서 행사가 존재하는 월(1-12) 목록을 오름차순으로 반환한다.
+// 행사가 걸쳐 있는 모든 'YYYY-MM'을 반환 (시작월~종료월, 연도 경계 포함).
+function yearMonthsOf(event) {
+  const start = event.startDate?.slice(0, 7)
+  if (!start) return []
+  const end = (event.endDate ?? event.startDate).slice(0, 7)
+  const result = []
+  // 데이터 오류(종료일이 시작일보다 한참 뒤)로 무한 루프에 빠지지 않게 상한을 둔다.
+  for (let ym = start, i = 0; ym <= end && i < 24; ym = nextYearMonth(ym), i++) {
+    result.push(ym)
+  }
+  return result
+}
+
+export function filterByMonth(eventList, yearMonth) {
+  if (!yearMonth) return eventList
+  return eventList.filter(e => yearMonthsOf(e).includes(yearMonth))
+}
+
+// eventList에서 행사가 존재하는 'YYYY-MM' 목록을 오름차순으로 반환한다.
 export function getActiveMonths(eventList) {
   const months = new Set()
   for (const e of eventList) {
-    const startM = parseInt(e.startDate?.split('-')[1], 10)
-    const endM   = parseInt(e.endDate?.split('-')[1],   10)
-    if (!startM) continue
-    for (let m = startM; m <= (endM || startM); m++) months.add(m)
+    for (const ym of yearMonthsOf(e)) months.add(ym)
   }
-  return [...months].sort((a, b) => a - b)
+  return [...months].sort()
 }
