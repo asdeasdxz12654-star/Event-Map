@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "crawl": "node src/crawl.mjs"
+    "crawl": "node src/crawl.mjs",
+    "verify:posters": "node src/verify-poster-images.mjs",
+    "verify:coords": "node src/verify-venue-coords.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.113.0",
