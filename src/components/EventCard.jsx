@@ -65,7 +65,7 @@ export default function EventCard({ event }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-4 transition-all duration-200 group"
+      className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group"
     >
       <button
         onClick={e => {
@@ -103,7 +103,7 @@ export default function EventCard({ event }) {
             className="w-full aspect-[16/7] rounded-xl object-cover"
           />
         ) : (
-          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex items-center justify-center text-4xl">
+          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex items-center justify-center text-3xl sm:text-4xl">
             {CATEGORY_EMOJI[event.category] ?? '🎪'}
           </div>
         )}
@@ -123,7 +123,7 @@ export default function EventCard({ event }) {
       </div>
 
       <div className="flex items-start justify-between gap-2 mb-2 pr-8">
-        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors text-sm leading-snug">
+        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors text-sm leading-snug line-clamp-2">
           {event.title}
         </h3>
       </div>
