@@ -397,6 +397,9 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
     }
     // crowd_level(예상 혼잡도)은 실시간 데이터가 아니라 과거 참가 규모 기반 수동
     // 추정치라 EventExtractionSchema(AI 크롤러 스키마)엔 넣지 않고 여기서만 채운다.
+    // 주의: DB에 crowd_level 컬럼이 아직 없는 상태(supabase/event_extras.sql
+    // 실행 전)에서 이 코드가 돌면 아래 update가 조용히 실패(warn만 찍힘)한다 —
+    // 마이그레이션 실행 후 크롤러를 한 번 더 돌려야 값이 채워짐.
     if (extracted.crowd_level && approved?.promoted_event_id) {
       const { error: crowdError } = await supabase
         .from('events')
