@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import StatusBadge from './StatusBadge'
 import CategoryBadge from './CategoryBadge'
+import CrowdBadge from './CrowdBadge'
 import { getEventStatus, getDaysUntil } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
@@ -140,6 +141,7 @@ export default function EventCard({ event }) {
             {dDayLabel}
           </span>
         )}
+        <CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />
       </div>
 
       <div className="space-y-1 text-xs text-zinc-400 min-w-0">

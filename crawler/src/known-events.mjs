@@ -78,6 +78,8 @@ const KNOWN_EVENTS = [
           ? '스페셜 패스 사전예매: 팝업스토어 현장 9/1~6 → KREAM 온라인 9/7 · BTC 일반 예매 9/29 오픈'
           : null,
         admission_fee: '성인 18,000원 / 청소년 8,000원 (BTC 일반 사전예매, 100% 예매제)',
+        // 2025년 나흘간 20.2만명 방문(역대 2위 규모) — 국내 최대 게임전시라 항상 매우 혼잡.
+        crowd_level: 'very_high',
         website: 'https://www.gstar.or.kr/',
         tags: ['게임전시', '지스타', '부산', 'BEXCO'],
         confidence: 'high',
@@ -105,6 +107,8 @@ const KNOWN_EVENTS = [
         ticket_url: 'https://www.playx4.or.kr/',
         ticket_open_date: null,
         admission_fee: '3,000원 (미취학아동·만 65세 이상·장애인·국가유공자·현역 군인/경찰/소방관 무료)',
+        // 2026년 나흘간 약 13만명 방문(역대 최대) — 혼잡.
+        crowd_level: 'high',
         website: 'https://www.playx4.or.kr/',
         tags: ['게임전시', '플레이엑스포', 'PlayX4', '고양', 'KINTEX'],
         confidence: 'high',
@@ -132,6 +136,8 @@ const KNOWN_EVENTS = [
         ticket_url: 'https://www.agfkorea.com/',
         ticket_open_date: null,
         admission_fee: '공식 미정',
+        // 2025년 사흘간 10만명 최초 돌파(역대 최대, 티켓 발권 기준 집계) — 혼잡.
+        crowd_level: 'high',
         website: 'https://www.agfkorea.com/',
         tags: ['코스프레', 'AGF', '고양', 'KINTEX', '서브컬처'],
         confidence: 'high',
@@ -159,6 +165,8 @@ const KNOWN_EVENTS = [
         ticket_url: 'https://www.bicfest.org/',
         ticket_open_date: null,
         admission_fee: '오프라인 1일권 성인 15,000원·청소년 12,500원 / 2일권 성인 30,000원·청소년 25,000원 (공식 홈페이지 사전예매 20% 할인)',
+        // 2025년 온+오프라인 합산 3.8만명(오프라인만은 이보다 적음) — 보통.
+        crowd_level: 'medium',
         website: 'https://www.bicfest.org/',
         tags: ['게임전시', 'BIC', '인디게임', '부산', 'BEXCO'],
         confidence: 'high',
@@ -183,6 +191,9 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
+      // 서울 코믹월드 하루평균 2만명대, 지방 회차도 3만명대 방문 — 전시장 면적 대비
+      // 초과 밀집으로 알려져 있어 혼잡.
+      crowd_level: 'high',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
       confidence: 'high',
     },
@@ -198,6 +209,8 @@ const ONE_OFF_EVENTS = [
       description: '만화·웹툰 중심의 국제 문화축제. 야외 만화카페·마켓, 작가 대담·사인회 등.',
       ticket_url: 'https://www.bicof.com/', ticket_open_date: null,
       admission_fee: '일반 5,000원 / 부천시민 2,500원 / 19세 이하 무료',
+      // 회차별 11~12만명이지만 한국만화박물관 일원(도심 전역)에 분산 개최 — 보통.
+      crowd_level: 'medium',
       website: 'https://www.bicof.com/', tags: ['부천국제만화축제', 'BICOF', '부천', '만화', '웹툰'],
       confidence: 'high',
     },
@@ -228,6 +241,7 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
+      crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '울산'],
       confidence: 'high',
     },
@@ -244,6 +258,8 @@ const ONE_OFF_EVENTS = [
       description: '일러스트·서브컬처 종합 이벤트. 동인지·굿즈 판매 부스, 코스프레 포토존 운영.',
       ticket_url: 'https://illustar.net/', ticket_open_date: null,
       admission_fee: '선행입장권 12,000원(입장권만)·14,000원(탈의실 이용권 포함) / 일반입장권 7,000원·9,000원',
+      // 직전 11회 3.2만명 방문(역대급) — 혼잡.
+      crowd_level: 'high',
       website: 'https://illustar.net/', tags: ['일러스타페스', '서브컬처', '코스프레', '일러스트', 'KINTEX'],
       confidence: 'high',
     },
@@ -289,6 +305,7 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
+      crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '수원'],
       confidence: 'high',
     },
@@ -378,6 +395,18 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       if (posterError) console.warn(`[known-events] 포스터 저장 실패:`, posterError.message)
       else console.log(`[known-events] 포스터 설정됨`)
     }
+    // crowd_level(예상 혼잡도)은 실시간 데이터가 아니라 과거 참가 규모 기반 수동
+    // 추정치라 EventExtractionSchema(AI 크롤러 스키마)엔 넣지 않고 여기서만 채운다.
+    if (extracted.crowd_level && approved?.promoted_event_id) {
+      const { error: crowdError } = await supabase
+        .from('events')
+        .update({ crowd_level: extracted.crowd_level })
+        .eq('id', approved.promoted_event_id)
+        .is('crowd_level', null)
+        .is('admin_edited_at', null)
+      if (crowdError) console.warn(`[known-events] 혼잡도 저장 실패:`, crowdError.message)
+      else console.log(`[known-events] 예상 혼잡도 설정: ${extracted.crowd_level}`)
+    }
   }
 }
 
@@ -413,6 +442,9 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   if (extracted.venue_lat && extracted.venue_lng) {
     patch.venue_lat = extracted.venue_lat
     patch.venue_lng = extracted.venue_lng
+  }
+  if (extracted.crowd_level) {
+    patch.crowd_level = extracted.crowd_level
   }
 
   const { data, error } = await supabase

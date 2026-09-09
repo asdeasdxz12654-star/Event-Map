@@ -59,6 +59,8 @@ async function supabase(env, method, path, body) {
 }
 
 const ID_RE = /^\/admin\/events\/([^/]+)$/
+const BOOTHS_OF_EVENT_RE = /^\/admin\/events\/([^/]+)\/booths$/
+const BOOTH_ID_RE = /^\/admin\/booths\/([^/]+)$/
 
 async function handleAdmin(request, env, pathname) {
   if (!await verifyAdmin(request, env)) {
@@ -66,6 +68,31 @@ async function handleAdmin(request, env, pathname) {
   }
 
   const idMatch = ID_RE.exec(pathname)
+  const boothsOfEventMatch = BOOTHS_OF_EVENT_RE.exec(pathname)
+  const boothIdMatch = BOOTH_ID_RE.exec(pathname)
+
+  // POST /admin/events/:eventId/booths — 참가 부스 추가
+  if (boothsOfEventMatch && request.method === 'POST') {
+    const eventId = decodeURIComponent(boothsOfEventMatch[1])
+    const body = await request.json()
+    const data = await supabase(env, 'POST', 'event_booths', { event_id: eventId, ...body })
+    return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
+  }
+
+  // PATCH /admin/booths/:id — 참가 부스 수정
+  if (boothIdMatch && request.method === 'PATCH') {
+    const id = decodeURIComponent(boothIdMatch[1])
+    const body = await request.json()
+    await supabase(env, 'PATCH', `event_booths?id=eq.${encodeURIComponent(id)}`, body)
+    return json({ ok: true }, env)
+  }
+
+  // DELETE /admin/booths/:id — 참가 부스 삭제
+  if (boothIdMatch && request.method === 'DELETE') {
+    const id = decodeURIComponent(boothIdMatch[1])
+    await supabase(env, 'DELETE', `event_booths?id=eq.${encodeURIComponent(id)}`)
+    return new Response(null, { status: 204, headers: corsHeaders(env) })
+  }
 
   // POST /admin/events — 행사 추가
   if (pathname === '/admin/events' && request.method === 'POST') {

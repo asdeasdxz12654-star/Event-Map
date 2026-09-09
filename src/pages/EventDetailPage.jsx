@@ -5,6 +5,7 @@ import { ko } from 'date-fns/locale'
 import { getEventStatus } from '../data/events'
 import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
+import CrowdBadge from '../components/CrowdBadge'
 import TrustScore from '../components/TrustScore'
 import NaverMap from '../components/NaverMap'
 import { useEvents } from '../hooks/useEvents'
@@ -13,6 +14,7 @@ import { downloadEventIcs } from '../utils/ics'
 import { useAdmin } from '../contexts/AdminContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
+import BoothManager from '../components/BoothManager'
 import { ticketSiteName } from '../lib/ticketSite'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
@@ -159,6 +161,14 @@ export default function EventDetailPage() {
             <InfoRow icon="📅" label="기간" value={dateStr} />
             <InfoRow icon="📍" label="장소" value={`${event.venue}\n${event.venueAddress}`} />
             <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
+            {event.crowdLevel && (
+              <InfoRow
+                icon="👥"
+                label="예상 혼잡도"
+                value={<CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />}
+                hint="실시간 데이터가 아닌, 과거 참가 규모·매진 여부 기반 추정치입니다"
+              />
+            )}
             <InfoRow icon="🏢" label="주최" value={event.organizer} />
             {event.ticketOpenDate && (
               <InfoRow
@@ -181,6 +191,21 @@ export default function EventDetailPage() {
             <h2 className="text-sm font-semibold text-white mb-2">행사 신뢰도</h2>
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
           </div>
+
+          {/* 부스 배치도 */}
+          {event.floorPlanUrl && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+              <h2 className="text-sm font-semibold text-white mb-3">🗺 부스 배치도</h2>
+              <img
+                src={event.floorPlanUrl}
+                alt={`${event.title} 부스 배치도`}
+                className="w-full rounded-xl object-contain bg-white/5"
+              />
+            </div>
+          )}
+
+          {/* 참가 업체 · 부스 */}
+          <BoothManager eventId={event.id} />
 
           {/* 위치 & 경로 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
@@ -254,12 +279,15 @@ function stripHallInfo(name) {
     .trim()
 }
 
-function InfoRow({ icon, label, value }) {
+function InfoRow({ icon, label, value, hint }) {
   return (
     <div className="flex gap-3 text-sm">
       <span className="shrink-0 w-5">{icon}</span>
       <span className="text-zinc-400 shrink-0 w-20 whitespace-nowrap">{label}</span>
-      <span className="text-zinc-200 whitespace-pre-line">{value}</span>
+      <span className="text-zinc-200 whitespace-pre-line">
+        {value}
+        {hint && <span className="block text-xs text-zinc-500 mt-0.5">{hint}</span>}
+      </span>
     </div>
   )
 }

@@ -8,7 +8,16 @@ const EMPTY = {
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
+  crowd_level: '', floor_plan_url: '',
 }
+
+const CROWD_LEVELS = [
+  { value: '', label: '(추정 근거 없음 — 표시 안 함)' },
+  { value: 'low', label: '🟢 한산' },
+  { value: 'medium', label: '🟡 보통' },
+  { value: 'high', label: '🟠 혼잡' },
+  { value: 'very_high', label: '🔴 매우 혼잡' },
+]
 
 function toForm(event) {
   if (!event) return EMPTY
@@ -30,6 +39,8 @@ function toForm(event) {
     admission_fee: event.admissionFee ?? '',
     website: event.website ?? '',
     poster_url: event.posterUrl ?? '',
+    crowd_level: event.crowdLevel ?? '',
+    floor_plan_url: event.floorPlanUrl ?? '',
     trust_score: String(event.trustScore ?? 3),
     tags: (event.tags ?? []).join(', '),
   }
@@ -54,6 +65,8 @@ function toPayload(form) {
     admission_fee: form.admission_fee || null,
     website: form.website || null,
     poster_url: form.poster_url || null,
+    crowd_level: form.crowd_level || null,
+    floor_plan_url: form.floor_plan_url || null,
     trust_score: form.trust_score !== '' ? Number(form.trust_score) : null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
   }
@@ -198,6 +211,19 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <Field label="포스터 URL">
             <input type="url" value={form.poster_url} onChange={set('poster_url')} className={cls} placeholder="https://" />
           </Field>
+
+          <Field label="부스 배치도 URL">
+            <input type="url" value={form.floor_plan_url} onChange={set('floor_plan_url')} className={cls} placeholder="https://" />
+          </Field>
+
+          <Field label="예상 혼잡도">
+            <select value={form.crowd_level} onChange={set('crowd_level')} className={cls}>
+              {CROWD_LEVELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </Field>
+          <p className="text-[11px] text-zinc-500 -mt-2">
+            실시간 인원 데이터가 아닙니다 — 매진 여부·과거 참가 규모 등으로 직접 추정해 선택하세요.
+          </p>
 
           <Field label="신뢰도 (0~5)">
             <input type="number" min="0" max="5" value={form.trust_score} onChange={set('trust_score')} className={cls} />
