@@ -1,20 +1,33 @@
 // event-map-api-proxy
 //
 // 프론트엔드(GitHub Pages)가 API 키를 노출하지 않고 외부 API를 호출하기 위한 중계 Worker.
-// 관리자 CRUD 엔드포인트(/admin/events)는 ADMIN_TOKEN_HASH 시크릿으로 검증 후
-// SUPABASE_SERVICE_ROLE_KEY를 사용해 DB에 직접 쓴다.
+// 관리자 CRUD 엔드포인트(/admin/*)는 서버 사이드 로그인(POST /admin/login)으로 발급한
+// 서명된 세션 토큰(24시간 만료)으로 검증한 뒤 SUPABASE_SERVICE_ROLE_KEY로 DB에 직접 쓴다.
+//
+// 예전엔 "비밀번호의 SHA-256 해시"를 프론트엔드 번들에 그대로 박아두고 브라우저에서
+// 직접 비교했었다 — 그 해시가 공개 번들에 실리는 순간 공격자가 오프라인으로(서버 요청
+// 없이, 속도 제한도 안 받고) 얼마든지 크랙 시도를 할 수 있어서 취약했다. 지금은 비밀번호
+// 해시를 서버(Worker)에만 두고, 로그인 성공 시에만 HMAC 서명된 만료 토큰을 내려준다 —
+// 토큰만 봐서는 비밀번호를 역산할 수 없고, 탈취돼도 24시간 뒤엔 자동 무효화된다.
 //
 // 시크릿 등록:
 //   npx wrangler secret put SUPABASE_URL
 //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-//   npx wrangler secret put ADMIN_TOKEN_HASH   (값: sha256(관리자 비밀번호의 sha256) — AdminContext.jsx의
-//                                                _d()로 만든 토큰을 다시 sha256한 값. 실제 값은 커밋하지
-//                                                말고 각자 로컬에서만 계산해 등록할 것)
-//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://<user>.github.io)
+//   npx wrangler secret put ADMIN_PASSWORD_HASH (값: sha256(관리자 비밀번호) — 이 값 자체는
+//                                                 공개돼도 상관없을 정도로 안전하진 않으니
+//                                                 커밋하지 말고 시크릿으로만 등록할 것)
+//   npx wrangler secret put SESSION_SECRET      (세션 토큰 서명용 무작위 키. 아무 의미
+//                                                 없는 긴 무작위 문자열이면 됨 — 주기적으로
+//                                                 바꾸면 그 순간 모든 기존 세션이 무효화됨)
+//   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://<user>.github.io —
+//                                                로컬 개발도 같이 열어두고 싶으면 쉼표로 여러 개:
+//                                                "https://<user>.github.io,http://localhost:5173")
 //   npx wrangler secret put SEOUL_OPENDATA_KEY (서울 열린데이터광장 인증키. /seoul-congestion 라우트가
 //                                                이 키로 서울시 실시간 도시데이터 API를 대신 호출한다 —
 //                                                프론트엔드에 키를 직접 박으면 번들에 노출되고, 그
 //                                                API가 CORS도 지원 안 해서 브라우저에서 직접 호출 불가)
+
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24시간
 
 function corsHeaders(env = {}) {
   return {
@@ -36,13 +49,46 @@ async function sha256hex(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+async function hmacKey(secret) {
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  )
+}
+
+// 세션 토큰 = "만료시각.HMAC서명" — Worker가 상태 없이(별도 저장소 없이) 자체 검증
+// 가능한 형태. 페이로드에 비밀번호/해시가 전혀 안 들어가므로 토큰이 유출돼도 비밀번호를
+// 역산할 수 없고, 만료시각이 지나면 서명이 맞아도 거부된다.
+async function issueSessionToken(env) {
+  const payload = String(Date.now() + SESSION_TTL_MS)
+  const key = await hmacKey(env.SESSION_SECRET)
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
+  const sig = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return `${payload}.${sig}`
+}
+
+async function verifySessionToken(token, env) {
+  if (!token || !env.SESSION_SECRET) return false
+  const dot = token.indexOf('.')
+  if (dot < 0) return false
+  const payload = token.slice(0, dot)
+  const sigHex = token.slice(dot + 1)
+  const expiresAt = Number(payload)
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false
+  if (!/^[0-9a-f]+$/.test(sigHex) || sigHex.length % 2 !== 0) return false
+  const sigBytes = new Uint8Array(sigHex.match(/.{2}/g).map(b => parseInt(b, 16)))
+  const key = await hmacKey(env.SESSION_SECRET)
+  // crypto.subtle.verify는 상수 시간 비교라 타이밍 사이드채널에 안전하다.
+  return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(payload))
+}
+
 async function verifyAdmin(request, env) {
   const auth = request.headers.get('Authorization') ?? ''
   if (!auth.startsWith('Bearer ')) return false
-  const token = auth.slice(7)
-  if (!token || !env.ADMIN_TOKEN_HASH) return false
-  const tokenHash = await sha256hex(token)
-  return tokenHash === env.ADMIN_TOKEN_HASH
+  return verifySessionToken(auth.slice(7), env)
 }
 
 async function supabase(env, method, path, body) {
@@ -75,6 +121,22 @@ const SUB_OF_EVENT_RE = new RegExp(`^/admin/events/([^/]+)/(${subResourcePattern
 const SUB_ID_RE = new RegExp(`^/admin/(${subResourcePattern})/([^/]+)$`)
 
 async function handleAdmin(request, env, pathname) {
+  // POST /admin/login — 로그인. 여기가 인증의 시작점이라 verifyAdmin 검사 이전에 처리한다.
+  // 비밀번호 해시는 서버(env.ADMIN_PASSWORD_HASH)에만 있고 응답엔 절대 포함하지 않는다.
+  if (pathname === '/admin/login' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}))
+    const password = typeof body?.password === 'string' ? body.password : ''
+    if (!password || !env.ADMIN_PASSWORD_HASH) {
+      return json({ error: 'invalid_credentials' }, env, { status: 401 })
+    }
+    const hash = await sha256hex(password)
+    if (hash !== env.ADMIN_PASSWORD_HASH) {
+      return json({ error: 'invalid_credentials' }, env, { status: 401 })
+    }
+    const token = await issueSessionToken(env)
+    return json({ token }, env)
+  }
+
   if (!await verifyAdmin(request, env)) {
     return json({ error: 'unauthorized' }, env, { status: 401 })
   }
@@ -203,6 +265,17 @@ const routes = {
 
 export default {
   async fetch(request, env) {
+    // ALLOWED_ORIGIN은 쉼표로 여러 origin을 담을 수 있다 — 요청의 Origin이 그중
+    // 하나와 일치하면 그 값을 그대로 돌려주고(와일드카드 대신 정확히 매칭된 origin만
+    // 허용), 아니면 목록의 첫 값으로 fallback한다. corsHeaders()는 이 값을 그대로
+    // 읽기만 하면 되게, 여기서 한 번만 계산해서 env를 감싸 내려보낸다.
+    const allowedOrigins = (env.ALLOWED_ORIGIN ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    const requestOrigin = request.headers.get('Origin')
+    const resolvedOrigin = allowedOrigins.length === 0
+      ? '*'
+      : (allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0])
+    env = { ...env, ALLOWED_ORIGIN: resolvedOrigin }
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(env) })
     }

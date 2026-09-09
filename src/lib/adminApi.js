@@ -1,4 +1,4 @@
-import { getAdminToken } from '../contexts/AdminContext'
+import { getAdminToken, TOKEN_KEY } from '../contexts/AdminContext'
 
 const BASE = import.meta.env.VITE_ADMIN_API_URL || 'https://event-map-api-proxy.asdeasdxz12654.workers.dev'
 
@@ -22,6 +22,11 @@ async function req(method, path, body) {
     throw new Error(`네트워크 연결 오류: ${networkErr.message}`)
   }
   if (!res.ok) {
+    if (res.status === 401) {
+      // 세션 토큰이 만료됐거나 무효함 — 다음 로그인 시도가 확실히 새로 인증하도록 지운다.
+      try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* 시크릿 모드 등, 무시 */ }
+      throw new Error('관리자 세션이 만료됐습니다. 다시 로그인해주세요.')
+    }
     const e = await res.json().catch(() => ({}))
     let msg = e.message ?? `오류 ${res.status}`
     if (typeof msg === 'string' && msg.startsWith('{')) {
