@@ -9,6 +9,7 @@ import CrowdBadge from '../components/CrowdBadge'
 import TrustScore from '../components/TrustScore'
 import NaverMap from '../components/NaverMap'
 import { useEvents } from '../hooks/useEvents'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { downloadEventIcs } from '../utils/ics'
 import { useAdmin } from '../contexts/AdminContext'
@@ -27,6 +28,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate()
   const { events, loading, error } = useEvents()
   const event = events.find(e => e.id === id)
+  useDocumentTitle(event?.title)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
@@ -96,7 +98,7 @@ export default function EventDetailPage() {
     : `https://www.google.com/maps/dir/?api=1&destination=${mapSearch}&travelmode=transit`
 
   return (
-    <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
+    <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10 pb-24 lg:pb-10">
       {/* 뒤로가기 */}
       <Link to="/" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-6 transition-colors">
         ← 목록으로
@@ -276,6 +278,9 @@ export default function EventDetailPage() {
           <CtaButtons event={event} />
         </div>
       </div>
+
+      {/* 모바일 하단 고정 예매 바 — 페이지가 길어져도 예매하기가 항상 화면에 보이게 */}
+      <TicketStickyBar event={event} />
     </div>
   )
 }
@@ -337,26 +342,45 @@ function ShareButton({ event }) {
   )
 }
 
+// 예매 버튼 — 사이드바/모바일 인라인 CTA와 하단 고정 바(TicketStickyBar)가 공유한다.
+function TicketButton({ event, className }) {
+  if (!event.ticketUrl) return null
+  if (event.ticketStatus === 'soldout') {
+    return (
+      <div className={`bg-zinc-800 text-zinc-500 font-semibold text-center select-none ${className}`}>
+        🎟 매진
+      </div>
+    )
+  }
+  return (
+    <a
+      href={event.ticketUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-center transition-colors shadow-lg shadow-indigo-900/50 ${className}`}
+    >
+      🎟 {event.ticketStatus === 'available' ? '예매하기' : '예매 페이지'}
+      {ticketSiteName(event.ticketUrl) && ` (${ticketSiteName(event.ticketUrl)})`}
+    </a>
+  )
+}
+
+// 모바일 전용 하단 고정 CTA — 카드가 많이 쌓이는 행사(부스·출연진·지도까지)는 스크롤이
+// 길어져서, "예매하기"가 화면 맨 아래에 파묻히지 않게 항상 보이는 바를 따로 둔다.
+// 예매 링크가 아예 없는 행사(공식 사이트만 있는 경우 등)에서는 굳이 안 띄운다.
+function TicketStickyBar({ event }) {
+  if (!event.ticketUrl) return null
+  return (
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0f0f1a]/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <TicketButton event={event} className="block w-full py-3 rounded-xl text-sm" />
+    </div>
+  )
+}
+
 function CtaButtons({ event }) {
   return (
     <div className="flex flex-col gap-2">
-      {event.ticketUrl && (
-        event.ticketStatus === 'soldout' ? (
-          <div className="w-full py-3.5 bg-zinc-800 text-zinc-500 font-semibold rounded-2xl text-center select-none">
-            🎟 매진
-          </div>
-        ) : (
-          <a
-            href={event.ticketUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-2xl text-center transition-colors shadow-lg shadow-indigo-900/50"
-          >
-            🎟 {event.ticketStatus === 'available' ? '예매하기' : '예매 페이지'}
-            {ticketSiteName(event.ticketUrl) && ` (${ticketSiteName(event.ticketUrl)})`}
-          </a>
-        )
-      )}
+      <TicketButton event={event} className="w-full py-3.5 rounded-2xl" />
       {event.website && (
         <a
           href={event.website}

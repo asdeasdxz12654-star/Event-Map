@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
@@ -13,6 +14,7 @@ const TABS = [
 const CONFIDENCE_LABEL = { high: '높음', medium: '보통', low: '낮음' }
 
 export default function AdminDraftsPage() {
+  useDocumentTitle('행사 검수')
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
   const [status, setStatus] = useState('pending')
   const { drafts, loading, error, refresh } = useEventDrafts(status)

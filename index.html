@@ -8,6 +8,21 @@
     <meta name="theme-color" content="#6366f1" />
     <meta name="description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
     <title>게임이벤트허브</title>
+
+    <!-- 정적 SPA(GitHub Pages)라 카카오톡·트위터 등 링크 미리보기 봇은 JS를 안 돌리고
+         이 태그들만 읽는다 — 그래서 "행사별" 미리보기는 서버 렌더링 없인 못 만들고,
+         최소한 사이트 전체를 공유했을 때 제목/설명/이미지가 나오도록 기본값을 둔다.
+         (individual event 공유는 document.title만 바뀔 뿐 og 태그는 그대로임 — 알려진 한계) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="게임이벤트허브" />
+    <meta property="og:title" content="게임이벤트허브 — 국내 게임·코스프레·게임음악 행사 정보" />
+    <meta property="og:description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
+    <meta property="og:image" content="https://asdeasdxz12654-star.github.io/Event-Map/icons/icon-192.png" />
+    <meta property="og:url" content="https://asdeasdxz12654-star.github.io/Event-Map/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="게임이벤트허브" />
+    <meta name="twitter:description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
+    <meta name="twitter:image" content="https://asdeasdxz12654-star.github.io/Event-Map/icons/icon-192.png" />
   </head>
   <body>
     <div id="root"></div>

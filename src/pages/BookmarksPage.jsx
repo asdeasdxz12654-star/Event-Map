@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 import EventCard from '../components/EventCard'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 export default function BookmarksPage() {
+  useDocumentTitle('북마크')
   const { events, loading, error } = useEvents()
   const { bookmarkIds } = useBookmarks()
 

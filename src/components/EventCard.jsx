@@ -170,7 +170,7 @@ export default function EventCard({ event }) {
           {siteName && ` · ${siteName}`}
         </div>
       )}
-      {!ticketNotOpenYet && status === 'upcoming' && event.ticketUrl && (
+      {!ticketNotOpenYet && status !== STATUS.ENDED && event.ticketUrl && (
         <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400 truncate">
           🎟 예매 중{siteName && ` · ${siteName}`}
         </div>

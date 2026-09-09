@@ -4,10 +4,12 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { ko } from 'date-fns/locale'
 import CategoryBadge from '../components/CategoryBadge'
 import { useEvents } from '../hooks/useEvents'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
 export default function CalendarPage() {
+  useDocumentTitle('캘린더')
   const { events, loading, error } = useEvents()
   const [viewDate, setViewDate] = useState(new Date())
 

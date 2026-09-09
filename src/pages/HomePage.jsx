@@ -3,6 +3,7 @@ import EventCard from '../components/EventCard'
 import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useHomeFilters } from '../hooks/useHomeFilters'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useAdmin } from '../contexts/AdminContext'
 import AdminEventForm from '../components/AdminEventForm'
 
@@ -40,6 +41,7 @@ function SkeletonCard() {
 }
 
 export default function HomePage() {
+  useDocumentTitle(null)
   const { events, loading, error } = useEvents()
   const { isAdmin } = useAdmin()
   const [showAddForm, setShowAddForm] = useState(false)

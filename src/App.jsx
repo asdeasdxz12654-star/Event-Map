@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import ScrollToTopButton from './components/ScrollToTopButton'
+import ScrollRestoration from './components/ScrollRestoration'
 import { AdminProvider } from './contexts/AdminContext'
 import { UIFeedbackProvider } from './contexts/UIFeedbackContext'
 
@@ -39,6 +41,7 @@ export default function App() {
     <UIFeedbackProvider>
     <AdminProvider>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <ScrollRestoration />
       <div className="min-h-screen bg-[#0f0f1a]">
         <Navbar />
         <main>
@@ -54,6 +57,7 @@ export default function App() {
           </Suspense>
         </main>
       </div>
+      <ScrollToTopButton />
     </BrowserRouter>
     </AdminProvider>
     </UIFeedbackProvider>
