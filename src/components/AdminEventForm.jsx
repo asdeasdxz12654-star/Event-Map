@@ -7,7 +7,7 @@ const EMPTY = {
   title: '', category: '게임전시', start_date: '', end_date: '',
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
-  admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
+  ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
 }
 
 function toForm(event) {
@@ -26,6 +26,7 @@ function toForm(event) {
     ticket_url: event.ticketUrl ?? '',
     ticket_open_date: event.ticketOpenDate ?? '',
     ticket_open_time: event.ticketOpenTime ?? '',
+    ticket_open_note: event.ticketOpenNote ?? '',
     admission_fee: event.admissionFee ?? '',
     website: event.website ?? '',
     poster_url: event.posterUrl ?? '',
@@ -49,6 +50,7 @@ function toPayload(form) {
     ticket_url: form.ticket_url || null,
     ticket_open_date: form.ticket_open_date || null,
     ticket_open_time: form.ticket_open_time || null,
+    ticket_open_note: form.ticket_open_note || null,
     admission_fee: form.admission_fee || null,
     website: form.website || null,
     poster_url: form.poster_url || null,
@@ -178,6 +180,16 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <p className="text-[11px] text-zinc-500 -mt-2">
             예매 사이트명은 별도 입력 없이 예매 URL에서 자동으로 표시됩니다.
           </p>
+
+          <Field label="사전예매 안내 (예매 단계가 여러 개일 때만)">
+            <textarea
+              value={form.ticket_open_note}
+              onChange={set('ticket_open_note')}
+              rows={2}
+              className={cls + ' resize-none'}
+              placeholder="ex) 스페셜 패스 사전예매: 팝업스토어 현장 9/1~6 → KREAM 온라인 9/7 · 일반 예매 9/29 오픈"
+            />
+          </Field>
 
           <Field label="공식 사이트">
             <input type="url" value={form.website} onChange={set('website')} className={cls} placeholder="https://" />

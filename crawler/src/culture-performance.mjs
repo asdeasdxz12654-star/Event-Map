@@ -204,6 +204,7 @@ export function buildCulturePerformanceDraft(candidate) {
     ticket_url: null,
     ticket_open_date: null,
     ticket_open_time: null,
+    ticket_open_note: null,
     admission_fee: raw.charge || null,
     website: raw.url ?? null,
     tags: ['문화예술공연통합'],

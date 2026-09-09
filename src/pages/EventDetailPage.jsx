@@ -171,6 +171,9 @@ export default function EventDetailPage() {
                 ].filter(Boolean).join(' · ')}
               />
             )}
+            {event.ticketOpenNote && (
+              <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
+            )}
           </div>
 
           {/* 신뢰도 카드 */}

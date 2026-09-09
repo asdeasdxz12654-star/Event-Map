@@ -167,6 +167,7 @@ export function buildKopisDraft(candidate) {
     ticket_url: getRelateUrl(raw),
     ticket_open_date: null,
     ticket_open_time: null,
+    ticket_open_note: null,
     admission_fee: raw.pcseguidance ?? null,
     website: null,
     tags: ['게임음악', raw.genrenm].filter(Boolean),
