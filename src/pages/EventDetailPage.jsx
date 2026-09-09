@@ -116,8 +116,9 @@ export default function EventDetailPage() {
               className="w-full rounded-2xl object-cover mb-6 max-h-[480px]"
             />
           ) : (
-            <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex items-center justify-center text-6xl">
-              {categoryMeta(event.category).emoji}
+            <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex flex-col items-center justify-center gap-2">
+              <span className="text-5xl leading-none">{categoryMeta(event.category).emoji}</span>
+              <span className="text-sm text-zinc-300">공식 포스터 미정</span>
             </div>
           )}
 

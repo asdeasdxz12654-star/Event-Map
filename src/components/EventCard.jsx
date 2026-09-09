@@ -112,8 +112,11 @@ export default function EventCard({ event, compact = false }) {
             className="w-full aspect-[16/7] rounded-xl object-cover"
           />
         ) : (
-          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex items-center justify-center text-3xl sm:text-4xl">
-            {categoryMeta(event.category).emoji}
+          // 포스터가 없을 때. 예전엔 카테고리 이모지만 띄워서 "이미지를 못 불러온 건지,
+          // 아직 포스터가 안 나온 건지" 구분이 안 됐다. 상태를 글자로 밝힌다.
+          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl sm:text-3xl leading-none">{categoryMeta(event.category).emoji}</span>
+            <span className="text-[10px] sm:text-xs text-zinc-300">공식 포스터 미정</span>
           </div>
         )}
         {event.ticketStatus === 'soldout' && (
