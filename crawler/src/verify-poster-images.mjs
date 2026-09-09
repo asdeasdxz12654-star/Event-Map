@@ -14,7 +14,7 @@
 // 관리자가 직접 손댄 행사(admin_edited_at)는 건드리지 않고 보고만 한다.
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
-import { findPosterCandidates, isUsableImageUrl, isExcludedDomain } from './naver-image.mjs'
+import { findPosterCandidates, isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl } from './naver-image.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -40,7 +40,7 @@ async function setPoster(eventId, posterUrl) {
 async function main() {
   const { data: events, error } = await supabase
     .from('events')
-    .select('id, title, poster_url, admin_edited_at')
+    .select('id, title, poster_url, admin_edited_at, website, ticket_url')
     .not('poster_url', 'is', null)
     .order('start_date', { ascending: false })
 
@@ -62,10 +62,15 @@ async function main() {
   const report = []
 
   for (const event of events) {
-    const reachable = !isExcludedDomain(event.poster_url) && await isUsableImageUrl(event.poster_url)
+    // 언론사 기사 사진·스톡 이미지는 열리더라도 쓸 수 없다 (공식 홍보물이 아니고,
+    // 식별 가능한 개인이 찍혀 있으며, 언론사 서버 핫링크다).
+    const newsPhoto = isNewsPhotoUrl(event.poster_url)
+    const reachable = !newsPhoto &&
+      !isExcludedDomain(event.poster_url) &&
+      await isUsableImageUrl(event.poster_url)
 
     if (!reachable) {
-      console.log(`[깨짐] ${event.title}`)
+      console.log(`[${newsPhoto ? '부적합(기사·스톡 사진)' : '깨짐'}] ${event.title}`)
       console.log(`  ${event.poster_url}`)
       if (event.admin_edited_at) {
         console.log('  -> 관리자 수정 행사라 건드리지 않음')
@@ -74,7 +79,7 @@ async function main() {
         continue
       }
       // 깨진 링크는 우선 비운다. 그 다음 관련 있는 이미지가 있으면 채운다.
-      const candidates = REPICK ? await findPosterCandidates(event.title) : []
+      const candidates = REPICK ? await findPosterCandidates(event.title, [event.website, event.ticket_url]) : []
       let replacement = null
       for (const c of candidates.slice(0, 5)) {
         if (await isUsableImageUrl(c.link)) { replacement = c; break }
@@ -93,7 +98,7 @@ async function main() {
     }
 
     // 열리는 이미지 — 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
-    const candidates = await findPosterCandidates(event.title)
+    const candidates = await findPosterCandidates(event.title, [event.website, event.ticket_url])
     // 다른 행사와 같은 이미지를 쓰고 있으면 관련성 결과와 무관하게 의심으로 본다.
     const stillRelevant = !sharedUrls.has(event.poster_url) &&
       candidates.some(c => c.link === event.poster_url)

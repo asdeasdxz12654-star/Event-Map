@@ -11,7 +11,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 async function main() {
   const { data: events, error } = await supabase
     .from('events')
-    .select('id, title, start_date')
+    .select('id, title, start_date, website, ticket_url')
     .is('poster_url', null)
     .order('start_date')
 
@@ -23,7 +23,7 @@ async function main() {
 
   for (const event of events) {
     console.log(`[${event.start_date}] ${event.title}`)
-    const posterUrl = await fetchEventPosterUrl(event.title)
+    const posterUrl = await fetchEventPosterUrl(event.title, [event.website, event.ticket_url])
 
     if (!posterUrl) {
       console.log('  -> 이미지 없음, 스킵')

@@ -19,9 +19,69 @@ const MIN_SIDE_PX = 200        // 너무 작은 썸네일 제외
 const MAX_ASPECT_RATIO = 3     // 배너·파노라마 제외 (포스터는 세로형~정사각형)
 const MIN_TOKEN_OVERLAP = 0.5  // 행사명 토큰이 절반 이상 겹쳐야 채택
 
+// "공식 홍보물"로 볼 근거 — 이미지 제목에 아래 단어가 있거나, 행사 공식 사이트·예매처
+// 도메인에서 온 이미지만 채택한다.
+//
+// 이 조건이 없을 때는 행사명이 들어간 언론사 기사 사진이 그대로 썸네일이 됐다.
+// 실제로 코믹월드 회차 카드에 다른 행사에서 찍힌 코스어 인물 사진이 붙어 있었는데,
+// 공식 홍보물이 아닐뿐더러 사진 속 개인의 초상권 문제도 있고 언론사 서버 핫링크라
+// 저작권상으로도 쓸 수 없다. 포스터를 못 찾으면 카테고리 기본 이미지가 나온다.
+const PROMO_KEYWORDS = ['포스터', '포스타', '키비주얼', '키 비주얼', '메인이미지', '메인 이미지', 'poster', 'keyvisual', 'key visual']
+
+// 한국 도메인은 co.kr·or.kr처럼 2단계 TLD가 흔해서 뒤 두 조각만 보면 안 된다
+// ("a.co.kr"과 "b.co.kr"이 같은 도메인으로 잡힌다).
+const SECOND_LEVEL_KR = new Set(['co', 'or', 'ne', 'go', 're', 'pe', 'ac', 'hs', 'ms', 'es', 'sc', 'kg'])
+
+function hostOf(url) {
+  try { return new URL(url).hostname.toLowerCase().replace(/^www\./, '') } catch { return '' }
+}
+
+function registrableDomain(host) {
+  const parts = host.split('.')
+  if (parts.length <= 2) return host
+  const last = parts.at(-1)
+  const second = parts.at(-2)
+  if (last === 'kr' && SECOND_LEVEL_KR.has(second)) return parts.slice(-3).join('.')
+  return parts.slice(-2).join('.')
+}
+
+// 행사 공식 사이트·예매처와 같은 도메인에서 온 이미지인지
+export function isOfficialHost(link, officialUrls = []) {
+  const host = hostOf(link)
+  if (!host) return false
+  const domain = registrableDomain(host)
+  return officialUrls
+    .map(hostOf)
+    .filter(Boolean)
+    .some(officialHost => domain === registrableDomain(officialHost))
+}
+
 export function isExcludedDomain(url) {
   try { return EXCLUDED_DOMAINS.some(d => new URL(url).hostname.includes(d)) }
   catch { return true }
+}
+
+// 언론사 기사 사진·범용 스톡 이미지인지. 공식 홍보물이 아니고, 대개 식별 가능한
+// 개인이 찍혀 있으며(초상권), 언론사 서버 핫링크라 저작권상으로도 쓸 수 없다.
+// 행사 공식 트위터/유튜브 이미지(pbs.twimg.com, yt3.googleusercontent.com 등)는
+// 여기 걸리지 않게 해서, 공식 포스터를 그 경로로 올린 행사는 그대로 유지된다.
+const NEWS_PHOTO_HOSTS = [
+  'tong.visitkorea.or.kr', // 한국관광공사 대표 이미지 — 여러 행사가 돌려 쓰던 사진
+  's3.tradingview.com',    // 주식 차트가 포스터로 잡힌 적 있음
+]
+
+export function isNewsPhotoUrl(url) {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.toLowerCase()
+    if (NEWS_PHOTO_HOSTS.some(h => host === h || host.endsWith('.' + h))) return true
+    if (host.includes('imgnews')) return true          // imgnews.naver.net 등
+    if (/(^|\.)news\./.test(host)) return true          // news.<언론사>.co.kr
+    if (u.pathname.toLowerCase().includes('/news/')) return true // .../news/photo/...
+    return false
+  } catch {
+    return false
+  }
 }
 
 function stripHtml(str = '') {
@@ -127,8 +187,11 @@ async function searchImage(query) {
   return data.items ?? []
 }
 
-// 행사명과 실제로 관련 있는 후보만 점수 높은 순으로 돌려준다 (URL 접속 확인은 안 함).
-export async function findPosterCandidates(title) {
+// 행사명과 관련 있고 "공식 홍보물로 볼 근거가 있는" 후보만 점수 높은 순으로 돌려준다.
+// (URL 접속 확인은 안 함)
+//   officialUrls: 행사 공식 사이트·예매처 URL. 이 도메인에서 온 이미지는 제목에
+//                 '포스터' 같은 단어가 없어도 공식 자료로 인정한다.
+export async function findPosterCandidates(title, officialUrls = []) {
   if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) return []
   if (!title) return []
 
@@ -149,10 +212,21 @@ export async function findPosterCandidates(title) {
       const link = item.link
       if (!link?.startsWith('http') || seen.has(link)) continue
       seen.add(link)
-      if (isExcludedDomain(link) || !hasUsableSize(item)) continue
+      if (isExcludedDomain(link) || isNewsPhotoUrl(link) || !hasUsableSize(item)) continue
+
+      const itemTitle = stripHtml(item.title ?? '')
       const score = relevanceScore(title, item.title ?? '')
       if (score < MIN_TOKEN_OVERLAP) continue
-      candidates.push({ link, score, title: stripHtml(item.title ?? '') })
+
+      // 공식 홍보물 근거가 없으면(= 제목에 포스터/키비주얼 등이 없고 공식 도메인도
+      // 아니면) 채택하지 않는다. 기사 사진·현장 사진이 여기서 걸러진다.
+      const official = isOfficialHost(link, officialUrls)
+      const lowerTitle = itemTitle.toLowerCase()
+      const promo = PROMO_KEYWORDS.some(k => lowerTitle.includes(k))
+      if (!official && !promo) continue
+
+      // 공식 도메인 이미지를 먼저 쓰도록 가산점을 준다.
+      candidates.push({ link, score: score + (official ? 1 : 0), title: itemTitle, official })
     }
 
     if (candidates.length > 0) break // 1차 쿼리에서 건졌으면 2차는 안 돈다
@@ -163,8 +237,8 @@ export async function findPosterCandidates(title) {
 
 // 관련 있는 후보 중 실제로 열리는 첫 번째 이미지를 반환한다.
 // 조건을 만족하는 게 없으면 null (= 포스터 없음으로 두고 기본 이미지 사용).
-export async function fetchEventPosterUrl(title) {
-  const candidates = await findPosterCandidates(title)
+export async function fetchEventPosterUrl(title, officialUrls = []) {
+  const candidates = await findPosterCandidates(title, officialUrls)
   if (candidates.length === 0) {
     if (title) console.log('  -> 포스터: 관련 있는 이미지 없음, 건너뜀')
     return null

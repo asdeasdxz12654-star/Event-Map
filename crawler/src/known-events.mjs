@@ -3,11 +3,14 @@ import { lookupVenueCoords } from './naver-local.mjs'
 // source_url: known-event://{slug}/{year} 형식으로 연도별 중복 삽입을 방지한다.
 // promote_event_draft() 트리거의 title+start_date dedup으로 events 테이블 중복도 방지된다.
 
-// 행사 유형별 고정 대표 포스터 — 회차마다 검색하지 않고 하나로 통일한다.
-// 교체 시 이 상수만 수정하면 이후 새 회차에 자동 반영된다.
-const COMICWORLD_POSTER = 'https://tong.visitkorea.or.kr/cms/resource/38/4076738_image2_1.png'
-const COSANDCOMIC_POSTER = 'https://pbs.twimg.com/media/HOo8nV4bUAAdTNo?format=webp&name=medium'
-const ILLUSTARFES_POSTER = 'http://imgnews.naver.net/image/5401/2026/05/20/0000387802_001_20260520085212709.jpeg'
+// 회차별 공식 포스터만 넣는다.
+//
+// 예전엔 "행사 유형별 고정 대표 포스터"를 하나씩 두고 모든 회차에 같은 이미지를 썼는데,
+// 그 이미지들이 관광공사 공용 사진·언론사 기사 사진이었다. 그래서 코믹월드 336·337·338이
+// 전부 같은 관광공사 사진을 쓰고, 코스앤코믹 94회에 95회 포스터가 붙었다.
+// 회차가 다르면 포스터도 다르고, 공식 자료가 아니면 아예 안 넣는 편이 낫다
+// (포스터가 없으면 카테고리 기본 이미지가 나온다).
+const COSANDCOMIC_95_POSTER = 'https://pbs.twimg.com/media/HOo8nV4bUAAdTNo?format=webp&name=medium'
 
 // KINTEX 좌표. AGF·코믹월드 등 다른 행사들은 이미 네이버 지역검색으로 정확히
 // geocode된 37.669119 / 126.7460896을 쓰고 있어서 그 값에 맞췄다 — 위키백과 좌표
@@ -193,7 +196,6 @@ const ONE_OFF_EVENTS = [
   // ── 2026년 하반기 (web 검색 기반 확인, 2026-09-06 조사) ──
   {
     slug: 'comicworld-336-ilsan', year: 2026,
-    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 336 일산', category: '코스프레',
       start_date: '2026-09-12', end_date: '2026-09-13',
@@ -234,7 +236,6 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'cosandcomic-94', year: 2026,
-    posterUrl: COSANDCOMIC_POSTER,
     data: {
       is_event: true, title: '제94회 코스앤코믹 페스티벌', category: '코스프레',
       start_date: '2026-09-19', end_date: '2026-09-20',
@@ -255,7 +256,6 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'comicworld-337-ulsan', year: 2026,
-    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 337 울산', category: '코스프레',
       start_date: '2026-10-03', end_date: '2026-10-04',
@@ -273,7 +273,6 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'illustarfes-12-kintex', year: 2026,
-    posterUrl: ILLUSTARFES_POSTER,
     data: {
       is_event: true, title: '일러스타 페스 14', category: '코스프레',
       start_date: '2026-10-10', end_date: '2026-10-11',
@@ -297,7 +296,7 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'cosandcomic-95', year: 2026,
-    posterUrl: COSANDCOMIC_POSTER,
+    posterUrl: COSANDCOMIC_95_POSTER,
     data: {
       is_event: true, title: '제95회 코스앤코믹 페스티벌', category: '코스프레',
       start_date: '2026-10-17', end_date: '2026-10-18',
@@ -330,7 +329,6 @@ const ONE_OFF_EVENTS = [
   },
   {
     slug: 'comicworld-338-suwon', year: 2026,
-    posterUrl: COMICWORLD_POSTER,
     data: {
       is_event: true, title: '코믹월드 338 수원', category: '코스프레',
       start_date: '2026-10-24', end_date: '2026-10-25',
