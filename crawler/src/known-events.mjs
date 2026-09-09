@@ -69,7 +69,10 @@ const KNOWN_EVENTS = [
         organizer: '한국게임산업협회',
         description: '국내 최대 게임 전시회. 매년 11월 셋째 주 목~일, 부산 BEXCO 개최.',
         ticket_url: 'https://www.gstar.or.kr/',
-        ticket_open_date: null,
+        // 예매 오픈일은 회차마다 공식 발표로 확정되는 값이라 공식으로 계산 못 함.
+        // 확인되는 연도만 여기에 하나씩 추가.
+        ticket_open_date: year === 2026 ? '2026-09-29' : null,
+        ticket_open_time: null,
         admission_fee: '성인 18,000원 / 청소년 8,000원 (BTC 일반 사전예매, 100% 예매제)',
         website: 'https://www.gstar.or.kr/',
         tags: ['게임전시', '지스타', '부산', 'BEXCO'],
