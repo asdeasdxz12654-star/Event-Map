@@ -14,7 +14,7 @@
 // 관리자가 직접 손댄 행사(admin_edited_at)는 건드리지 않고 보고만 한다.
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
-import { findPosterCandidates, isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl } from './naver-image.mjs'
+import { findPosterCandidates, isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isOfficialHost } from './naver-image.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -40,7 +40,7 @@ async function setPoster(eventId, posterUrl) {
 async function main() {
   const { data: events, error } = await supabase
     .from('events')
-    .select('id, title, poster_url, admin_edited_at, website, ticket_url')
+    .select('id, title, poster_url, admin_edited_at, website, ticket_url, start_date')
     .not('poster_url', 'is', null)
     .order('start_date', { ascending: false })
 
@@ -79,7 +79,9 @@ async function main() {
         continue
       }
       // 깨진 링크는 우선 비운다. 그 다음 관련 있는 이미지가 있으면 채운다.
-      const candidates = REPICK ? await findPosterCandidates(event.title, [event.website, event.ticket_url]) : []
+      const candidates = REPICK
+        ? await findPosterCandidates(event.title, [event.website, event.ticket_url], event.start_date ? Number(event.start_date.slice(0, 4)) : null)
+        : []
       let replacement = null
       for (const c of candidates.slice(0, 5)) {
         if (await isUsableImageUrl(c.link)) { replacement = c; break }
@@ -97,19 +99,21 @@ async function main() {
       continue
     }
 
-    // 열리는 이미지 — 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
-    const candidates = await findPosterCandidates(event.title, [event.website, event.ticket_url])
-    // 다른 행사와 같은 이미지를 쓰고 있으면 관련성 결과와 무관하게 의심으로 본다.
-    const stillRelevant = !sharedUrls.has(event.poster_url) &&
-      candidates.some(c => c.link === event.poster_url)
+    // 행사 공식 사이트·예매처 도메인에서 온 이미지는 검색으로 다시 못 찾더라도 인정한다.
+    const officialUrls = [event.website, event.ticket_url]
+    const eventYear = event.start_date ? Number(event.start_date.slice(0, 4)) : null
+    const fromOfficialSite = isOfficialHost(event.poster_url, officialUrls)
 
-    if (candidates.length === 0 && !sharedUrls.has(event.poster_url)) {
-      // 비교할 근거가 없으면(검색 결과 없음·API 키 없음) 그대로 둔다.
-      // 단, 다른 행사와 공유 중인 이미지는 근거가 없어도 그 행사의 포스터가 아니다.
-      stats.ok++
-      await sleep(200)
-      continue
-    }
+    // 그 외에는 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
+    const candidates = await findPosterCandidates(event.title, officialUrls, eventYear)
+    // 다른 행사와 같은 이미지를 쓰고 있으면 관련성 결과와 무관하게 의심으로 본다.
+    const stillRelevant = fromOfficialSite ||
+      (!sharedUrls.has(event.poster_url) && candidates.some(c => c.link === event.poster_url))
+
+    // 예전엔 "검색 결과가 없으면 판단 근거가 없다"며 그대로 뒀는데, 공식 자료만 채택하도록
+    // 기준을 조인 뒤로는 후보가 0건인 게 흔해져서 그 경로로 잘못된 이미지가 계속 살아남았다
+    // (지스타 2027의 GstarCAD 패키지 사진이 그렇게 두 번이나 남았다).
+    // 이제 확인되지 않으면 의심으로 보고, --repick에서는 비운다.
 
     if (stillRelevant) {
       stats.ok++

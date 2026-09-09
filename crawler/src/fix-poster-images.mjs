@@ -23,7 +23,7 @@ async function main() {
 
   for (const event of events) {
     console.log(`[${event.start_date}] ${event.title}`)
-    const posterUrl = await fetchEventPosterUrl(event.title, [event.website, event.ticket_url])
+    const posterUrl = await fetchEventPosterUrl(event.title, [event.website, event.ticket_url], event.start_date ? Number(event.start_date.slice(0, 4)) : null)
 
     if (!posterUrl) {
       console.log('  -> 이미지 없음, 스킵')

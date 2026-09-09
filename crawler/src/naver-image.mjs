@@ -78,10 +78,19 @@ export function isNewsPhotoUrl(url) {
     if (host.includes('imgnews')) return true          // imgnews.naver.net 등
     if (/(^|\.)news\./.test(host)) return true          // news.<언론사>.co.kr
     if (u.pathname.toLowerCase().includes('/news/')) return true // .../news/photo/...
+    // 쇼핑몰 상품 이미지 — "지스타 2027"에 GstarCAD 소프트웨어 패키지 사진이 붙은 적 있다.
+    if (/^shop\d*\.phinf\./.test(host)) return true
+    if (host.includes('shopping')) return true
     return false
   } catch {
     return false
   }
+}
+
+// URL 경로에 들어 있는 연도(/2016/04/25/ 같은 업로드 날짜). 자릿수만 보고 아무 숫자나
+// 연도로 읽지 않도록 슬래시로 구분된 조각만 본다.
+export function yearsInUrl(url) {
+  return [...String(url).matchAll(/\/(20[0-4]\d)\//g)].map(m => Number(m[1]))
 }
 
 function stripHtml(str = '') {
@@ -191,7 +200,10 @@ async function searchImage(query) {
 // (URL 접속 확인은 안 함)
 //   officialUrls: 행사 공식 사이트·예매처 URL. 이 도메인에서 온 이미지는 제목에
 //                 '포스터' 같은 단어가 없어도 공식 자료로 인정한다.
-export async function findPosterCandidates(title, officialUrls = []) {
+//   eventYear: 행사 개최 연도. 제목에 연도가 없는 행사(예: "제29회 부천국제만화축제")도
+//              옛 회차 포스터가 붙는 걸 막기 위해, 이미지 URL에 다른 연도가 박혀 있으면
+//              (/2016/04/25/ 같은 업로드 경로) 걸러낸다.
+export async function findPosterCandidates(title, officialUrls = [], eventYear = null) {
   if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) return []
   if (!title) return []
 
@@ -213,6 +225,12 @@ export async function findPosterCandidates(title, officialUrls = []) {
       if (!link?.startsWith('http') || seen.has(link)) continue
       seen.add(link)
       if (isExcludedDomain(link) || isNewsPhotoUrl(link) || !hasUsableSize(item)) continue
+
+      // URL 경로의 연도가 행사 연도와 다르면 옛 회차 자료다.
+      if (eventYear) {
+        const urlYears = yearsInUrl(link)
+        if (urlYears.length > 0 && !urlYears.includes(eventYear)) continue
+      }
 
       const itemTitle = stripHtml(item.title ?? '')
       const score = relevanceScore(title, item.title ?? '')
@@ -237,8 +255,8 @@ export async function findPosterCandidates(title, officialUrls = []) {
 
 // 관련 있는 후보 중 실제로 열리는 첫 번째 이미지를 반환한다.
 // 조건을 만족하는 게 없으면 null (= 포스터 없음으로 두고 기본 이미지 사용).
-export async function fetchEventPosterUrl(title, officialUrls = []) {
-  const candidates = await findPosterCandidates(title, officialUrls)
+export async function fetchEventPosterUrl(title, officialUrls = [], eventYear = null) {
+  const candidates = await findPosterCandidates(title, officialUrls, eventYear)
   if (candidates.length === 0) {
     if (title) console.log('  -> 포스터: 관련 있는 이미지 없음, 건너뜀')
     return null

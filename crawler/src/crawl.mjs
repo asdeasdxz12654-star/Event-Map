@@ -170,9 +170,9 @@ async function attachCoords(eventId, venue, venueAddress) {
 
 // 네이버 이미지 검색으로 포스터를 찾아 events에 업데이트한다.
 // 이미 포스터가 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
-async function attachPosterImage(eventId, title, officialUrls = []) {
+async function attachPosterImage(eventId, title, officialUrls = [], eventYear = null) {
   if (!eventId) return
-  const posterUrl = await fetchEventPosterUrl(title, officialUrls)
+  const posterUrl = await fetchEventPosterUrl(title, officialUrls, eventYear)
   if (!posterUrl) return
   const { error } = await supabase
     .from('events')
@@ -224,7 +224,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     } else {
       console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
       await attachCoords(approved?.promoted_event_id, extracted.venue, extracted.venue_address)
-      await attachPosterImage(approved?.promoted_event_id, extracted.title, [extracted.website, extracted.ticket_url])
+      await attachPosterImage(approved?.promoted_event_id, extracted.title, [extracted.website, extracted.ticket_url], extracted.start_date ? Number(extracted.start_date.slice(0, 4)) : null)
     }
   }
 
