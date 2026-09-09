@@ -48,6 +48,16 @@ async function main() {
 
   console.log(`포스터가 있는 행사 ${events.length}건 검증${DRY_RUN ? ' (dry-run)' : ''}${REPICK ? ' + 의심 건 교체' : ''}\n`)
 
+  // 여러 행사가 똑같은 이미지를 쓰고 있으면 그건 그 행사의 포스터가 아니라
+  // 관광공사 대표 이미지 같은 범용 사진이다 (코믹월드 335·336·337·338이 전부 같은
+  // 이미지를 쓰고 있었다). 관련성 재검색과 별개로 이 조건만으로도 교체 대상이다.
+  const urlCount = new Map()
+  for (const e of events) urlCount.set(e.poster_url, (urlCount.get(e.poster_url) ?? 0) + 1)
+  const sharedUrls = new Set([...urlCount].filter(([, n]) => n > 1).map(([u]) => u))
+  if (sharedUrls.size > 0) {
+    console.log(`여러 행사가 공유 중인 이미지 ${sharedUrls.size}종 발견 — 개별 포스터로 보지 않는다\n`)
+  }
+
   const stats = { ok: 0, cleared: 0, repicked: 0, suspicious: 0, adminSkipped: 0 }
   const report = []
 
@@ -84,10 +94,13 @@ async function main() {
 
     // 열리는 이미지 — 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
     const candidates = await findPosterCandidates(event.title)
-    const stillRelevant = candidates.some(c => c.link === event.poster_url)
+    // 다른 행사와 같은 이미지를 쓰고 있으면 관련성 결과와 무관하게 의심으로 본다.
+    const stillRelevant = !sharedUrls.has(event.poster_url) &&
+      candidates.some(c => c.link === event.poster_url)
 
-    if (candidates.length === 0) {
+    if (candidates.length === 0 && !sharedUrls.has(event.poster_url)) {
       // 비교할 근거가 없으면(검색 결과 없음·API 키 없음) 그대로 둔다.
+      // 단, 다른 행사와 공유 중인 이미지는 근거가 없어도 그 행사의 포스터가 아니다.
       stats.ok++
       await sleep(200)
       continue
@@ -122,7 +135,16 @@ async function main() {
       if (await isUsableImageUrl(c.link)) { replacement = c; break }
     }
     if (!replacement) {
-      console.log('  -> 쓸 만한 대체 이미지 없음, 그대로 둠')
+      // 여러 행사가 공유하는 범용 이미지는 "그 행사의 포스터가 아님"이 확실하므로,
+      // 대체할 것이 없으면 비워서 카테고리 기본 이미지가 나오게 한다.
+      if (sharedUrls.has(event.poster_url)) {
+        if (await setPoster(event.id, null)) {
+          console.log('  -> 공용 이미지라 비움 (기본 이미지로 표시됨)')
+          stats.cleared++
+        }
+      } else {
+        console.log('  -> 쓸 만한 대체 이미지 없음, 그대로 둠')
+      }
       await sleep(200)
       continue
     }

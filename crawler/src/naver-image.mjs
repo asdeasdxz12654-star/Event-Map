@@ -52,15 +52,20 @@ export function relevanceScore(eventTitle, candidateTitle) {
 
   const eventYears = yearsIn(eventTitle)
   const candidateYears = yearsIn(candidateTitle)
-  if (eventYears.length > 0 && candidateYears.length > 0) {
-    if (!candidateYears.some(y => eventYears.includes(y))) return 0
-  }
+  // 제목에 연도가 있는 행사는 후보에도 같은 연도가 있어야 한다.
+  // 예전엔 "후보에 다른 연도가 있으면 탈락"이라 연도가 아예 없는 후보는 그냥 통과했고,
+  // 그래서 "AGF 2027"에 주식 차트 이미지가 붙는 일이 생겼다. 연도를 요구하면 놓치는
+  // 포스터도 생기지만, 엉뚱한 이미지를 붙이는 것보다는 기본 이미지가 낫다.
+  if (eventYears.length > 0 && !candidateYears.some(y => eventYears.includes(y))) return 0
 
   const candidateText = candidate.join(' ')
   const matched = wanted.filter(t => candidateText.includes(t))
 
-  // 가장 긴 토큰(대개 행사 고유명)은 반드시 있어야 한다.
-  const core = [...wanted].sort((a, b) => b.length - a.length)[0]
+  // 행사 고유명(연도를 뺀 가장 긴 토큰)은 반드시 있어야 한다.
+  // 연도를 제외하지 않으면 "AGF 2027"의 핵심 토큰이 "2027"이 돼서 이름은 안 맞아도
+  // 연도만 같으면 통과해버린다.
+  const nameTokens = wanted.filter(t => !/^20[2-4]\d$/.test(t))
+  const core = [...nameTokens].sort((a, b) => b.length - a.length)[0]
   if (core && !candidateText.includes(core)) return 0
 
   return matched.length / wanted.length

@@ -50,32 +50,46 @@ function normalizeName(text) {
   return stripHtml(text).toLowerCase().replace(/[^0-9a-z가-힣]+/g, '')
 }
 
+// 주소에서 시·도와 시군구를 뺀 나머지(도로명 + 건물번호). "경기도 고양시 일산서구
+// 킨텍스로 217-60" -> "킨텍스로21760". 이게 일치하면 같은 건물로 봐도 된다.
+function addressCore(address) {
+  const parts = stripHtml(address).trim().split(/\s+/).slice(2)
+  return normalizeName(parts.join(''))
+}
+
 // 후보가 얼마나 믿을 만한지 점수화한다. 0이면 채택하지 않는다.
+//
+// 처음엔 "시·도가 같으면 2점" 식으로 지역만 맞아도 점수를 줬는데, 그러면 이름이 전혀
+// 다른 곳도 통과했다. 실제로 "킨텍스 제2전시장"에 트램펄린장(스타필드 바운스) 좌표가,
+// "킨텍스"에 일산동구청 좌표가 박혔다 — 둘 다 같은 고양시라는 이유만으로 채택된 것이다.
+// 지금은 상호명이 겹치거나 도로명 주소가 일치해야만 채택한다. 지역 일치는 가산점일 뿐
+// 단독 근거가 되지 못한다.
 export function scoreLocalItem(item, { venue, address }) {
   const itemAddress = item.roadAddress || item.address || ''
+
+  const wantRegion = address ? normalizeRegion(address) : ''
+  const gotRegion = normalizeRegion(itemAddress)
+  // 시·도가 다르면 완전히 다른 곳이다 (부산 행사에 서울 좌표가 박히는 케이스)
+  if (wantRegion && gotRegion && wantRegion !== gotRegion) return 0
+
+  // 상호명 일치 — 홀·층을 뗀 장소명이 검색 결과 이름과 서로 포함 관계인지
+  const wantName = venue ? normalizeName(stripHallDetails(venue)) : ''
+  const gotName = normalizeName(item.title ?? '')
+  const nameMatch = wantName.length >= 2 && gotName.length >= 2 &&
+    (gotName.includes(wantName) || wantName.includes(gotName))
+
+  // 도로명 주소 일치 — 시·도/시군구를 뺀 부분이 들어 있는지.
+  // "경기도 일산"처럼 도로명이 없는 뭉뚱그린 주소는 근거로 쓰지 않는다.
+  const wantCore = address ? addressCore(address) : ''
+  const addressMatch = wantCore.length >= 4 && normalizeName(itemAddress).includes(wantCore)
+
+  if (!nameMatch && !addressMatch) return 0
+
   let score = 0
-
-  if (address) {
-    const wantRegion = normalizeRegion(address)
-    const gotRegion = normalizeRegion(itemAddress)
-    // 시·도가 다르면 완전히 다른 곳이다 (부산 행사에 서울 좌표가 박히는 케이스)
-    if (wantRegion && gotRegion && wantRegion !== gotRegion) return 0
-    if (wantRegion && wantRegion === gotRegion) score += 2
-
-    const wantDistrict = districtOf(address)
-    const gotDistrict = districtOf(itemAddress)
-    if (wantDistrict && gotDistrict && wantDistrict === gotDistrict) score += 2
-  }
-
-  if (venue) {
-    const wantName = normalizeName(stripHallDetails(venue))
-    const gotName = normalizeName(item.title ?? '')
-    if (wantName && gotName) {
-      if (gotName.includes(wantName) || wantName.includes(gotName)) score += 3
-    }
-  }
-
-  // 주소도 장소명도 못 맞췄으면 근거가 없는 것이다.
+  if (nameMatch) score += 3
+  if (addressMatch) score += 3
+  if (wantRegion && wantRegion === gotRegion) score += 1
+  if (address && districtOf(address) && districtOf(address) === districtOf(itemAddress)) score += 1
   return score
 }
 
