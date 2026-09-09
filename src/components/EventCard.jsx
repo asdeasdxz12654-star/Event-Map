@@ -8,6 +8,7 @@ import CrowdBadge from './CrowdBadge'
 import { getEventStatus, getDaysUntil, STATUS } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { ticketSiteName } from '../lib/ticketSite'
 
@@ -18,6 +19,7 @@ export default function EventCard({ event }) {
   const status = getEventStatus(event)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const { isAdmin } = useAdmin()
+  const { toast, confirm } = useUIFeedback()
   const bookmarked = isBookmarked(event.id)
   const [imgError, setImgError] = useState(false)
   const showPoster = !!event.posterUrl && !imgError
@@ -25,11 +27,11 @@ export default function EventCard({ event }) {
   const handleDelete = async (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm(`"${event.title}" 행사를 삭제하시겠습니까?`)) return
+    if (!await confirm(`"${event.title}" 행사를 삭제하시겠습니까?`)) return
     try {
       await adminApi.deleteEvent(event.id)
     } catch (err) {
-      alert(`삭제 실패: ${err.message}`)
+      toast(`삭제 실패: ${err.message}`)
     }
   }
 

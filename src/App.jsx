@@ -1,11 +1,25 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
-import HomePage from './pages/HomePage'
-import CalendarPage from './pages/CalendarPage'
-import BookmarksPage from './pages/BookmarksPage'
-import EventDetailPage from './pages/EventDetailPage'
-import AdminDraftsPage from './pages/AdminDraftsPage'
 import { AdminProvider } from './contexts/AdminContext'
+import { UIFeedbackProvider } from './contexts/UIFeedbackContext'
+
+// 라우트 단위 코드 스플리팅 — 첫 방문(HomePage)에 다른 페이지 코드까지
+// 전부 딸려오지 않게 한다. 특히 AdminDraftsPage(관리자 전용, 뉴스 검수)는
+// 방문자 대부분이 절대 안 들어가는 페이지라 스플리팅 효과가 크다.
+const HomePage = lazy(() => import('./pages/HomePage'))
+const CalendarPage = lazy(() => import('./pages/CalendarPage'))
+const BookmarksPage = lazy(() => import('./pages/BookmarksPage'))
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'))
+const AdminDraftsPage = lazy(() => import('./pages/AdminDraftsPage'))
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <span className="text-zinc-500 text-sm animate-pulse">불러오는 중...</span>
+    </div>
+  )
+}
 
 function NotFoundPage() {
   return (
@@ -22,22 +36,26 @@ function NotFoundPage() {
 
 export default function App() {
   return (
+    <UIFeedbackProvider>
     <AdminProvider>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen bg-[#0f0f1a]">
         <Navbar />
         <main>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/bookmarks" element={<BookmarksPage />} />
-            <Route path="/events/:id" element={<EventDetailPage />} />
-            <Route path="/admin/drafts" element={<AdminDraftsPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/bookmarks" element={<BookmarksPage />} />
+              <Route path="/events/:id" element={<EventDetailPage />} />
+              <Route path="/admin/drafts" element={<AdminDraftsPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </BrowserRouter>
     </AdminProvider>
+    </UIFeedbackProvider>
   )
 }

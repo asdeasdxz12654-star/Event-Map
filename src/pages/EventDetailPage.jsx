@@ -12,6 +12,7 @@ import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { downloadEventIcs } from '../utils/ics'
 import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
 import BoothManager from '../components/BoothManager'
@@ -28,16 +29,17 @@ export default function EventDetailPage() {
   const event = events.find(e => e.id === id)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const { isAdmin } = useAdmin()
+  const { toast, confirm } = useUIFeedback()
   const [imgError, setImgError] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
 
   const handleDelete = async () => {
-    if (!confirm(`"${event?.title}" 행사를 삭제하시겠습니까?`)) return
+    if (!await confirm(`"${event?.title}" 행사를 삭제하시겠습니까?`)) return
     try {
       await adminApi.deleteEvent(event.id)
       navigate('/')
     } catch (err) {
-      alert(`삭제 실패: ${err.message}`)
+      toast(`삭제 실패: ${err.message}`)
     }
   }
 

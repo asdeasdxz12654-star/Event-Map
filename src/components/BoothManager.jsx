@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useEventBooths } from '../hooks/useEventBooths'
 import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 
 const EMPTY_FORM = { name: '', booth_no: '', goods: '' }
 
 function BoothRow({ booth, isAdmin, onSaved }) {
+  const { toast, confirm } = useUIFeedback()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ name: booth.name, booth_no: booth.boothNo ?? '', goods: booth.goods ?? '' })
   const [saving, setSaving] = useState(false)
@@ -24,19 +26,19 @@ function BoothRow({ booth, isAdmin, onSaved }) {
       setEditing(false)
       onSaved?.()
     } catch (err) {
-      alert(`수정 실패: ${err.message}`)
+      toast(`수정 실패: ${err.message}`)
     } finally {
       setSaving(false)
     }
   }
 
   const remove = async () => {
-    if (!confirm(`"${booth.name}" 부스를 삭제하시겠습니까?`)) return
+    if (!await confirm(`"${booth.name}" 부스를 삭제하시겠습니까?`)) return
     try {
       await adminApi.deleteBooth(booth.id)
       onSaved?.()
     } catch (err) {
-      alert(`삭제 실패: ${err.message}`)
+      toast(`삭제 실패: ${err.message}`)
     }
   }
 
@@ -78,6 +80,7 @@ function BoothRow({ booth, isAdmin, onSaved }) {
 export default function BoothManager({ eventId, note }) {
   const { booths, loading } = useEventBooths(eventId)
   const { isAdmin } = useAdmin()
+  const { toast } = useUIFeedback()
   const [showAddForm, setShowAddForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
@@ -97,7 +100,7 @@ export default function BoothManager({ eventId, note }) {
       })
       setForm(EMPTY_FORM)
     } catch (err) {
-      alert(`추가 실패: ${err.message}`)
+      toast(`추가 실패: ${err.message}`)
     } finally {
       setSaving(false)
     }

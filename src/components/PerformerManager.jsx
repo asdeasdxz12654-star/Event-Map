@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useEventPerformers } from '../hooks/useEventPerformers'
 import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 
 const EMPTY_FORM = { artist_name: '', songs: '' }
@@ -23,6 +24,7 @@ function copyFor(category) {
 }
 
 function PerformerRow({ performer, copy, isAdmin, onSaved }) {
+  const { toast, confirm } = useUIFeedback()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ artist_name: performer.artistName, songs: performer.songs ?? '' })
   const [saving, setSaving] = useState(false)
@@ -40,19 +42,19 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
       setEditing(false)
       onSaved?.()
     } catch (err) {
-      alert(`수정 실패: ${err.message}`)
+      toast(`수정 실패: ${err.message}`)
     } finally {
       setSaving(false)
     }
   }
 
   const remove = async () => {
-    if (!confirm(`"${performer.artistName}" 항목을 삭제하시겠습니까?`)) return
+    if (!await confirm(`"${performer.artistName}" 항목을 삭제하시겠습니까?`)) return
     try {
       await adminApi.deletePerformer(performer.id)
       onSaved?.()
     } catch (err) {
-      alert(`삭제 실패: ${err.message}`)
+      toast(`삭제 실패: ${err.message}`)
     }
   }
 
@@ -107,6 +109,7 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
 export default function PerformerManager({ eventId, category, note }) {
   const { performers, loading } = useEventPerformers(eventId)
   const { isAdmin } = useAdmin()
+  const { toast } = useUIFeedback()
   const [showAddForm, setShowAddForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
@@ -126,7 +129,7 @@ export default function PerformerManager({ eventId, category, note }) {
       })
       setForm(EMPTY_FORM)
     } catch (err) {
-      alert(`추가 실패: ${err.message}`)
+      toast(`추가 실패: ${err.message}`)
     } finally {
       setSaving(false)
     }
