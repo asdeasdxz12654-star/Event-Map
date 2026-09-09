@@ -22,6 +22,7 @@ function mapEvent(row) {
     ticketOpenNote: row.ticket_open_note,
     crowdLevel: row.crowd_level,
     floorPlanUrl: row.floor_plan_url,
+    seoulPlaceName: row.seoul_place_name,
     admissionFee: row.admission_fee,
     website: row.website,
     trustScore: row.trust_score,

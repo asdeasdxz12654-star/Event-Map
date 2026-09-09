@@ -8,7 +8,7 @@ const EMPTY = {
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
-  crowd_level: '', floor_plan_url: '',
+  crowd_level: '', floor_plan_url: '', seoul_place_name: '',
 }
 
 const CROWD_LEVELS = [
@@ -41,6 +41,7 @@ function toForm(event) {
     poster_url: event.posterUrl ?? '',
     crowd_level: event.crowdLevel ?? '',
     floor_plan_url: event.floorPlanUrl ?? '',
+    seoul_place_name: event.seoulPlaceName ?? '',
     trust_score: String(event.trustScore ?? 3),
     tags: (event.tags ?? []).join(', '),
   }
@@ -67,6 +68,7 @@ function toPayload(form) {
     poster_url: form.poster_url || null,
     crowd_level: form.crowd_level || null,
     floor_plan_url: form.floor_plan_url || null,
+    seoul_place_name: form.seoul_place_name || null,
     trust_score: form.trust_score !== '' ? Number(form.trust_score) : null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
   }
@@ -223,6 +225,20 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           </Field>
           <p className="text-[11px] text-zinc-500 -mt-2">
             실시간 인원 데이터가 아닙니다 — 매진 여부·과거 참가 규모 등으로 직접 추정해 선택하세요.
+          </p>
+
+          <Field label="서울시 실시간 도시데이터 장소명">
+            <input
+              type="text"
+              value={form.seoul_place_name}
+              onChange={set('seoul_place_name')}
+              className={cls}
+              placeholder="ex) 올림픽공원, 잠실종합운동장"
+            />
+          </Field>
+          <p className="text-[11px] text-zinc-500 -mt-2">
+            서울시 "주요 120장소" 목록과 정확히 일치할 때만 작동합니다 (킨텍스·벡스코 등은
+            서울 밖이라 지원 안 됨). 일치하면 예상 혼잡도 대신 실시간 인구 혼잡도가 표시됩니다.
           </p>
 
           <Field label="신뢰도 (0~5)">

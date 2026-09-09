@@ -15,6 +15,7 @@ import { useAdmin } from '../contexts/AdminContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
 import BoothManager from '../components/BoothManager'
+import LiveCongestion from '../components/LiveCongestion'
 import { ticketSiteName } from '../lib/ticketSite'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
@@ -161,7 +162,7 @@ export default function EventDetailPage() {
             <InfoRow icon="📅" label="기간" value={dateStr} />
             <InfoRow icon="📍" label="장소" value={`${event.venue}\n${event.venueAddress}`} />
             <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
-            {event.crowdLevel && (
+            {event.crowdLevel && !event.seoulPlaceName && (
               <InfoRow
                 icon="👥"
                 label="예상 혼잡도"
@@ -185,6 +186,9 @@ export default function EventDetailPage() {
               <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
             )}
           </div>
+
+          {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
+          <LiveCongestion placeName={event.seoulPlaceName} />
 
           {/* 신뢰도 카드 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">

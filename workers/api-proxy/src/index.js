@@ -11,6 +11,10 @@
 //                                                _d()로 만든 토큰을 다시 sha256한 값. 실제 값은 커밋하지
 //                                                말고 각자 로컬에서만 계산해 등록할 것)
 //   npx wrangler secret put ALLOWED_ORIGIN     (값: 프론트엔드 도메인, ex: https://<user>.github.io)
+//   npx wrangler secret put SEOUL_OPENDATA_KEY (서울 열린데이터광장 인증키. /seoul-congestion 라우트가
+//                                                이 키로 서울시 실시간 도시데이터 API를 대신 호출한다 —
+//                                                프론트엔드에 키를 직접 박으면 번들에 노출되고, 그
+//                                                API가 CORS도 지원 안 해서 브라우저에서 직접 호출 불가)
 
 function corsHeaders(env = {}) {
   return {
@@ -127,8 +131,56 @@ async function handleAdmin(request, env, pathname) {
   return json({ error: 'not_found' }, env, { status: 404 })
 }
 
+// 서울시 실시간 도시데이터 API 응답에서 우리가 쓰는 필드만 골라 반환한다.
+// "서울시 주요 120장소"에 없는 장소명을 넘기면 ERROR-500이 오는데, 그것도
+// 그대로 seoul_api_error로 넘겨서 프론트가 "지원 안 되는 장소" 처리하게 한다.
+async function handleSeoulCongestion(request, env) {
+  if (!env.SEOUL_OPENDATA_KEY) {
+    return json({ error: 'not_configured' }, env, { status: 501 })
+  }
+  const place = new URL(request.url).searchParams.get('place')
+  if (!place) return json({ error: 'missing_place' }, env, { status: 400 })
+
+  const url = `http://openapi.seoul.go.kr:8088/${env.SEOUL_OPENDATA_KEY}/json/citydata/1/1/${encodeURIComponent(place)}`
+  const res = await fetch(url)
+  const data = await res.json().catch(() => null)
+
+  const resultCode = data?.['RESULT.CODE'] ?? data?.RESULT?.['RESULT.CODE']
+  if (resultCode !== 'INFO-000') {
+    return json(
+      { error: 'seoul_api_error', message: data?.['RESULT.MESSAGE'] ?? data?.RESULT?.['RESULT.MESSAGE'] ?? '알 수 없는 오류' },
+      env,
+      { status: 502 }
+    )
+  }
+
+  const ppltn = data.CITYDATA?.LIVE_PPLTN_STTS?.[0]
+  if (!ppltn) return json({ error: 'no_data' }, env, { status: 502 })
+
+  return json(
+    {
+      place: ppltn.AREA_NM,
+      level: ppltn.AREA_CONGEST_LVL,
+      message: ppltn.AREA_CONGEST_MSG,
+      populationMin: Number(ppltn.AREA_PPLTN_MIN),
+      populationMax: Number(ppltn.AREA_PPLTN_MAX),
+      updatedAt: ppltn.PPLTN_TIME,
+      forecast: (ppltn.FCST_PPLTN ?? []).slice(0, 4).map(f => ({
+        time: f.FCST_TIME,
+        level: f.FCST_CONGEST_LVL,
+      })),
+    },
+    env,
+    // 서울시 쪽 갱신 주기가 대략 5분이라, 그 사이 중복 호출은 엣지에서 캐시로 흡수한다
+    // (여러 명이 동시에 같은 행사를 보고 있어도 서울시 API/키 호출량이 늘지 않게).
+    { headers: { 'Cache-Control': 'public, max-age=120' } }
+  )
+}
+
 const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
+
+  '/seoul-congestion': handleSeoulCongestion,
 
   '/transit': (_request, env) =>
     json(
