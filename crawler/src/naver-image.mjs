@@ -75,6 +75,10 @@ export function isNewsPhotoUrl(url) {
     const u = new URL(url)
     const host = u.hostname.toLowerCase()
     if (NEWS_PHOTO_HOSTS.some(h => host === h || host.endsWith('.' + h))) return true
+    // 공공기관(.go.kr)은 주최·주관인 경우가 많고, 그 보도자료 페이지에 올라오는 이미지가
+    // 곧 공식 포스터다. 실제로 부천국제만화축제 공식 포스터가 news.bucheon.go.kr에
+    // 올라와 있는데, 아래 "news." 규칙에 걸려 언론사 사진으로 잘못 분류됐다.
+    if (host.endsWith('.go.kr')) return false
     if (host.includes('imgnews')) return true          // imgnews.naver.net 등
     if (/(^|\.)news\./.test(host)) return true          // news.<언론사>.co.kr
     if (u.pathname.toLowerCase().includes('/news/')) return true // .../news/photo/...
@@ -256,6 +260,14 @@ export async function findPosterCandidates(title, officialUrls = [], eventYear =
 // 관련 있는 후보 중 실제로 열리는 첫 번째 이미지를 반환한다.
 // 조건을 만족하는 게 없으면 null (= 포스터 없음으로 두고 기본 이미지 사용).
 export async function fetchEventPosterUrl(title, officialUrls = [], eventYear = null) {
+  // 아직 한참 남은(내년 이후) 행사는 공식 포스터가 나오기 전이라, 검색해봐야 옛 회차
+  // 포스터나 엉뚱한 이미지가 걸린다. 실제로 "지스타 2027"에 CAD 소프트웨어 패키지
+  // 사진이 붙었다. 해가 바뀌어 그 행사가 올해가 되면 그때 다시 채우면 된다.
+  if (eventYear && eventYear > new Date().getFullYear()) {
+    console.log(`  -> 포스터: ${eventYear}년 행사라 아직 검색하지 않음`)
+    return null
+  }
+
   const candidates = await findPosterCandidates(title, officialUrls, eventYear)
   if (candidates.length === 0) {
     if (title) console.log('  -> 포스터: 관련 있는 이미지 없음, 건너뜀')
