@@ -214,6 +214,130 @@ const ONE_OFF_EVENTS = [
       confidence: 'high',
     },
   },
+
+  // ── 서브컬처 행사일정(comicw.co.kr/c)과 대조해 빠져 있던 행사들, 2026-09-10 조사 ──
+  // 날짜·장소는 그 일정표 값을 그대로 옮겼다. 입장료·예매처처럼 확인 안 된 값은 비워둔다
+  // (추측해서 채우면 틀린 정보가 그대로 노출된다).
+  // 좌표는 비워서 네이버 지역검색이 장소명으로 채우게 둔다.
+  {
+    slug: 'ace-fair-gwangju-2026', year: 2026,
+    data: {
+      is_event: true, title: '2026 광주 ACE Fair', category: '게임전시',
+      start_date: '2026-09-10', end_date: '2026-09-13',
+      venue: '김대중컨벤션센터', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '아시아 콘텐츠·엔터테인먼트 산업 전시회(Asia Content & Entertainment Fair). 게임·애니메이션·캐릭터 등 콘텐츠 기업이 참가한다.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['게임전시', 'ACE Fair', '광주', '콘텐츠'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'dfesta-35', year: 2026,
+    data: {
+      is_event: true, title: '제35회 디. 페스타', category: '코스프레',
+      start_date: '2026-10-03', end_date: '2026-10-03',
+      venue: 'SETEC', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '동인 창작물 판매·전시 중심의 서브컬처 행사.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['코스프레', '동인', '디페스타', '서울', 'SETEC'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'powerdukjil-2', year: 2026,
+    data: {
+      is_event: true, title: '제2회 파워덕질 페스티벌', category: '코스프레',
+      start_date: '2026-10-03', end_date: '2026-10-03',
+      venue: '진주 로데오거리', venue_address: '경상남도 진주시', venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '진주 로데오거리 일대에서 열리는 서브컬처 야외 행사.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['코스프레', '서브컬처', '진주', '경남'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'mungujeon-2026-fall', year: 2026,
+    data: {
+      is_event: true, title: '문구전 2026 가을', category: '일러스트',
+      start_date: '2026-10-09', end_date: '2026-10-09',
+      venue: '세종대학교 광개토관', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '창작 문구·굿즈 판매 행사. 코믹월드와 같은 주최사가 운영한다.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: 'https://comicw.net/', tags: ['일러스트', '문구전', '굿즈', '서울'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'daejeon-content-fair-2026', year: 2026,
+    data: {
+      is_event: true, title: '2026 대전콘텐츠페어', category: '게임전시',
+      start_date: '2026-10-16', end_date: '2026-10-18',
+      venue: '대전컨벤션센터', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '게임·웹툰·애니메이션 등 콘텐츠 분야 전시·체험 행사.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['게임전시', '대전', '콘텐츠페어'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'illustkorea-incheon-2026', year: 2026,
+    data: {
+      is_event: true, title: '2026 인천 일러스트코리아', category: '일러스트',
+      start_date: '2026-10-30', end_date: '2026-11-01',
+      venue: '송도컨벤시아', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '일러스트레이터 작가 부스 중심의 그림·굿즈 페어.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['일러스트', '인천', '송도컨벤시아'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'busan-illustration-fair-v7', year: 2026,
+    data: {
+      is_event: true, title: '부산일러스트레이션페어 V.7', category: '일러스트',
+      start_date: '2026-11-06', end_date: '2026-11-08',
+      venue: 'BEXCO 제2전시장 4홀', venue_address: '부산광역시 해운대구 APEC로 55',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '일러스트레이터 작가 부스 중심의 그림·굿즈 페어 부산 회차.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['일러스트', '부산', 'BEXCO'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'skychord-festival-2026', year: 2026,
+    data: {
+      is_event: true, title: '스카이코드 페스티벌', category: '코스프레',
+      start_date: '2026-11-22', end_date: '2026-11-22',
+      venue: '광주디자인진흥원', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '광주에서 열리는 서브컬처 동인 행사. 코스프레 무대·경연 프로그램이 함께 열린다.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['코스프레', '동인', '광주', '스카이코드'],
+      confidence: 'high',
+    },
+  },
+  {
+    slug: 'finecharacter-2026', year: 2026,
+    data: {
+      is_event: true, title: '파인캐릭터 2026', category: '일러스트',
+      start_date: '2026-11-27', end_date: '2026-11-29',
+      venue: '동대문디자인플라자(DDP) 쇼룸 1층', venue_address: '서울특별시 중구 을지로 281',
+      venue_lat: null, venue_lng: null,
+      organizer: null,
+      description: '캐릭터·아트토이 등 창작 캐릭터 상품 전시·판매 행사.',
+      ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
+      website: null, tags: ['일러스트', '캐릭터', '서울', 'DDP'],
+      confidence: 'high',
+    },
+  },
   {
     slug: 'comicworld-336-ilsan', year: 2026,
     data: {

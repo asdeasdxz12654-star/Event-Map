@@ -6,7 +6,7 @@ import { z } from 'zod'
 export const EventExtractionSchema = z.object({
   is_event: z.boolean(),
   title: z.string().nullable(),
-  category: z.enum(['게임전시', '코스프레', '게임음악']).nullable(),
+  category: z.enum(['게임전시', '코스프레', '게임음악', '일러스트']).nullable(),
   start_date: z.string().nullable().describe('YYYY-MM-DD'),
   end_date: z.string().nullable().describe('YYYY-MM-DD, 하루짜리 행사면 start_date와 동일하게'),
   venue: z.string().nullable(),

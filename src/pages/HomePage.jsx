@@ -19,6 +19,7 @@ const CATEGORY_FILTERS = [
   { key: CATEGORIES.GAME,   label: '🎮 게임전시' },
   { key: CATEGORIES.COSPLAY,label: '✨ 코스프레' },
   { key: CATEGORIES.CONCERT,label: '🎵 게임음악' },
+  { key: CATEGORIES.ILLUST, label: '🎨 일러스트' },
 ]
 
 function SkeletonCard() {
@@ -90,7 +91,7 @@ export default function HomePage() {
       <div className="flex items-start justify-between mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 정보</h1>
-          <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악 행사를 한눈에</p>
+          <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악·일러스트 행사를 한눈에</p>
         </div>
         {isAdmin && (
           <button

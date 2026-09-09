@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { adminApi } from '../lib/adminApi'
 
-const CATEGORIES = ['게임전시', '코스프레', '게임음악']
+const CATEGORIES = ['게임전시', '코스프레', '게임음악', '일러스트']
 
 const EMPTY = {
   title: '', category: '게임전시', start_date: '', end_date: '',

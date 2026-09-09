@@ -40,7 +40,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 // Groq는 Anthropic의 zodOutputFormat 같은 스키마 강제 기능이 없어서, JSON 모양을 프롬프트에
 // 직접 명시한다 (schema.mjs의 EventExtractionSchema와 필드가 어긋나지 않게 같이 고칠 것).
-const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악 행사 뉴스를 분류·추출하는 도우미다.
+const EXTRACTION_SYSTEM_PROMPT = `너는 한국 게임/코스프레/게임음악/일러스트 행사 뉴스를 분류·추출하는 도우미다.
 주어진 기사 제목과 요약을 보고, 이 기사가 행사(전시회, 코스프레 행사, 콘서트 등)와 관련된 기사인지 판단해라.
 신작 게임 리뷰, 업데이트 소식, 순위 기사 등 행사와 무관한 기사는 is_event를 false로 하고 나머지 필드는 null로 둔다.
 행사를 직접 소개하는 기사뿐 아니라, 'OO사가 지스타 2026에 참가한다', 'PlayX4에 부스를 운영한다'처럼
@@ -60,7 +60,7 @@ title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지�
 기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
 참가하는 기사여도 title/start_date/venue는 그 행사 자체의 정보로 통일해서 채워라.
 반드시 아래 JSON 형식으로만 답해라 (설명 문장 없이 JSON 객체 하나만):
-{"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"ticket_open_time":string|null,"ticket_open_note":string|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}
+{"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|"일러스트"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"ticket_open_time":string|null,"ticket_open_note":string|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}
 ticket_open_time은 기사에 "오후 8시 오픈", "20:00부터 예매 시작"처럼 예매 시작 시각이 명시된 경우에만 그 표현 그대로 채우고, 시각이 안 나와 있으면 null로 둬라.
 ticket_open_note는 "선예매 9/1, 일반예매 9/29"처럼 예매 단계가 여러 개일 때만 전체 일정을 한 문장으로 요약해 채우고, 단계가 하나뿐이면 null로 둬라. 이때 ticket_open_date/ticket_open_time에는 그중 가장 이른(선예매) 단계의 날짜/시각을 채워라.`
 
@@ -109,7 +109,7 @@ async function callGroq(articleText) {
   }
 }
 
-const VALID_CATEGORIES = ['게임전시', '코스프레', '게임음악']
+const VALID_CATEGORIES = ['게임전시', '코스프레', '게임음악', '일러스트']
 
 const OVERSEAS_KEYWORDS = [
   '타이베이', '도쿄', '오사카', '교토', '나고야', '요코하마', '삿포로', '후쿠오카',

@@ -3,6 +3,9 @@ export const CATEGORIES = {
   GAME: '게임전시',
   COSPLAY: '코스프레',
   CONCERT: '게임음악',
+  // 일러스트레이션페어·문구전·캐릭터페어처럼 그림/굿즈 중심 행사.
+  // 위 셋 어디에도 안 맞는데 같은 관객층이 찾는 행사라 따로 뒀다.
+  ILLUST: '일러스트',
 }
 
 export const STATUS = {
@@ -18,6 +21,7 @@ const CATEGORY_META = {
   [CATEGORIES.GAME]:    { emoji: '🎮', badgeClass: 'bg-violet-500/20 text-violet-300', dotClass: 'bg-violet-400' },
   [CATEGORIES.COSPLAY]: { emoji: '✨', badgeClass: 'bg-pink-500/20 text-pink-300',     dotClass: 'bg-pink-400' },
   [CATEGORIES.CONCERT]: { emoji: '🎵', badgeClass: 'bg-amber-500/20 text-amber-300',   dotClass: 'bg-amber-400' },
+  [CATEGORIES.ILLUST]:  { emoji: '🎨', badgeClass: 'bg-sky-500/20 text-sky-300',       dotClass: 'bg-sky-400' },
 }
 
 const UNKNOWN_CATEGORY_META = {
@@ -26,7 +30,7 @@ const UNKNOWN_CATEGORY_META = {
   dotClass: 'bg-zinc-400',
 }
 
-// DB에 check 제약이 걸려 있어 실제로는 세 카테고리뿐이지만, 크롤러가 새 값을 넣는
+// DB에 check 제약이 걸려 있어 실제로는 네 카테고리뿐이지만, 크롤러가 새 값을 넣는
 // 상황 등을 대비해 기본값을 준다.
 export function categoryMeta(category) {
   return CATEGORY_META[category] ?? UNKNOWN_CATEGORY_META
