@@ -9,6 +9,14 @@ const COMICWORLD_POSTER = 'https://tong.visitkorea.or.kr/cms/resource/38/4076738
 const COSANDCOMIC_POSTER = 'https://pbs.twimg.com/media/HOo8nV4bUAAdTNo?format=webp&name=medium'
 const ILLUSTARFES_POSTER = 'http://imgnews.naver.net/image/5401/2026/05/20/0000387802_001_20260520085212709.jpeg'
 
+// KINTEX 좌표. AGF·코믹월드 등 다른 행사들은 이미 네이버 지역검색으로 정확히
+// geocode된 37.669119 / 126.7460896을 쓰고 있어서 그 값에 맞췄다 — 위키백과 좌표
+// (37.66889, 126.74556)와도 40m 이내로 거의 같다.
+// 예전엔 행사마다 좌표를 따로 박아넣어서 잘못된 값(37.6727, 126.756)이 여러 행사에
+// 중복 반영돼 있었다 — 이제 여기 하나만 고치면 다음 push 때 전체 행사에 반영된다.
+const KINTEX_LAT = 37.669119
+const KINTEX_LNG = 126.7460896
+
 function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
 }
@@ -83,8 +91,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: 'KINTEX 제1전시장',
         venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
-        venue_lat: 37.6727,
-        venue_lng: 126.7560,
+        venue_lat: KINTEX_LAT,
+        venue_lng: KINTEX_LNG,
         organizer: '경기콘텐츠진흥원',
         description: '경기도 고양 KINTEX에서 열리는 게임·콘텐츠 박람회. 매년 5월 넷째 주 목~일 개최.',
         ticket_url: 'https://www.playx4.or.kr/',
@@ -110,8 +118,8 @@ const KNOWN_EVENTS = [
         end_date: toDateStr(end),
         venue: 'KINTEX 제1전시장',
         venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
-        venue_lat: 37.6727,
-        venue_lng: 126.7560,
+        venue_lat: KINTEX_LAT,
+        venue_lng: KINTEX_LNG,
         organizer: null,
         description: '국내 최대 서브컬처·코스프레 행사. 매년 12월 첫째 주 금~일, KINTEX 개최.',
         ticket_url: 'https://www.agfkorea.com/',
@@ -164,7 +172,7 @@ const ONE_OFF_EVENTS = [
       is_event: true, title: '코믹월드 336 일산', category: '코스프레',
       start_date: '2026-09-12', end_date: '2026-09-13',
       venue: 'KINTEX 제1전시장', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
-      venue_lat: 37.6727, venue_lng: 126.7560,
+      venue_lat: KINTEX_LAT, venue_lng: KINTEX_LNG,
       organizer: null,
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
@@ -224,7 +232,7 @@ const ONE_OFF_EVENTS = [
       is_event: true, title: '일러스타 페스 14', category: '코스프레',
       start_date: '2026-10-10', end_date: '2026-10-11',
       venue: 'KINTEX 제1전시장', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
-      venue_lat: 37.6727, venue_lng: 126.7560,
+      venue_lat: KINTEX_LAT, venue_lng: KINTEX_LNG,
       organizer: '스타라이크',
       description: '일러스트·서브컬처 종합 이벤트. 동인지·굿즈 판매 부스, 코스프레 포토존 운영.',
       ticket_url: 'https://illustar.net/', ticket_open_date: null,
@@ -284,7 +292,7 @@ const ONE_OFF_EVENTS = [
       is_event: true, title: 'WONDERLIVET 2026', category: '게임음악',
       start_date: '2026-11-20', end_date: '2026-11-22',
       venue: 'KINTEX 7·8·9·10홀', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
-      venue_lat: 37.6727, venue_lng: 126.7560,
+      venue_lat: KINTEX_LAT, venue_lng: KINTEX_LNG,
       organizer: null,
       description: '국내 최대 J-POP·애니메이션 음악 라이브 페스티벌. 3일간 42팀 출연.',
       ticket_url: 'https://ticket.yes24.com/Perf/59840', ticket_open_date: null,
@@ -375,23 +383,32 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
     return
   }
 
+  const patch = {
+    title: extracted.title,
+    category: extracted.category,
+    start_date: extracted.start_date,
+    end_date: extracted.end_date,
+    venue: extracted.venue,
+    venue_address: extracted.venue_address,
+    organizer: extracted.organizer,
+    description: extracted.description,
+    ticket_url: extracted.ticket_url,
+    ticket_open_date: extracted.ticket_open_date,
+    admission_fee: extracted.admission_fee,
+    website: extracted.website,
+    tags: extracted.tags ?? [],
+  }
+  // 좌표는 known-events.mjs에 하드코딩된 경우(KINTEX_LAT 상수 수정 등)에만 동기화한다 —
+  // lookupVenueCoords()로 자동 조회한 좌표까지 여기서 덮어쓰면 안 되므로 하드코딩된
+  // 케이스만 골라서 반영.
+  if (extracted.venue_lat && extracted.venue_lng) {
+    patch.venue_lat = extracted.venue_lat
+    patch.venue_lng = extracted.venue_lng
+  }
+
   const { data, error } = await supabase
     .from('events')
-    .update({
-      title: extracted.title,
-      category: extracted.category,
-      start_date: extracted.start_date,
-      end_date: extracted.end_date,
-      venue: extracted.venue,
-      venue_address: extracted.venue_address,
-      organizer: extracted.organizer,
-      description: extracted.description,
-      ticket_url: extracted.ticket_url,
-      ticket_open_date: extracted.ticket_open_date,
-      admission_fee: extracted.admission_fee,
-      website: extracted.website,
-      tags: extracted.tags ?? [],
-    })
+    .update(patch)
     .eq('id', promotedEventId)
     .is('admin_edited_at', null)
     .select('id')
