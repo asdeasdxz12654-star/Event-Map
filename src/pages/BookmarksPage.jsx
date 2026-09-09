@@ -3,11 +3,13 @@ import EventCard from '../components/EventCard'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useListColumns, eventGridClass } from '../hooks/useListColumns'
 
 export default function BookmarksPage() {
   useDocumentTitle('북마크')
   const { events, loading, error } = useEvents()
   const { bookmarkIds } = useBookmarks()
+  const [columns] = useListColumns() // 열 수는 홈에서 고른 설정을 그대로 따른다
 
   const bookmarked = events.filter(e => bookmarkIds.includes(e.id))
 
@@ -37,8 +39,8 @@ export default function BookmarksPage() {
       )}
 
       {!loading && bookmarked.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {bookmarked.map(event => <EventCard key={event.id} event={event} />)}
+        <div className={eventGridClass(columns)}>
+          {bookmarked.map(event => <EventCard key={event.id} event={event} compact={columns === 2} />)}
         </div>
       )}
     </div>

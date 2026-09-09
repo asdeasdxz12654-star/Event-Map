@@ -10,6 +10,14 @@ window.addEventListener('error', e => {
   if (e?.error?.stack?.includes('reportAllChanges')) e.preventDefault()
 })
 
+// 설치 프롬프트(beforeinstallprompt)는 React가 마운트되기 전에 발생할 수 있다.
+// 여기서 먼저 잡아 보관해두고, InstallAppButton이 그 값을 받아 쓴다.
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault()
+  window.__deferredInstallPrompt = e
+  window.dispatchEvent(new Event('install-prompt-ready'))
+})
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

@@ -7,14 +7,41 @@
 body {
   background-color: #0f0f1a;
   color: #f1f1f5;
-  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  font-family: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
   overflow-wrap: break-word;
+  /* 삼성 인터넷·iOS 사파리에서 버튼을 누를 때 뜨는 회색 하이라이트 제거 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 #root {
+  /* svh를 모르는 브라우저(구형 사파리 등)를 위해 vh를 먼저 둔다 */
+  min-height: 100vh;
   min-height: 100svh;
+}
+
+/* iOS 사파리는 글자 크기가 16px보다 작은 입력칸을 탭하면 화면을 확대한다.
+   확대되면 레이아웃이 틀어진 것처럼 보이고 되돌리기도 번거로워서, 좁은 화면에서는
+   입력칸만 16px로 키운다 (표시 크기는 sm 이상에서 원래대로). */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* 검색 입력의 브라우저 기본 지우기(✕) 버튼 제거 — 우리가 그린 ✕ 버튼과 겹쳐서
+   크롬·엣지·사파리에서 X가 두 개로 보였다. type="search"는 그대로 둬야 모바일
+   키보드에 "검색" 키가 나오므로, 네이티브 장식만 숨긴다. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration,
+input[type='search']::-webkit-search-results-button,
+input[type='search']::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 /* 스크롤바 */

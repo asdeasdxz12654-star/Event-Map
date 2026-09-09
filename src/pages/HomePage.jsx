@@ -3,6 +3,7 @@ import EventCard from '../components/EventCard'
 import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useHomeFilters } from '../hooks/useHomeFilters'
+import { useListColumns, eventGridClass } from '../hooks/useListColumns'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useAdmin } from '../contexts/AdminContext'
 import AdminEventForm from '../components/AdminEventForm'
@@ -44,6 +45,7 @@ export default function HomePage() {
   useDocumentTitle(null)
   const { events, loading, error } = useEvents()
   const { isAdmin } = useAdmin()
+  const [columns, setColumns] = useListColumns()
   const [showAddForm, setShowAddForm] = useState(false)
   const {
     status: activeStatus,
@@ -104,13 +106,15 @@ export default function HomePage() {
         <AdminEventForm onClose={() => setShowAddForm(false)} />
       )}
 
-      {/* 상태 탭 */}
-      <div className="flex gap-2 lg:gap-3 mb-4 lg:mb-5">
+      {/* 상태 탭 — 좁은 화면(360px 이하)에서 세 탭이 한 줄에 안 들어가 페이지 전체가
+          가로로 밀렸다. 여백을 줄이고, 그래도 넘치면 월 필터처럼 이 줄 안에서만
+          가로 스크롤되게 한다(페이지는 안 밀리게). */}
+      <div className="flex gap-1.5 sm:gap-2 lg:gap-3 mb-4 lg:mb-5 overflow-x-auto scrollbar-hide">
         {STATUS_TABS.map(({ key, label, icon }) => (
           <button
             key={key}
             onClick={() => setActiveStatus(key)}
-            className={`flex items-center gap-1.5 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl text-sm lg:text-base font-medium transition-all ${
+            className={`shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl text-sm lg:text-base font-medium transition-all ${
               activeStatus === key
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
                 : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
@@ -165,6 +169,27 @@ export default function HomePage() {
         ))}
 
         <div className="flex items-center gap-1.5 ml-auto">
+          {/* 목록 열 수 — 좁은 화면에서만. PC는 어차피 3~4열이라 선택할 게 없다. */}
+          <div className="flex rounded-lg overflow-hidden border border-white/10 lg:hidden">
+            {[
+              { value: 1, icon: '▤', label: '한 줄에 한 개씩 크게 보기' },
+              { value: 2, icon: '▦', label: '한 줄에 두 개씩 보기' },
+            ].map(({ value, icon, label }) => (
+              <button
+                key={value}
+                onClick={() => setColumns(value)}
+                aria-label={label}
+                aria-pressed={columns === value}
+                title={label}
+                className={`px-2.5 py-1.5 text-xs transition-colors ${value === 2 ? 'border-l border-white/10' : ''} ${
+                  columns === value ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
+                }`}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+
           {/* 정렬 */}
           <div className="flex rounded-lg overflow-hidden border border-white/10">
             <button
@@ -239,7 +264,7 @@ export default function HomePage() {
 
       {/* 이벤트 그리드 */}
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className={eventGridClass(columns)}>
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : error ? (
@@ -258,9 +283,9 @@ export default function HomePage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className={eventGridClass(columns)}>
           {filtered.map(event => (
-            <EventCard key={event.id} event={event} />
+            <EventCard key={event.id} event={event} compact={columns === 2} />
           ))}
         </div>
       )}

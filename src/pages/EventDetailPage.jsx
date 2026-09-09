@@ -20,6 +20,7 @@ import BoothManager from '../components/BoothManager'
 import PerformerManager from '../components/PerformerManager'
 import SectionCard from '../components/SectionCard'
 import LiveCongestion from '../components/LiveCongestion'
+import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
 
 export default function EventDetailPage() {
@@ -46,7 +47,7 @@ export default function EventDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-16 text-center text-zinc-500">
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center text-zinc-500">
         <div className="text-4xl mb-3 animate-pulse">⏳</div>
         <p>행사 정보를 불러오는 중...</p>
       </div>
@@ -55,7 +56,7 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-16 text-center">
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center">
         <div className="text-5xl mb-4">🔍</div>
         <p className="text-zinc-400 mb-4">행사 정보를 찾을 수 없습니다</p>
         <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm">← 목록으로</Link>
@@ -78,26 +79,27 @@ export default function EventDetailPage() {
 
   const hasCoords = event.venueLat != null && event.venueLng != null
 
+  // 모바일 하단 고정 예매 바는 "실제로 누를 수 있을 때"만 띄운다 — 매진 행사에서는
+  // 누를 수 없는 회색 "매진" 블록이 화면 아래를 계속 차지하기만 했다.
+  // 바가 뜨는 동안에는 본문 CTA의 예매 버튼을 빼서 같은 버튼이 두 번 보이지 않게 한다.
+  const showTicketBar = !!event.ticketUrl && event.ticketStatus !== 'soldout'
+
   const venueAddress = event.venueAddress ?? ''
   const venueName = event.venue ?? ''
-  // 지도 검색은 도로명 주소를 우선한다. 주소가 없으면 장소명에서 홀·층 정보를 제거하고 사용한다.
-  // (홀 번호가 포함된 채로 검색하면 지오코딩이 실패해 지도가 표시되지 않는다.)
-  const mapSearch = encodeURIComponent(venueAddress || stripHallInfo(venueName))
-
-
-  const naverMapUrl = `https://map.naver.com/v5/search/${mapSearch}`
-
-  // 대중교통 길찾기 — 목적지 레이블도 주소로 통일해 홀 번호가 노출되지 않게 한다.
-  // 네이버 방향 URL: directions/{from}/{to}/{경유}/{mode}, 좌표 순서는 경도,위도
-  const naverTransitUrl = hasCoords
-    ? `https://map.naver.com/v5/directions/-/-/${mapSearch},${event.venueLng},${event.venueLat}/transit`
-    : `https://map.naver.com/v5/search/${mapSearch}`
-  const googleTransitUrl = hasCoords
-    ? `https://www.google.com/maps/dir/?api=1&destination=${event.venueLat},${event.venueLng}&travelmode=transit`
-    : `https://www.google.com/maps/dir/?api=1&destination=${mapSearch}&travelmode=transit`
+  // 장소명에는 "코엑스 3층 D홀"처럼 행사 위치를 자세히 적어도 되지만, 지도에 넘길 때는
+  // 홀·층을 떼고 "코엑스"만 남긴다 — 홀 번호가 붙은 문자열은 지도에서 검색이 안 돼
+  // 엉뚱한 곳이 찍히거나 아무것도 안 나온다.
+  const mapPlaceName = stripHallInfo(venueName) || venueName
+  // 검색어는 도로명 주소를 우선한다(가장 정확). 주소가 없을 때만 정리된 장소명을 쓴다.
+  const mapQuery = venueAddress || mapPlaceName
+  // 좌표를 알고 있으면 지도 중심을 그 좌표로 고정한다 — 검색어가 애매해도(같은 이름의
+  // 다른 지점 등) 실제 행사장 위치가 열리게 하는 안전장치.
+  const naverMapUrl = hasCoords
+    ? `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}?c=${event.venueLng},${event.venueLat},15,0,0,0,dh`
+    : `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}`
 
   return (
-    <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10 pb-24 lg:pb-10">
+    <div className={`max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10 lg:pb-10 ${showTicketBar ? 'pb-24' : 'pb-6'}`}>
       {/* 뒤로가기 */}
       <Link to="/" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-6 transition-colors">
         ← 목록으로
@@ -167,7 +169,8 @@ export default function EventDetailPage() {
           {/* 기본 정보 카드 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 mb-4">
             <InfoRow icon="📅" label="기간" value={dateStr} />
-            <InfoRow icon="📍" label="장소" value={`${event.venue}\n${event.venueAddress}`} />
+            {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
+            <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
             <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
             {event.crowdLevel && !showingLiveCongestion && status !== STATUS.ENDED && (
               <InfoRow
@@ -225,31 +228,23 @@ export default function EventDetailPage() {
               <NaverMap
                 lat={event.venueLat}
                 lng={event.venueLng}
-                venueName={venueName}
+                venueName={venueName || mapPlaceName}
                 linkUrl={naverMapUrl}
               />
             )}
             <div className="p-4">
-              <h2 className="text-sm font-semibold text-white mb-3">위치 & 경로</h2>
-              <p className="text-xs text-zinc-500 mb-1.5">대중교통 길찾기</p>
-              <div className="flex gap-2">
-                <a
-                  href={naverTransitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl text-center transition-colors"
-                >
-                  🚇 네이버
-                </a>
-                <a
-                  href={googleTransitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
-                >
-                  🗺 구글 맵
-                </a>
-              </div>
+              <h2 className="text-sm font-semibold text-white mb-1">위치 & 경로</h2>
+              {(venueName || venueAddress) && (
+                <p className="text-xs text-zinc-400 mb-3 whitespace-pre-line">
+                  {[venueName, venueAddress].filter(Boolean).join('\n')}
+                </p>
+              )}
+              <DirectionsButtons
+                lat={event.venueLat}
+                lng={event.venueLng}
+                placeName={mapPlaceName}
+                fallbackQuery={mapQuery}
+              />
             </div>
           </div>
 
@@ -266,7 +261,7 @@ export default function EventDetailPage() {
 
           {/* CTA 버튼 — PC에서는 오른쪽 사이드바에 고정 표시되므로 모바일에서만 노출 */}
           <div className="lg:hidden">
-            <CtaButtons event={event} />
+            <CtaButtons event={event} showTicket={!showTicketBar} />
           </div>
         </div>
 
@@ -277,7 +272,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* 모바일 하단 고정 예매 바 — 페이지가 길어져도 예매하기가 항상 화면에 보이게 */}
-      <TicketStickyBar event={event} />
+      {showTicketBar && <TicketStickyBar event={event} />}
     </div>
   )
 }
@@ -295,6 +290,8 @@ function stripHallInfo(name) {
 }
 
 function InfoRow({ icon, label, value, hint }) {
+  // 값이 비어 있으면(주최·장소 미등록 등) 라벨만 남은 빈 줄이 생기므로 아예 감춘다.
+  if (value == null || value === '') return null
   return (
     <div className="flex gap-3 text-sm">
       <span className="shrink-0 w-5">{icon}</span>
@@ -364,9 +361,8 @@ function TicketButton({ event, className }) {
 
 // 모바일 전용 하단 고정 CTA — 카드가 많이 쌓이는 행사(부스·출연진·지도까지)는 스크롤이
 // 길어져서, "예매하기"가 화면 맨 아래에 파묻히지 않게 항상 보이는 바를 따로 둔다.
-// 예매 링크가 아예 없는 행사(공식 사이트만 있는 경우 등)에서는 굳이 안 띄운다.
+// 띄울지 말지(예매 링크 없음·매진)는 호출부의 showTicketBar가 판단한다.
 function TicketStickyBar({ event }) {
-  if (!event.ticketUrl) return null
   return (
     <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0f0f1a]/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <TicketButton event={event} className="block w-full py-3 rounded-xl text-sm" />
@@ -374,10 +370,10 @@ function TicketStickyBar({ event }) {
   )
 }
 
-function CtaButtons({ event }) {
+function CtaButtons({ event, showTicket = true }) {
   return (
     <div className="flex flex-col gap-2">
-      <TicketButton event={event} className="w-full py-3.5 rounded-2xl" />
+      {showTicket && <TicketButton event={event} className="w-full py-3.5 rounded-2xl" />}
       {event.website && (
         <a
           href={event.website}

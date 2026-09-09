@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import NotificationBell from './NotificationBell'
+import InstallAppButton from './InstallAppButton'
 import AdminModal from './AdminModal'
 import { useAdmin } from '../contexts/AdminContext'
 
@@ -16,7 +17,9 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-[#0f0f1a]/90 backdrop-blur border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-4 lg:px-8 h-14 lg:h-16 flex items-center justify-between">
+      {/* 컨테이너 폭은 각 페이지(max-w-2xl lg:max-w-6xl)와 반드시 같게 유지한다 —
+          다르면 태블릿 폭에서 로고와 본문 왼쪽 끝이 어긋나 보인다. */}
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 h-14 lg:h-16 flex items-center justify-between">
         <span className="font-bold text-white text-lg lg:text-xl tracking-tight">
           🎮 이벤트허브
         </span>
@@ -38,6 +41,7 @@ export default function Navbar() {
               <span className="hidden sm:inline"> {label}</span>
             </NavLink>
           ))}
+          <InstallAppButton />
           <NotificationBell />
           <button
             onClick={() => setShowAdmin(true)}

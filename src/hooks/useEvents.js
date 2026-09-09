@@ -35,6 +35,8 @@ function mapEvent(row) {
   }
 }
 
+const PAGE_SIZE = 1000 // PostgREST 기본 상한
+
 function sortByStartDate(list) {
   return [...list].sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))
 }
@@ -48,26 +50,43 @@ export function useEvents() {
   useEffect(() => {
     let cancelled = false
 
-    // 예전엔 "올해 1/1~12/31"만 불러왔는데, 그러면 12월에 접속했을 때 바로 다음 달
-    // (내년 1월) 행사가 통째로 안 보이고, 이미 등록된 내년 행사(지스타 2027 등)도
-    // 영영 안 뜬다. 올해 초부터 내년 말까지로 넓힌다 — 지난 행사는 "종료" 탭에서
-    // 필요하므로 하한은 올해 1/1 그대로 둔다.
+    // 목록에는 "올해 행사"만 노출한다 — 내년 행사까지 함께 보이면 지금 갈 수 있는
+    // 행사와 1년 뒤 행사가 같은 목록에 섞여서 "예정" 탭이 실제보다 부풀려 보인다.
+    // (내년 행사도 DB에는 그대로 쌓이고, 해가 바뀌면 자동으로 목록에 들어온다.
+    //  연말에 다음 달 행사가 안 보이는 건 이 정책의 의도된 결과다.)
     const year = new Date().getFullYear()
     const rangeStart = `${year}-01-01`
-    const rangeEnd = `${year + 1}-12-31`
+    const rangeEnd = `${year}-12-31`
 
-    supabase
-      .from('events')
-      .select('*')
-      .gte('start_date', rangeStart)
-      .lte('start_date', rangeEnd)
-      .then(({ data, error: fetchError }) => {
+    // PostgREST는 요청당 기본 1000행까지만 준다 — 에러도 없이 잘려 나가므로,
+    // 끝 페이지(요청한 개수보다 적게 온 페이지)가 나올 때까지 range로 이어 받는다.
+    async function fetchAllEvents() {
+      const rows = []
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error: fetchError } = await supabase
+          .from('events')
+          .select('*')
+          .gte('start_date', rangeStart)
+          .lte('start_date', rangeEnd)
+          // 페이지 사이에 순서가 흔들리면 행이 누락/중복되므로 정렬을 고정한다.
+          .order('start_date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1)
+        if (fetchError) throw fetchError
+        rows.push(...data)
+        if (data.length < PAGE_SIZE) return rows
+      }
+    }
+
+    fetchAllEvents()
+      .then(rows => {
         if (cancelled) return
-        if (fetchError) {
-          setError(fetchError)
-        } else {
-          setEvents(sortByStartDate(data.map(mapEvent)))
-        }
+        setEvents(sortByStartDate(rows.map(mapEvent)))
+        setLoading(false)
+      })
+      .catch(fetchError => {
+        if (cancelled) return
+        setError(fetchError)
         setLoading(false)
       })
 

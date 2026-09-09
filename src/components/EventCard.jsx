@@ -14,7 +14,9 @@ import { ticketSiteName } from '../lib/ticketSite'
 
 const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
 
-export default function EventCard({ event }) {
+// compact: 카드가 좁을 때(모바일 2열) 날짜를 축약해서 잘리지 않게 한다.
+// 1열로 보고 있으면 폭이 넉넉하니 축약하지 않는다.
+export default function EventCard({ event, compact = false }) {
   const status = getEventStatus(event)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const { isAdmin } = useAdmin()
@@ -44,6 +46,12 @@ export default function EventCard({ event }) {
   const dateStr = isSameDay
     ? format(start, 'M월 d일 (eee)', { locale: ko })
     : `${format(start, 'M월 d일', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
+
+  // 모바일은 카드가 2열이라 폭이 절반뿐 — 위 형식은 "9월 21일 ~ 9월 2…"처럼 날짜가
+  // 잘려 나간다. 좁은 화면에서만 쓰는 축약 형식을 따로 만든다.
+  const compactDateStr = isSameDay
+    ? format(start, 'M.d (eee)', { locale: ko })
+    : `${format(start, 'M.d')} ~ ${format(end, 'M.d')}`
 
   // D-Day (예정 행사만)
   const daysUntil = status === 'upcoming' ? getDaysUntil(event) : null
@@ -150,7 +158,14 @@ export default function EventCard({ event }) {
       <div className="space-y-1 text-xs text-zinc-400 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="shrink-0">📅</span>
-          <span className="truncate">{dateStr}</span>
+          {compact ? (
+            <>
+              <span className="truncate sm:hidden">{compactDateStr}</span>
+              <span className="truncate hidden sm:block">{dateStr}</span>
+            </>
+          ) : (
+            <span className="truncate">{dateStr}</span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="shrink-0">📍</span>
@@ -169,7 +184,9 @@ export default function EventCard({ event }) {
           {siteName && ` · ${siteName}`}
         </div>
       )}
-      {!ticketNotOpenYet && status !== STATUS.ENDED && event.ticketUrl && (
+      {/* 매진이면 "예매 중"이 아니다 — 포스터엔 매진 오버레이가 걸려 있는데 바로 아래에
+          "예매 중"이 같이 뜨는 모순이 있었다. */}
+      {!ticketNotOpenYet && status !== STATUS.ENDED && event.ticketUrl && event.ticketStatus !== 'soldout' && (
         <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400 truncate">
           🎟 예매 중{siteName && ` · ${siteName}`}
         </div>

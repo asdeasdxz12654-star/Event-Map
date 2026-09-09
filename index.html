@@ -4,10 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover가 있어야 iOS에서 env(safe-area-inset-*)이 실제 값을 갖는다.
+         이게 없으면 아이폰 하단 홈 인디케이터 영역에 고정 예매 바가 깔려버린다. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#6366f1" />
     <meta name="description" content="국내 게임·코스프레·게임음악 행사 통합 정보 플랫폼" />
     <title>게임이벤트허브</title>
+
+    <!-- iOS 사파리는 웹앱 매니페스트의 display/이름을 안 보고 아래 메타를 본다.
+         홈 화면에 추가했을 때 주소창 없는 앱처럼 뜨게 하는 설정. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="이벤트허브" />
 
     <!-- 정적 SPA(GitHub Pages)라 카카오톡·트위터 등 링크 미리보기 봇은 JS를 안 돌리고
          이 태그들만 읽는다 — 그래서 "행사별" 미리보기는 서버 렌더링 없인 못 만들고,
