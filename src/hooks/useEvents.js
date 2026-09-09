@@ -18,6 +18,7 @@ function mapEvent(row) {
     posterUrl: row.poster_url,
     ticketUrl: row.ticket_url,
     ticketOpenDate: row.ticket_open_date,
+    ticketOpenTime: row.ticket_open_time,
     admissionFee: row.admission_fee,
     website: row.website,
     trustScore: row.trust_score,

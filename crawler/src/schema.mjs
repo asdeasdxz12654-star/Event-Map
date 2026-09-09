@@ -15,6 +15,7 @@ export const EventExtractionSchema = z.object({
   description: z.string().nullable().describe('한두 문장 요약'),
   ticket_url: z.string().nullable(),
   ticket_open_date: z.string().nullable().describe('YYYY-MM-DD'),
+  ticket_open_time: z.string().nullable().optional().describe('예매 오픈 시각. 기사에 명시된 그대로, 예: "20:00", "오후 8시". 확실하지 않으면 null'),
   admission_fee: z.string().nullable(),
   website: z.string().nullable(),
   tags: z.array(z.string()).nullable(),

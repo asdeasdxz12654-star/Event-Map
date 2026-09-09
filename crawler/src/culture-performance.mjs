@@ -203,6 +203,7 @@ export function buildCulturePerformanceDraft(candidate) {
     description: stripHtml(raw.description ?? '').slice(0, 200) || null,
     ticket_url: null,
     ticket_open_date: null,
+    ticket_open_time: null,
     admission_fee: raw.charge || null,
     website: raw.url ?? null,
     tags: ['문화예술공연통합'],

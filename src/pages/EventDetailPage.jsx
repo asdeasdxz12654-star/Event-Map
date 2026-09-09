@@ -13,6 +13,7 @@ import { downloadEventIcs } from '../utils/ics'
 import { useAdmin } from '../contexts/AdminContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
+import { ticketSiteName } from '../lib/ticketSite'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 
@@ -163,7 +164,11 @@ export default function EventDetailPage() {
               <InfoRow
                 icon="🎟"
                 label="예매 오픈"
-                value={format(new Date(event.ticketOpenDate), 'yyyy년 M월 d일', { locale: ko })}
+                value={[
+                  format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'yyyy년 M월 d일', { locale: ko }),
+                  event.ticketOpenTime,
+                  ticketSiteName(event.ticketUrl),
+                ].filter(Boolean).join(' · ')}
               />
             )}
           </div>
@@ -304,6 +309,7 @@ function CtaButtons({ event }) {
             className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-2xl text-center transition-colors shadow-lg shadow-indigo-900/50"
           >
             🎟 {event.ticketStatus === 'available' ? '예매하기' : '예매 페이지'}
+            {ticketSiteName(event.ticketUrl) && ` (${ticketSiteName(event.ticketUrl)})`}
           </a>
         )
       )}

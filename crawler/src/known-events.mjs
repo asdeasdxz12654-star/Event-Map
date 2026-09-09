@@ -394,6 +394,7 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
     description: extracted.description,
     ticket_url: extracted.ticket_url,
     ticket_open_date: extracted.ticket_open_date,
+    ticket_open_time: extracted.ticket_open_time ?? null,
     admission_fee: extracted.admission_fee,
     website: extracted.website,
     tags: extracted.tags ?? [],

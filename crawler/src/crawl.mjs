@@ -60,7 +60,8 @@ title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지�
 기사마다 title이 달라지면 나중에 중복 행사로 잘못 등록된다. 여러 회사가 같은 행사에
 참가하는 기사여도 title/start_date/venue는 그 행사 자체의 정보로 통일해서 채워라.
 반드시 아래 JSON 형식으로만 답해라 (설명 문장 없이 JSON 객체 하나만):
-{"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}`
+{"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"ticket_open_time":string|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}
+ticket_open_time은 기사에 "오후 8시 오픈", "20:00부터 예매 시작"처럼 예매 시작 시각이 명시된 경우에만 그 표현 그대로 채우고, 시각이 안 나와 있으면 null로 둬라.`
 
 function stripHtml(html = '') {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -396,7 +397,7 @@ async function main() {
           is_event: false, confidence: 'low',
           title: null, category: null, start_date: null, end_date: null,
           venue: null, venue_address: null, organizer: null, description: null,
-          ticket_url: null, ticket_open_date: null, admission_fee: null,
+          ticket_url: null, ticket_open_date: null, ticket_open_time: null, admission_fee: null,
           website: null, tags: null,
         },
       })

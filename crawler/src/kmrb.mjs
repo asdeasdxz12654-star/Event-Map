@@ -161,6 +161,7 @@ export function buildKmrbDraft(candidate) {
     description: null,
     ticket_url: null,
     ticket_open_date: null,
+    ticket_open_time: null,
     admission_fee: null,
     website: null,
     tags: ['영등위공연추천', raw.kindName].filter(Boolean),

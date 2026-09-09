@@ -8,6 +8,7 @@ import { getEventStatus, getDaysUntil } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
 import { adminApi } from '../lib/adminApi'
+import { ticketSiteName } from '../lib/ticketSite'
 
 const CATEGORY_EMOJI = { '게임전시': '🎮', '코스프레': '✨', '게임음악': '🎵' }
 const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
@@ -52,6 +53,11 @@ export default function EventCard({ event }) {
   // 7일 이내 추가된 행사
   const isNew = event.createdAt
     && (Date.now() - new Date(event.createdAt).getTime()) < NEW_THRESHOLD_MS
+
+  const ticketNotOpenYet = !!event.ticketOpenDate
+    && status === 'upcoming'
+    && event.ticketOpenDate > format(new Date(), 'yyyy-MM-dd')
+  const siteName = ticketSiteName(event.ticketUrl)
 
   return (
     <Link
@@ -151,9 +157,16 @@ export default function EventCard({ event }) {
         </div>
       </div>
 
-      {event.ticketOpenDate && status === 'upcoming' && event.ticketOpenDate > format(new Date(), 'yyyy-MM-dd') && (
+      {ticketNotOpenYet && (
         <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400">
           🎟 예매 오픈: {format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M월 d일', { locale: ko })}
+          {event.ticketOpenTime && ` ${event.ticketOpenTime}`}
+          {siteName && ` · ${siteName}`}
+        </div>
+      )}
+      {!ticketNotOpenYet && status === 'upcoming' && event.ticketUrl && (
+        <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400 truncate">
+          🎟 예매 중{siteName && ` · ${siteName}`}
         </div>
       )}
     </Link>

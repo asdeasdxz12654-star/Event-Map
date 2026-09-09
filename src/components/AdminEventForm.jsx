@@ -6,7 +6,7 @@ const CATEGORIES = ['게임전시', '코스프레', '게임음악']
 const EMPTY = {
   title: '', category: '게임전시', start_date: '', end_date: '',
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
-  organizer: '', description: '', ticket_url: '', ticket_open_date: '',
+  organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
 }
 
@@ -25,6 +25,7 @@ function toForm(event) {
     description: event.description ?? '',
     ticket_url: event.ticketUrl ?? '',
     ticket_open_date: event.ticketOpenDate ?? '',
+    ticket_open_time: event.ticketOpenTime ?? '',
     admission_fee: event.admissionFee ?? '',
     website: event.website ?? '',
     poster_url: event.posterUrl ?? '',
@@ -47,6 +48,7 @@ function toPayload(form) {
     description: form.description || null,
     ticket_url: form.ticket_url || null,
     ticket_open_date: form.ticket_open_date || null,
+    ticket_open_time: form.ticket_open_time || null,
     admission_fee: form.admission_fee || null,
     website: form.website || null,
     poster_url: form.poster_url || null,
@@ -165,9 +167,17 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
             <input type="url" value={form.ticket_url} onChange={set('ticket_url')} className={cls} placeholder="https://" />
           </Field>
 
-          <Field label="예매 오픈일">
-            <input type="date" value={form.ticket_open_date} onChange={set('ticket_open_date')} className={cls} />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="예매 오픈일">
+              <input type="date" value={form.ticket_open_date} onChange={set('ticket_open_date')} className={cls} />
+            </Field>
+            <Field label="예매 오픈 시각">
+              <input type="text" value={form.ticket_open_time} onChange={set('ticket_open_time')} className={cls} placeholder="ex) 20:00, 오후 8시" />
+            </Field>
+          </div>
+          <p className="text-[11px] text-zinc-500 -mt-2">
+            예매 사이트명은 별도 입력 없이 예매 URL에서 자동으로 표시됩니다.
+          </p>
 
           <Field label="공식 사이트">
             <input type="url" value={form.website} onChange={set('website')} className={cls} placeholder="https://" />

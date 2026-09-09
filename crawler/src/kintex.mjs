@@ -141,6 +141,7 @@ export function buildKintexDraft(candidate) {
     description: null,
     ticket_url: raw.HMPG_URL || null,
     ticket_open_date: null,
+    ticket_open_time: null,
     admission_fee: null,
     website: raw.HMPG_URL || null,
     tags: ['킨텍스', raw.EVENT_PLC].filter(Boolean),
