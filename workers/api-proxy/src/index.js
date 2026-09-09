@@ -63,8 +63,16 @@ async function supabase(env, method, path, body) {
 }
 
 const ID_RE = /^\/admin\/events\/([^/]+)$/
-const BOOTHS_OF_EVENT_RE = /^\/admin\/events\/([^/]+)\/booths$/
-const BOOTH_ID_RE = /^\/admin\/booths\/([^/]+)$/
+
+// 행사에 딸린 하위 목록(참가 부스, 출연진)은 구조가 같아서 라우트 패턴을 공유한다 —
+// urlSegment(URL에 쓰는 이름) -> table(실제 Supabase 테이블명) 매핑만 다르다.
+const SUB_RESOURCES = {
+  booths: 'event_booths',
+  performers: 'event_performers',
+}
+const subResourcePattern = Object.keys(SUB_RESOURCES).join('|')
+const SUB_OF_EVENT_RE = new RegExp(`^/admin/events/([^/]+)/(${subResourcePattern})$`)
+const SUB_ID_RE = new RegExp(`^/admin/(${subResourcePattern})/([^/]+)$`)
 
 async function handleAdmin(request, env, pathname) {
   if (!await verifyAdmin(request, env)) {
@@ -72,29 +80,32 @@ async function handleAdmin(request, env, pathname) {
   }
 
   const idMatch = ID_RE.exec(pathname)
-  const boothsOfEventMatch = BOOTHS_OF_EVENT_RE.exec(pathname)
-  const boothIdMatch = BOOTH_ID_RE.exec(pathname)
+  const subOfEventMatch = SUB_OF_EVENT_RE.exec(pathname)
+  const subIdMatch = SUB_ID_RE.exec(pathname)
 
-  // POST /admin/events/:eventId/booths — 참가 부스 추가
-  if (boothsOfEventMatch && request.method === 'POST') {
-    const eventId = decodeURIComponent(boothsOfEventMatch[1])
+  // POST /admin/events/:eventId/booths|performers — 하위 항목 추가
+  if (subOfEventMatch && request.method === 'POST') {
+    const eventId = decodeURIComponent(subOfEventMatch[1])
+    const table = SUB_RESOURCES[subOfEventMatch[2]]
     const body = await request.json()
-    const data = await supabase(env, 'POST', 'event_booths', { event_id: eventId, ...body })
+    const data = await supabase(env, 'POST', table, { event_id: eventId, ...body })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
   }
 
-  // PATCH /admin/booths/:id — 참가 부스 수정
-  if (boothIdMatch && request.method === 'PATCH') {
-    const id = decodeURIComponent(boothIdMatch[1])
+  // PATCH /admin/booths|performers/:id — 하위 항목 수정
+  if (subIdMatch && request.method === 'PATCH') {
+    const table = SUB_RESOURCES[subIdMatch[1]]
+    const id = decodeURIComponent(subIdMatch[2])
     const body = await request.json()
-    await supabase(env, 'PATCH', `event_booths?id=eq.${encodeURIComponent(id)}`, body)
+    await supabase(env, 'PATCH', `${table}?id=eq.${encodeURIComponent(id)}`, body)
     return json({ ok: true }, env)
   }
 
-  // DELETE /admin/booths/:id — 참가 부스 삭제
-  if (boothIdMatch && request.method === 'DELETE') {
-    const id = decodeURIComponent(boothIdMatch[1])
-    await supabase(env, 'DELETE', `event_booths?id=eq.${encodeURIComponent(id)}`)
+  // DELETE /admin/booths|performers/:id — 하위 항목 삭제
+  if (subIdMatch && request.method === 'DELETE') {
+    const table = SUB_RESOURCES[subIdMatch[1]]
+    const id = decodeURIComponent(subIdMatch[2])
+    await supabase(env, 'DELETE', `${table}?id=eq.${encodeURIComponent(id)}`)
     return new Response(null, { status: 204, headers: corsHeaders(env) })
   }
 

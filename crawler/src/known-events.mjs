@@ -80,6 +80,7 @@ const KNOWN_EVENTS = [
         admission_fee: '성인 18,000원 / 청소년 8,000원 (BTC 일반 사전예매, 100% 예매제)',
         // 2025년 나흘간 20.2만명 방문(역대 2위 규모) — 국내 최대 게임전시라 항상 매우 혼잡.
         crowd_level: 'very_high',
+        booth_info_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) BTC 부스배치도 페이지에 공개',
         website: 'https://www.gstar.or.kr/',
         tags: ['게임전시', '지스타', '부산', 'BEXCO'],
         confidence: 'high',
@@ -109,6 +110,7 @@ const KNOWN_EVENTS = [
         admission_fee: '3,000원 (미취학아동·만 65세 이상·장애인·국가유공자·현역 군인/경찰/소방관 무료)',
         // 2026년 나흘간 약 13만명 방문(역대 최대) — 혼잡.
         crowd_level: 'high',
+        booth_info_note: '예년 기준 행사 약 2주 전 참가사 명단·부스배치도 공식 공개',
         website: 'https://www.playx4.or.kr/',
         tags: ['게임전시', '플레이엑스포', 'PlayX4', '고양', 'KINTEX'],
         confidence: 'high',
@@ -138,6 +140,7 @@ const KNOWN_EVENTS = [
         admission_fee: '공식 미정',
         // 2025년 사흘간 10만명 최초 돌파(역대 최대, 티켓 발권 기준 집계) — 혼잡.
         crowd_level: 'high',
+        booth_info_note: '참가사별 부스 프로그램은 행사 한 달 전부터 순차 공개, 종합 배치도는 임박 시 공개',
         website: 'https://www.agfkorea.com/',
         tags: ['코스프레', 'AGF', '고양', 'KINTEX', '서브컬처'],
         confidence: 'high',
@@ -167,6 +170,7 @@ const KNOWN_EVENTS = [
         admission_fee: '오프라인 1일권 성인 15,000원·청소년 12,500원 / 2일권 성인 30,000원·청소년 25,000원 (공식 홈페이지 사전예매 20% 할인)',
         // 2025년 온+오프라인 합산 3.8만명(오프라인만은 이보다 적음) — 보통.
         crowd_level: 'medium',
+        booth_info_note: '전시작 목록은 오프라인 행사 약 1개월 전부터 공식 홈페이지(bicfest.org)에 순차 공개',
         website: 'https://www.bicfest.org/',
         tags: ['게임전시', 'BIC', '인디게임', '부산', 'BEXCO'],
         confidence: 'high',
@@ -194,6 +198,9 @@ const ONE_OFF_EVENTS = [
       // 서울 코믹월드 하루평균 2만명대, 지방 회차도 3만명대 방문 — 전시장 면적 대비
       // 초과 밀집으로 알려져 있어 혼잡.
       crowd_level: 'high',
+      // 참가 동아리(부스컷)는 comicw.net에 상시 공개(등록 즉시 반영), 배치도는
+      // comicw.net/map/에 행사 임박 시 별도 공지.
+      booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
       confidence: 'high',
     },
@@ -211,6 +218,7 @@ const ONE_OFF_EVENTS = [
       admission_fee: '일반 5,000원 / 부천시민 2,500원 / 19세 이하 무료',
       // 회차별 11~12만명이지만 한국만화박물관 일원(도심 전역)에 분산 개최 — 보통.
       crowd_level: 'medium',
+      booth_info_note: '야외마켓부스 참가자 모집 중 — 최종 참가자 명단은 행사 임박 시 공개',
       website: 'https://www.bicof.com/', tags: ['부천국제만화축제', 'BICOF', '부천', '만화', '웹툰'],
       confidence: 'high',
     },
@@ -226,6 +234,9 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
       ticket_url: null, ticket_open_date: null, admission_fee: '공식 미정',
+      // 역대 회차 어디서도 참가업체/부스 라인업을 공식적으로 공개한 사례를 못 찾음
+      // (자체 홍보 부스 위주). 매 회차 검색해도 안 나오면 공개 안 하는 행사로 봄.
+      booth_info_note: '미공개',
       website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
       confidence: 'high',
     },
@@ -242,6 +253,7 @@ const ONE_OFF_EVENTS = [
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
+      booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '울산'],
       confidence: 'high',
     },
@@ -260,6 +272,8 @@ const ONE_OFF_EVENTS = [
       admission_fee: '선행입장권 12,000원(입장권만)·14,000원(탈의실 이용권 포함) / 일반입장권 7,000원·9,000원',
       // 직전 11회 3.2만명 방문(역대급) — 혼잡.
       crowd_level: 'high',
+      // 8회 사례: 최종 부스 배치도가 행사 임박(1~2주 전)해서 illustar.net 공지사항으로 공개됨.
+      booth_info_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 배치도 공개',
       website: 'https://illustar.net/', tags: ['일러스타페스', '서브컬처', '코스프레', '일러스트', 'KINTEX'],
       confidence: 'high',
     },
@@ -275,6 +289,7 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
       ticket_url: null, ticket_open_date: null, admission_fee: '공식 미정',
+      booth_info_note: '미공개',
       website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
       confidence: 'high',
     },
@@ -290,6 +305,7 @@ const ONE_OFF_EVENTS = [
       description: '34개국 122편 애니메이션 상영, 콘텐츠마켓·전시·학술포럼 등. 매년 10월 부천 개최.',
       ticket_url: 'https://www.biaf.or.kr/', ticket_open_date: null,
       admission_fee: '개막작 30,000원 / 일반 상영작 8,000원 / 특별토크 15,000원 (2025년 기준, 2026년 가격 미확정)',
+      booth_info_note: '애니메이션콘텐츠마켓 참가업체 사전 공개 사례를 못 찾음 — 공식 사이트에서 행사 임박 시 확인 필요',
       website: 'https://www.biaf.or.kr/', tags: ['BIAF', '부천국제애니메이션페스티벌', '부천', '애니메이션'],
       confidence: 'high',
     },
@@ -306,6 +322,7 @@ const ONE_OFF_EVENTS = [
       description: '국내 최대 2차 창작 동인·코스프레 행사.',
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
+      booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '수원'],
       confidence: 'high',
     },
@@ -410,6 +427,18 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       if (crowdError) console.warn(`[known-events] 혼잡도 저장 실패:`, crowdError.message)
       else console.log(`[known-events] 예상 혼잡도 설정: ${extracted.crowd_level}`)
     }
+    // booth_info_note: 참가업체/부스/굿즈 공개 여부·시점에 대한 조사 결과.
+    // "미공개"(공식적으로 안 알림) 또는 예상 공개 시점 안내.
+    if (extracted.booth_info_note && approved?.promoted_event_id) {
+      const { error: boothNoteError } = await supabase
+        .from('events')
+        .update({ booth_info_note: extracted.booth_info_note })
+        .eq('id', approved.promoted_event_id)
+        .is('booth_info_note', null)
+        .is('admin_edited_at', null)
+      if (boothNoteError) console.warn(`[known-events] 부스 공개 메모 저장 실패:`, boothNoteError.message)
+      else console.log(`[known-events] 부스 공개 메모 설정됨`)
+    }
   }
 }
 
@@ -448,6 +477,9 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   }
   if (extracted.crowd_level) {
     patch.crowd_level = extracted.crowd_level
+  }
+  if (extracted.booth_info_note) {
+    patch.booth_info_note = extracted.booth_info_note
   }
 
   const { data, error } = await supabase

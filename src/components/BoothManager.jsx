@@ -75,7 +75,7 @@ function BoothRow({ booth, isAdmin, onSaved }) {
   )
 }
 
-export default function BoothManager({ eventId }) {
+export default function BoothManager({ eventId, note }) {
   const { booths, loading } = useEventBooths(eventId)
   const { isAdmin } = useAdmin()
   const [showAddForm, setShowAddForm] = useState(false)
@@ -103,7 +103,7 @@ export default function BoothManager({ eventId }) {
     }
   }
 
-  if (loading || (!isAdmin && booths.length === 0)) return null
+  if (loading || (!isAdmin && booths.length === 0 && !note)) return null
 
   const cls = 'bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500'
 
@@ -119,7 +119,17 @@ export default function BoothManager({ eventId }) {
       </div>
 
       {booths.length === 0 && !showAddForm && (
-        <p className="text-xs text-zinc-500">아직 등록된 참가 업체/부스 정보가 없습니다.</p>
+        note ? (
+          note === '미공개' ? (
+            <p className="text-xs text-zinc-500">
+              <span className="text-zinc-400">🚫 미공개</span> — 공식 행사에서 참가업체/부스 정보를 공개하지 않습니다.
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-500">ℹ️ {note}</p>
+          )
+        ) : (
+          <p className="text-xs text-zinc-500">아직 등록된 참가 업체/부스 정보가 없습니다.</p>
+        )
       )}
 
       {booths.map(booth => (

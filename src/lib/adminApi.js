@@ -43,4 +43,8 @@ export const adminApi = {
   createBooth: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/booths`, data),
   updateBooth: (id, data) => req('PATCH', `/admin/booths/${encodeURIComponent(id)}`, data),
   deleteBooth: (id) => req('DELETE', `/admin/booths/${encodeURIComponent(id)}`),
+
+  createPerformer: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/performers`, data),
+  updatePerformer: (id, data) => req('PATCH', `/admin/performers/${encodeURIComponent(id)}`, data),
+  deletePerformer: (id) => req('DELETE', `/admin/performers/${encodeURIComponent(id)}`),
 }
