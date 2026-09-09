@@ -81,6 +81,9 @@ const KNOWN_EVENTS = [
         // 2025년 나흘간 20.2만명 방문(역대 2위 규모) — 국내 최대 게임전시라 항상 매우 혼잡.
         crowd_level: 'very_high',
         booth_info_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) BTC 부스배치도 페이지에 공개',
+        // 2025년 세부 일정(무대 포함)은 개최 21일 전(10/23)에 공개됨. 고정 프로그램:
+        // 게임 코스프레 어워즈, 지스타 네트워크 파티 등.
+        stage_info_note: '예년 기준 행사 약 3주 전 세부 일정(무대 프로그램 포함) 공개',
         website: 'https://www.gstar.or.kr/',
         tags: ['게임전시', '지스타', '부산', 'BEXCO'],
         confidence: 'high',
@@ -111,6 +114,7 @@ const KNOWN_EVENTS = [
         // 2026년 나흘간 약 13만명 방문(역대 최대) — 혼잡.
         crowd_level: 'high',
         booth_info_note: '예년 기준 행사 약 2주 전 참가사 명단·부스배치도 공식 공개',
+        stage_info_note: '무대 일정은 부스 배치도와 같은 시점(행사 약 2주 전)에 함께 공개',
         website: 'https://www.playx4.or.kr/',
         tags: ['게임전시', '플레이엑스포', 'PlayX4', '고양', 'KINTEX'],
         confidence: 'high',
@@ -141,6 +145,8 @@ const KNOWN_EVENTS = [
         // 2025년 사흘간 10만명 최초 돌파(역대 최대, 티켓 발권 기준 집계) — 혼잡.
         crowd_level: 'high',
         booth_info_note: '참가사별 부스 프로그램은 행사 한 달 전부터 순차 공개, 종합 배치도는 임박 시 공개',
+        // 2025년 레드/블루 스테이지 1차 타임테이블 10/17(행사 약 7주 전), 2차 10/24 공개.
+        stage_info_note: '레드/블루 스테이지 타임테이블은 예년 기준 행사 약 6~7주 전부터 순차 공개',
         website: 'https://www.agfkorea.com/',
         tags: ['코스프레', 'AGF', '고양', 'KINTEX', '서브컬처'],
         confidence: 'high',
@@ -171,6 +177,7 @@ const KNOWN_EVENTS = [
         // 2025년 온+오프라인 합산 3.8만명(오프라인만은 이보다 적음) — 보통.
         crowd_level: 'medium',
         booth_info_note: '전시작 목록은 오프라인 행사 약 1개월 전부터 공식 홈페이지(bicfest.org)에 순차 공개',
+        stage_info_note: '무대 프로그램·라이브인디 운영 확인됨, 구체적 공개 시점은 bicfest.org·SNS에서 임박 시 확인 필요',
         website: 'https://www.bicfest.org/',
         tags: ['게임전시', 'BIC', '인디게임', '부산', 'BEXCO'],
         confidence: 'high',
@@ -201,6 +208,8 @@ const ONE_OFF_EVENTS = [
       // 참가 동아리(부스컷)는 comicw.net에 상시 공개(등록 즉시 반영), 배치도는
       // comicw.net/map/에 행사 임박 시 별도 공지.
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      // 매 회차 거의 고정 시간대: 16:10 일러스트 콘테스트 → 16:30 코스프레 무대공연 → ~17:30 종료.
+      stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
       confidence: 'high',
     },
@@ -237,6 +246,9 @@ const ONE_OFF_EVENTS = [
       // 역대 회차 어디서도 참가업체/부스 라인업을 공식적으로 공개한 사례를 못 찾음
       // (자체 홍보 부스 위주). 매 회차 검색해도 안 나오면 공개 안 하는 행사로 봄.
       booth_info_note: '미공개',
+      // 부스와 달리 무대 라인업(게스트·최강자전 등)은 X(@cos_comic)에 공개함 —
+      // "Line-up" 트윗·"최강자전 무대 신청" 공지 확인됨. 정확한 공개 시점은 불명.
+      stage_info_note: '부스와 달리 무대 라인업(게스트·최강자전 등)은 공개함 — 공식 X(@cos_comic)에서 임박 시 확인',
       website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
       confidence: 'high',
     },
@@ -254,6 +266,7 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '울산'],
       confidence: 'high',
     },
@@ -274,6 +287,10 @@ const ONE_OFF_EVENTS = [
       crowd_level: 'high',
       // 8회 사례: 최종 부스 배치도가 행사 임박(1~2주 전)해서 illustar.net 공지사항으로 공개됨.
       booth_info_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 배치도 공개',
+      // 과거 사례(5·8·9회) 공통: 무대 시간표는 행사 임박(D-6 전후)해서 X 공지로 공개.
+      // 고정 프로그램: 노래자랑(TJ), 참여형 코스플레이 공연, 랜덤플레이댄스, 인디아이돌
+      // 공연, 애니송 DJ 이벤트 등.
+      stage_info_note: '과거 사례 기준 행사 임박(D-6 전후)해서 X(@illustar_fes) 공지로 무대 시간표 공개',
       website: 'https://illustar.net/', tags: ['일러스타페스', '서브컬처', '코스프레', '일러스트', 'KINTEX'],
       confidence: 'high',
     },
@@ -290,6 +307,7 @@ const ONE_OFF_EVENTS = [
       description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
       ticket_url: null, ticket_open_date: null, admission_fee: '공식 미정',
       booth_info_note: '미공개',
+      stage_info_note: '부스와 달리 무대 라인업(게스트·최강자전 등)은 공개함 — 공식 X(@cos_comic)에서 임박 시 확인',
       website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
       confidence: 'high',
     },
@@ -323,6 +341,7 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '수원'],
       confidence: 'high',
     },
@@ -439,6 +458,19 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       if (boothNoteError) console.warn(`[known-events] 부스 공개 메모 저장 실패:`, boothNoteError.message)
       else console.log(`[known-events] 부스 공개 메모 설정됨`)
     }
+    // stage_info_note: 무대 프로그램(공연·경연·토크쇼 등) 공개 여부·시점.
+    // booth_info_note와 별개 컬럼 — 코스앤코믹처럼 부스는 미공개인데 무대는
+    // 공개하는 행사가 있어서 하나로 합치면 그 차이를 표현할 수 없다.
+    if (extracted.stage_info_note && approved?.promoted_event_id) {
+      const { error: stageNoteError } = await supabase
+        .from('events')
+        .update({ stage_info_note: extracted.stage_info_note })
+        .eq('id', approved.promoted_event_id)
+        .is('stage_info_note', null)
+        .is('admin_edited_at', null)
+      if (stageNoteError) console.warn(`[known-events] 무대 공개 메모 저장 실패:`, stageNoteError.message)
+      else console.log(`[known-events] 무대 공개 메모 설정됨`)
+    }
   }
 }
 
@@ -480,6 +512,9 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   }
   if (extracted.booth_info_note) {
     patch.booth_info_note = extracted.booth_info_note
+  }
+  if (extracted.stage_info_note) {
+    patch.stage_info_note = extracted.stage_info_note
   }
 
   const { data, error } = await supabase

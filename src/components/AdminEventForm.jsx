@@ -8,7 +8,7 @@ const EMPTY = {
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
-  crowd_level: '', floor_plan_url: '', seoul_place_name: '', booth_info_note: '',
+  crowd_level: '', floor_plan_url: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '',
 }
 
 const CROWD_LEVELS = [
@@ -43,6 +43,7 @@ function toForm(event) {
     floor_plan_url: event.floorPlanUrl ?? '',
     seoul_place_name: event.seoulPlaceName ?? '',
     booth_info_note: event.boothInfoNote ?? '',
+    stage_info_note: event.stageInfoNote ?? '',
     trust_score: String(event.trustScore ?? 3),
     tags: (event.tags ?? []).join(', '),
   }
@@ -71,6 +72,7 @@ function toPayload(form) {
     floor_plan_url: form.floor_plan_url || null,
     seoul_place_name: form.seoul_place_name || null,
     booth_info_note: form.booth_info_note || null,
+    stage_info_note: form.stage_info_note || null,
     trust_score: form.trust_score !== '' ? Number(form.trust_score) : null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
   }
@@ -255,6 +257,20 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <p className="text-[11px] text-zinc-500 -mt-2">
             등록된 부스가 없을 때 이 문구가 대신 표시됩니다. 공식 행사가 참가업체를
             아예 공개 안 하면 정확히 "미공개"라고 입력하세요.
+          </p>
+
+          <Field label="무대 프로그램 공개 상태">
+            <input
+              type="text"
+              value={form.stage_info_note}
+              onChange={set('stage_info_note')}
+              className={cls}
+              placeholder='ex) 미공개, 또는 "행사 3주 전 공개 예상"'
+            />
+          </Field>
+          <p className="text-[11px] text-zinc-500 -mt-2">
+            부스와 별개입니다 — 코스앤코믹처럼 부스는 미공개인데 무대 라인업은
+            공개하는 행사도 있으니 따로 입력하세요.
           </p>
 
           <Field label="신뢰도 (0~5)">

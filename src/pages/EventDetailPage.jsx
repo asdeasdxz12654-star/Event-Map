@@ -200,8 +200,8 @@ export default function EventDetailPage() {
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
           </div>
 
-          {/* 출연진 · 세트리스트 (게임음악 카테고리 한정) */}
-          {event.category === '게임음악' && <PerformerManager eventId={event.id} />}
+          {/* 출연진 · 세트리스트 / 무대 일정 (전 카테고리 — 콘서트는 세트리스트, 그 외는 무대 프로그램) */}
+          <PerformerManager eventId={event.id} category={event.category} note={event.stageInfoNote} />
 
           {/* 부스 배치도 */}
           {event.floorPlanUrl && (

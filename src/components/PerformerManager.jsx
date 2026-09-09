@@ -5,7 +5,24 @@ import { adminApi } from '../lib/adminApi'
 
 const EMPTY_FORM = { artist_name: '', songs: '' }
 
-function PerformerRow({ performer, isAdmin, onSaved }) {
+// 게임음악(콘서트/음악회) 카테고리는 "가수 + 세트리스트"로, 그 외 카테고리는
+// "무대 프로그램(공연·토크쇼·경연 등) + 진행 내용"으로 문구만 다르게 보여준다 —
+// 데이터 구조(artist_name/songs)는 동일하게 재사용.
+function copyFor(category) {
+  const isConcert = category === '게임음악'
+  return {
+    heading: isConcert ? '🎤 출연진 · 세트리스트' : '🎤 무대 일정 · 프로그램',
+    addLabel: isConcert ? '+ 출연진 추가' : '+ 무대 프로그램 추가',
+    namePlaceholder: isConcert ? '가수/아티스트명' : '프로그램명 (예: 코스프레 경연대회)',
+    detailPlaceholder: isConcert
+      ? '세트리스트 (한 줄에 한 곡, 미공개면 비워두세요)'
+      : '진행 시간·내용 (예: "16:30 코스프레 무대공연", 미공개면 비워두세요)',
+    undisclosed: isConcert ? '세트리스트 미공개' : '상세 내용 미공개',
+    emptyText: isConcert ? '아직 등록된 출연진 정보가 없습니다.' : '아직 등록된 무대 프로그램 정보가 없습니다.',
+  }
+}
+
+function PerformerRow({ performer, copy, isAdmin, onSaved }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ artist_name: performer.artistName, songs: performer.songs ?? '' })
   const [saving, setSaving] = useState(false)
@@ -30,7 +47,7 @@ function PerformerRow({ performer, isAdmin, onSaved }) {
   }
 
   const remove = async () => {
-    if (!confirm(`"${performer.artistName}" 출연진을 삭제하시겠습니까?`)) return
+    if (!confirm(`"${performer.artistName}" 항목을 삭제하시겠습니까?`)) return
     try {
       await adminApi.deletePerformer(performer.id)
       onSaved?.()
@@ -44,11 +61,11 @@ function PerformerRow({ performer, isAdmin, onSaved }) {
   if (editing) {
     return (
       <div className="py-2 border-b border-white/5 last:border-0 space-y-1.5">
-        <input value={form.artist_name} onChange={set('artist_name')} placeholder="가수/아티스트명" className={cls + ' w-full'} />
+        <input value={form.artist_name} onChange={set('artist_name')} placeholder={copy.namePlaceholder} className={cls + ' w-full'} />
         <textarea
           value={form.songs}
           onChange={set('songs')}
-          placeholder="세트리스트 (한 줄에 한 곡, 미공개면 비워두세요)"
+          placeholder={copy.detailPlaceholder}
           rows={3}
           className={cls + ' w-full resize-none'}
         />
@@ -71,7 +88,7 @@ function PerformerRow({ performer, isAdmin, onSaved }) {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-zinc-500 mt-1">세트리스트 미공개</p>
+          <p className="text-xs text-zinc-500 mt-1">{copy.undisclosed}</p>
         )}
       </div>
       {isAdmin && (
@@ -84,14 +101,16 @@ function PerformerRow({ performer, isAdmin, onSaved }) {
   )
 }
 
-// 게임음악(콘서트/음악회) 카테고리 행사에서만 상세페이지에 노출 — 출연 가수와
-// 세트리스트를 보여준다. 곡 목록이 미공개면 "세트리스트 미공개"로 표시.
-export default function PerformerManager({ eventId }) {
+// 콘서트뿐 아니라 모든 카테고리에서 노출 — 콘서트는 "출연진·세트리스트",
+// 그 외는 "무대 일정·프로그램"으로 문구만 바뀐다. note는 목록이 비어있을 때
+// 대신 보여줄 공개 상태 메모(events.stage_info_note) — booth_info_note와 같은 방식.
+export default function PerformerManager({ eventId, category, note }) {
   const { performers, loading } = useEventPerformers(eventId)
   const { isAdmin } = useAdmin()
   const [showAddForm, setShowAddForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const copy = copyFor(category)
 
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
@@ -113,36 +132,46 @@ export default function PerformerManager({ eventId }) {
     }
   }
 
-  if (loading || (!isAdmin && performers.length === 0)) return null
+  if (loading || (!isAdmin && performers.length === 0 && !note)) return null
 
   const cls = 'bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500'
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-white">🎤 출연진 · 세트리스트</h2>
+        <h2 className="text-sm font-semibold text-white">{copy.heading}</h2>
         {isAdmin && (
           <button onClick={() => setShowAddForm(v => !v)} className="text-xs text-indigo-400 hover:text-indigo-300">
-            {showAddForm ? '닫기' : '+ 출연진 추가'}
+            {showAddForm ? '닫기' : copy.addLabel}
           </button>
         )}
       </div>
 
       {performers.length === 0 && !showAddForm && (
-        <p className="text-xs text-zinc-500">아직 등록된 출연진 정보가 없습니다.</p>
+        note ? (
+          note === '미공개' ? (
+            <p className="text-xs text-zinc-500">
+              <span className="text-zinc-400">🚫 미공개</span> — 공식 행사에서 무대 프로그램 정보를 공개하지 않습니다.
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-500">ℹ️ {note}</p>
+          )
+        ) : (
+          <p className="text-xs text-zinc-500">{copy.emptyText}</p>
+        )
       )}
 
       {performers.map(performer => (
-        <PerformerRow key={performer.id} performer={performer} isAdmin={isAdmin} onSaved={() => {}} />
+        <PerformerRow key={performer.id} performer={performer} copy={copy} isAdmin={isAdmin} onSaved={() => {}} />
       ))}
 
       {isAdmin && showAddForm && (
         <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
-          <input value={form.artist_name} onChange={set('artist_name')} placeholder="가수/아티스트명 *" className={cls + ' w-full'} required />
+          <input value={form.artist_name} onChange={set('artist_name')} placeholder={`${copy.namePlaceholder} *`} className={cls + ' w-full'} required />
           <textarea
             value={form.songs}
             onChange={set('songs')}
-            placeholder="세트리스트 (한 줄에 한 곡, 미공개면 비워두세요)"
+            placeholder={copy.detailPlaceholder}
             rows={3}
             className={cls + ' w-full resize-none'}
           />

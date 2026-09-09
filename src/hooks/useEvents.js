@@ -24,6 +24,7 @@ function mapEvent(row) {
     floorPlanUrl: row.floor_plan_url,
     seoulPlaceName: row.seoul_place_name,
     boothInfoNote: row.booth_info_note,
+    stageInfoNote: row.stage_info_note,
     admissionFee: row.admission_fee,
     website: row.website,
     trustScore: row.trust_score,
