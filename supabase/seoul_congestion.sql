@@ -8,4 +8,10 @@
 -- 일치할 때만 관리자가 이 컬럼에 그 장소명을 그대로 채워 넣는다
 -- (전체 목록은 서울 열린데이터광장의 "서울시 주요 120장소명 목록(코드포함).xlsx" 참고).
 
-아 근데 행사 혼잡도 어디에 노출되나요?
+alter table public.events
+  add column if not exists seoul_place_name text;
+
+comment on column public.events.seoul_place_name is
+  '서울시 실시간 도시데이터 API의 "서울시 주요 120장소" 중 이 행사장과 정확히
+   일치하는 장소명(예: "올림픽공원"). 값이 있으면 상세페이지에서 실시간 인구
+   혼잡도를 불러온다. null이면 (지원 안 되는 장소) 기존 crowd_level 추정치만 표시.';
