@@ -30,6 +30,7 @@ import { fetchEventPosterUrl } from './naver-image.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
+import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -236,7 +237,8 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
 // 표시해 관리자 검수 페이지에서 최종 판단하도록 한다. envVar가 없으면 조용히 스킵한다
 // (로컬/부분 실행 지원).
 async function processStructuredSource({ label, envVar, fetchFn, buildFn }) {
-  if (!process.env[envVar]) {
+  // envVar가 없는 소스(API 키가 필요 없는 공개 페이지)는 이 검사를 건너뛴다.
+  if (envVar && !process.env[envVar]) {
     console.log(`${envVar} 미설정, ${label} 수집 스킵`)
     return
   }
@@ -336,6 +338,8 @@ async function main() {
     { label: '킨텍스', envVar: 'KINTEX_API_KEY', fetchFn: fetchKintexCandidates, buildFn: buildKintexDraft },
     { label: '영등위', envVar: 'KMRB_API_KEY', fetchFn: fetchKmrbCandidates, buildFn: buildKmrbDraft },
     { label: '문화예술공연통합', envVar: 'CULTURE_PERFORMANCE_API_KEY', fetchFn: fetchCulturePerformanceCandidates, buildFn: buildCulturePerformanceDraft },
+    // API 키가 필요 없는 공개 일정표 — 뉴스에 안 난 행사를 찾는 용도(검수 대기로만 들어간다)
+    { label: '행사일정', fetchFn: fetchSubcultureCalendarCandidates, buildFn: buildSubcultureCalendarDraft },
   ]
   for (const source of STRUCTURED_SOURCES) {
     await processStructuredSource(source)
