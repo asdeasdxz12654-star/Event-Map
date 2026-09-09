@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
@@ -101,6 +102,7 @@ export default function AdminDraftsPage() {
 }
 
 function DraftCard({ draft, onChanged }) {
+  const { toast } = useUIFeedback()
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState(null)
   const e = draft.extracted
@@ -109,7 +111,13 @@ function DraftCard({ draft, onChanged }) {
     setSubmitting(true)
     setActionError(null)
     try {
-      await setDraftStatus(draft.id, newStatus)
+      const saved = await setDraftStatus(draft.id, newStatus)
+      // 승인했는데 rejected로 돌아왔다면 트리거가 자동 게시에 실패한 것이다
+      // (LLM이 뽑은 카테고리가 허용값 밖이거나 날짜 형식이 깨진 경우 등).
+      // 카드가 목록에서 사라지면서 인라인 에러도 같이 없어지므로 토스트로 알린다.
+      if (newStatus === 'approved' && saved?.status === 'rejected') {
+        toast(saved.reviewNote ?? '자동 게시에 실패해 반려 처리했습니다.')
+      }
       onChanged()
     } catch {
       setActionError('처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
@@ -153,6 +161,10 @@ function DraftCard({ draft, onChanged }) {
       >
         원문 보기: {draft.sourceTitle}
       </a>
+
+      {draft.reviewNote && (
+        <p className="text-sm text-amber-300 bg-amber-400/10 rounded-xl px-3 py-2 mt-3">{draft.reviewNote}</p>
+      )}
 
       {actionError && (
         <p className="text-sm text-red-400 bg-red-400/10 rounded-xl px-3 py-2 mt-3">{actionError}</p>

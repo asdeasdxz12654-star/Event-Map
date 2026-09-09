@@ -3,8 +3,17 @@ main = "src/index.js"
 compatibility_date = "2026-09-02"
 
 # 외부 API 키는 여기 적지 말고 시크릿으로 등록:
-#   npx wrangler secret put TRANSIT_API_KEY
-# 코드에서는 env.TRANSIT_API_KEY 로 읽는다. 배포 후 값을 바꾸고 싶을 때도 secret put을 다시 실행하면 됨.
+#   npx wrangler secret put SEOUL_OPENDATA_KEY
+# 코드에서는 env.SEOUL_OPENDATA_KEY 로 읽는다. 배포 후 값을 바꾸고 싶을 때도 secret put을 다시 실행하면 됨.
+
+# /admin/login 시도 횟수 카운터용 KV.
+# 바인딩이 없어도 아이솔레이트 메모리로 세기 때문에 무제한 시도가 열리지는 않지만,
+# 메모리 카운터는 콜로·아이솔레이트마다 따로 세므로 운영에서는 KV를 쓴다.
+# 다른 계정/환경에 새로 배포한다면 아래 id를 직접 만든 것으로 바꿔야 한다:
+#   npx wrangler kv namespace create LOGIN_RATE_LIMIT
+[[kv_namespaces]]
+binding = "LOGIN_RATE_LIMIT"
+id = "588d26816f1c4686aa16325ebb60381d"
 
 [observability]
 enabled = true

@@ -9,7 +9,9 @@ create table if not exists public.event_drafts (
   published_at       timestamptz,
   status             text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   extracted          jsonb not null,             -- Claude가 추출한 구조화 필드 (events 테이블과 같은 컬럼명)
-  promoted_event_id  text references public.events(id),
+  -- on delete set null: 연결된 행사가 지워지면 참조만 끊는다 (hardening_2026-09-09.sql에서
+  -- 기존 DB의 제약도 같은 형태로 교체했다).
+  promoted_event_id  text references public.events(id) on delete set null,
   created_at         timestamptz not null default now(),
   reviewed_at        timestamptz
 );
@@ -17,8 +19,10 @@ create table if not exists public.event_drafts (
 create index if not exists event_drafts_status_idx on public.event_drafts(status);
 
 alter table public.event_drafts enable row level security;
--- 정책을 하나도 안 만들면 RLS가 기본적으로 전부 막는다.
--- anon 키로는 읽기/쓰기 둘 다 불가 — 크롤러(GitHub Actions)와 검수는 service_role 키로만 접근.
+-- 이 파일은 정책을 하나도 만들지 않는다 = anon 키로는 읽기/쓰기 둘 다 불가.
+-- 크롤러(GitHub Actions)는 service_role 키로 접근한다.
+-- 앱 내 검수 화면(/admin/drafts)이 쓰는 관리자 읽기/수정 정책은 별도 파일에 있다:
+-- supabase/event_drafts_admin_policies.sql (관리자 이메일 기준 select/update 허용).
 
 -- status를 'approved'로 바꾸는 순간, extracted의 내용을 실제 events 테이블에 반영한다.
 -- (Supabase 대시보드 Table Editor에서 status 컬럼 값만 바꿔주면 그게 곧 "게시" 버튼 역할을 한다)

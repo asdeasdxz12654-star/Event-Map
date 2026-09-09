@@ -12,6 +12,7 @@ function mapDraft(row) {
     status: row.status,
     extracted: row.extracted ?? {},
     promotedEventId: row.promoted_event_id,
+    reviewNote: row.review_note ?? null,
     createdAt: row.created_at,
     reviewedAt: row.reviewed_at,
   }
@@ -42,8 +43,16 @@ export function useEventDrafts(status = 'pending') {
   return { drafts, loading, error, refresh }
 }
 
-// 승인/반려 공용 — 나머지(events 반영)는 promote_event_draft() 트리거가 처리한다
+// 승인/반려 공용 — 나머지(events 반영)는 promote_event_draft() 트리거가 처리한다.
+// 트리거가 승인을 실패 처리(rejected + review_note)할 수도 있어서, 실제로 저장된 행을
+// 돌려받아 호출부가 결과를 확인할 수 있게 한다.
 export async function setDraftStatus(id, status) {
-  const { error } = await supabase.from('event_drafts').update({ status }).eq('id', id)
+  const { data, error } = await supabase
+    .from('event_drafts')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .maybeSingle()
   if (error) throw error
+  return data ? mapDraft(data) : null
 }

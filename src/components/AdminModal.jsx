@@ -13,12 +13,12 @@ export default function AdminModal({ onClose }) {
     if (!pw) return
     setLoading(true)
     setError('')
-    const ok = await authenticate(pw)
+    const { ok, message } = await authenticate(pw)
     setLoading(false)
     if (ok) {
       onClose()
     } else {
-      setError('관리자 코드가 올바르지 않습니다')
+      setError(message ?? '관리자 코드가 올바르지 않습니다')
       setPw('')
       inputRef.current?.focus()
     }

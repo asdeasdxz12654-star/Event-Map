@@ -13,9 +13,10 @@
 // 시크릿 등록:
 //   npx wrangler secret put SUPABASE_URL
 //   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-//   npx wrangler secret put ADMIN_PASSWORD_HASH (값: sha256(관리자 비밀번호) — 이 값 자체는
-//                                                 공개돼도 상관없을 정도로 안전하진 않으니
-//                                                 커밋하지 말고 시크릿으로만 등록할 것)
+//   npx wrangler secret put ADMIN_PASSWORD_HASH (값: node scripts/hash-password.mjs '비밀번호'
+//                                                 출력물. PBKDF2-SHA256 + 무작위 salt이며,
+//                                                 예전 형식(64자리 SHA-256 hex)도 계속 받지만
+//                                                 유출 시 즉시 크랙되므로 새 형식 권장)
 //   npx wrangler secret put SESSION_SECRET      (세션 토큰 서명용 무작위 키. 아무 의미
 //                                                 없는 긴 무작위 문자열이면 됨 — 주기적으로
 //                                                 바꾸면 그 순간 모든 기존 세션이 무효화됨)
@@ -26,14 +27,38 @@
 //                                                이 키로 서울시 실시간 도시데이터 API를 대신 호출한다 —
 //                                                프론트엔드에 키를 직접 박으면 번들에 노출되고, 그
 //                                                API가 CORS도 지원 안 해서 브라우저에서 직접 호출 불가)
+//
+// KV 바인딩(권장): LOGIN_RATE_LIMIT — /admin/login 시도 횟수 카운터. 붙이는 방법은
+// wrangler.toml 주석 참고. 안 붙어 있어도 아이솔레이트 메모리로 세긴 하지만(무제한 시도
+// 방지), 콜로별로 따로 세기 때문에 운영에서는 KV를 붙이는 걸 권한다.
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24시간
+
+// 로그인 실패 허용치: 같은 IP에서 10분 안에 5번 틀리면 잠근다.
+// 잠금 시간은 실패가 이어질수록 배로 늘어난다(10분 → 20분 → … → 최대 24시간).
+const LOGIN_MAX_FAILURES = 5
+const LOGIN_WINDOW_MS = 10 * 60 * 1000
+const LOGIN_LOCK_BASE_MS = 10 * 60 * 1000
+const LOGIN_LOCK_MAX_MS = 24 * 60 * 60 * 1000
+// IP를 바꿔가며 시도하는 경우에 대비한 전체 시도량 제한. 이 횟수를 넘기면 모든
+// 로그인 응답을 늦춰서(차단이 아니라 지연) 초당 시도 횟수를 떨어뜨린다.
+const LOGIN_GLOBAL_THROTTLE_AFTER = 20
+const LOGIN_GLOBAL_THROTTLE_MS = 2000
+// 실패 응답은 항상 이만큼 늦춘다 — 응답 속도 차이로 정답을 좁혀 들어가지 못하게.
+const LOGIN_FAILURE_DELAY_MS = 400
 
 function corsHeaders(env = {}) {
   return {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ?? '*',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    // Retry-After는 CORS 기본 노출 목록에 없다 — 명시하지 않으면 브라우저 JS에서
+    // 429의 대기 시간을 읽을 수 없어 안내 문구에 쓸 수가 없다.
+    'Access-Control-Expose-Headers': 'Retry-After',
+    // ACAO 값이 요청 Origin에 따라 달라지므로 캐시 키에도 Origin이 들어가야 한다.
+    // 이게 없으면 Cache-Control이 걸린 응답(/seoul-congestion)에서 A오리진용 ACAO가
+    // 박힌 캐시본이 B오리진 요청에 그대로 나가 CORS가 깨진다.
+    'Vary': 'Origin',
   }
 }
 
@@ -42,6 +67,16 @@ function json(data, env, init = {}) {
     ...init,
     headers: { 'Content-Type': 'application/json', ...corsHeaders(env), ...(init.headers ?? {}) },
   })
+}
+
+// 핸들러 안에서 "이 상태 코드로 응답하고 끝내라"를 던지기 위한 에러.
+// 이걸로 감싸지 않은 예외는 전부 500 + 마스킹된 메시지로 나간다.
+class HttpError extends Error {
+  constructor(status, code) {
+    super(code)
+    this.status = status
+    this.code = code
+  }
 }
 
 async function sha256hex(text) {
@@ -91,6 +126,136 @@ async function verifyAdmin(request, env) {
   return verifySessionToken(auth.slice(7), env)
 }
 
+// --- 비밀번호 검증 -------------------------------------------------------
+// ADMIN_PASSWORD_HASH는 두 형식을 받는다.
+//   pbkdf2$<반복횟수>$<salt(base64)>$<해시(base64)>   ← 권장. scripts/hash-password.mjs로 생성
+//   <64자리 hex>                                      ← 예전 형식(salt 없는 SHA-256 1회)
+// 예전 형식은 시크릿이 유출됐을 때 오프라인 크랙이 사실상 즉시 끝난다(GPU로 초당 수십억 회).
+// 새 형식으로 바꾸면 같은 유출 상황에서도 반복 횟수만큼 비용이 곱해진다.
+// 비교는 두 형식 모두 상수 시간으로 한다 — 앞자리부터 맞춰가며 정답을 좁히지 못하게.
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+
+async function verifyPassword(password, stored) {
+  if (!password || !stored) return false
+
+  if (stored.startsWith('pbkdf2$')) {
+    const [, iterationsRaw, saltB64, hashB64] = stored.split('$')
+    const iterations = Number(iterationsRaw)
+    if (!Number.isFinite(iterations) || iterations < 1000 || !saltB64 || !hashB64) return false
+    let salt, expected
+    try {
+      salt = base64ToBytes(saltB64)
+      expected = base64ToBytes(hashB64)
+    } catch {
+      return false
+    }
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+      key,
+      expected.length * 8
+    )
+    return timingSafeEqual(new Uint8Array(bits), expected)
+  }
+
+  const hex = await sha256hex(password)
+  return timingSafeEqual(new TextEncoder().encode(hex), new TextEncoder().encode(stored.trim().toLowerCase()))
+}
+
+// --- 로그인 레이트리밋 ---------------------------------------------------
+// LOGIN_RATE_LIMIT KV가 있으면 그걸 쓰고, 없으면 아이솔레이트 메모리로라도 센다.
+// 메모리 폴백은 콜로/아이솔레이트마다 따로 세므로 완벽하진 않지만, KV 바인딩을
+// 빠뜨린 배포가 "무제한 시도 가능" 상태로 열려 있는 것보다는 훨씬 낫다.
+// 확실한 차단이 필요하면 Cloudflare 대시보드의 Rate Limiting 룰을 앞단에 함께 건다.
+const memoryStore = new Map()
+
+function counterStore(env) {
+  if (env.LOGIN_RATE_LIMIT) {
+    return {
+      get: key => env.LOGIN_RATE_LIMIT.get(key, 'json'),
+      put: (key, value, ttlSec) =>
+        env.LOGIN_RATE_LIMIT.put(key, JSON.stringify(value), { expirationTtl: Math.max(60, ttlSec) }),
+      delete: key => env.LOGIN_RATE_LIMIT.delete(key),
+    }
+  }
+  return {
+    get: async key => {
+      const entry = memoryStore.get(key)
+      if (!entry) return null
+      if (entry.expiresAt <= Date.now()) { memoryStore.delete(key); return null }
+      return entry.value
+    },
+    put: async (key, value, ttlSec) => {
+      memoryStore.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 })
+      // 아이솔레이트가 오래 살아도 키가 무한히 쌓이지 않게 만료된 것들을 정리한다.
+      if (memoryStore.size > 500) {
+        const now = Date.now()
+        for (const [k, v] of memoryStore) if (v.expiresAt <= now) memoryStore.delete(k)
+      }
+    },
+    delete: async key => { memoryStore.delete(key) },
+  }
+}
+
+function clientIp(request) {
+  return request.headers.get('CF-Connecting-IP') ?? 'unknown'
+}
+
+// 실패가 쌓일수록 잠기는 시간이 배로 늘어난다 (10분 → 20분 → 40분 ... 최대 24시간).
+function lockDurationMs(failures) {
+  const over = Math.max(0, failures - LOGIN_MAX_FAILURES)
+  return Math.min(LOGIN_LOCK_BASE_MS * 2 ** over, LOGIN_LOCK_MAX_MS)
+}
+
+// 잠겨 있으면 남은 초(Retry-After), 아니면 0.
+async function loginLockedFor(request, env) {
+  const record = await counterStore(env).get(`login:${clientIp(request)}`)
+  if (!record?.lockedUntil || record.lockedUntil <= Date.now()) return 0
+  return Math.ceil((record.lockedUntil - Date.now()) / 1000)
+}
+
+async function recordLoginFailure(request, env) {
+  const store = counterStore(env)
+  const key = `login:${clientIp(request)}`
+  const now = Date.now()
+  const prev = await store.get(key)
+  // 마지막 실패로부터 창이 지났으면 카운터를 처음부터 다시 센다.
+  const failures = (prev && prev.expiresAt > now ? prev.failures : 0) + 1
+  const lockedUntil = failures >= LOGIN_MAX_FAILURES ? now + lockDurationMs(failures) : 0
+  const expiresAt = Math.max(now + LOGIN_WINDOW_MS, lockedUntil)
+  await store.put(key, { failures, lockedUntil, expiresAt }, Math.ceil((expiresAt - now) / 1000))
+
+  // IP를 바꿔가며 시도하면 위 카운터를 우회할 수 있어서, 전체 시도량도 따로 센다.
+  // 여기서는 잠그지 않고 응답을 늦추기만 한다 — 전체를 잠그면 공격자가 아무 비밀번호나
+  // 계속 넣는 것만으로 진짜 관리자의 로그인을 막을 수 있기 때문이다.
+  const globalKey = 'login:__all__'
+  const prevGlobal = await store.get(globalKey)
+  const globalFailures = (prevGlobal && prevGlobal.expiresAt > now ? prevGlobal.failures : 0) + 1
+  const globalExpiresAt = prevGlobal && prevGlobal.expiresAt > now ? prevGlobal.expiresAt : now + LOGIN_WINDOW_MS
+  await store.put(globalKey, { failures: globalFailures, expiresAt: globalExpiresAt }, Math.ceil((globalExpiresAt - now) / 1000))
+  return globalFailures
+}
+
+async function clearLoginFailures(request, env) {
+  await counterStore(env).delete(`login:${clientIp(request)}`)
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function supabase(env, method, path, body) {
   const url = `${env.SUPABASE_URL}/rest/v1/${path}`
   const res = await fetch(url, {
@@ -99,7 +264,10 @@ async function supabase(env, method, path, body) {
       'Content-Type': 'application/json',
       'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
       'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal',
+      // POST뿐 아니라 PATCH도 바뀐 행을 돌려받는다 — return=minimal이면 PostgREST가
+      // "0행 수정"도 성공으로 주기 때문에, 없는 id로 PATCH해도 200 {ok:true}가 나갔다.
+      // 반환된 배열이 비었는지로 404를 판별하려면 representation이 필요하다.
+      'Prefer': method === 'DELETE' ? 'return=minimal' : 'return=representation',
     },
     body: body != null ? JSON.stringify(body) : undefined,
   })
@@ -108,13 +276,41 @@ async function supabase(env, method, path, body) {
   return text ? JSON.parse(text) : null
 }
 
+// PATCH 결과가 빈 배열이면 그 id를 가진 행이 없다는 뜻 -> 404.
+async function updateRow(env, table, id, body) {
+  const rows = await supabase(env, 'PATCH', `${table}?id=eq.${encodeURIComponent(id)}`, body)
+  if (!Array.isArray(rows) || rows.length === 0) throw new HttpError(404, 'not_found')
+  return rows[0]
+}
+
+// 클라이언트 body에서 허용된 컬럼만 뽑는다. id·created_at처럼 서버/DB가 정하는 값은
+// 목록에 없으므로 body에 실려와도 무시된다 — 예전엔 { id, ...body } 순서 탓에 body의
+// id가 서버가 만든 UUID를 덮어썼고, PATCH로는 기본키를 통째로 갈아치울 수도 있었다.
+function pick(body, allowed) {
+  const out = {}
+  for (const key of allowed) {
+    if (body != null && Object.prototype.hasOwnProperty.call(body, key)) out[key] = body[key]
+  }
+  return out
+}
+
+const EVENT_COLUMNS = [
+  'title', 'category', 'start_date', 'end_date',
+  'venue', 'venue_address', 'venue_lat', 'venue_lng',
+  'organizer', 'description', 'poster_url',
+  'ticket_url', 'ticket_open_date', 'ticket_open_time', 'ticket_open_note',
+  'ticket_status', 'admission_fee', 'website', 'trust_score',
+  'past_events', 'tags', 'crowd_level', 'floor_plan_url',
+  'seoul_place_name', 'booth_info_note', 'stage_info_note',
+]
+
 const ID_RE = /^\/admin\/events\/([^/]+)$/
 
 // 행사에 딸린 하위 목록(참가 부스, 출연진)은 구조가 같아서 라우트 패턴을 공유한다 —
-// urlSegment(URL에 쓰는 이름) -> table(실제 Supabase 테이블명) 매핑만 다르다.
+// urlSegment(URL에 쓰는 이름) -> 실제 테이블명 + 허용 컬럼만 다르다.
 const SUB_RESOURCES = {
-  booths: 'event_booths',
-  performers: 'event_performers',
+  booths: { table: 'event_booths', columns: ['name', 'booth_no', 'goods', 'sort_order'] },
+  performers: { table: 'event_performers', columns: ['artist_name', 'songs', 'sort_order'] },
 }
 const subResourcePattern = Object.keys(SUB_RESOURCES).join('|')
 const SUB_OF_EVENT_RE = new RegExp(`^/admin/events/([^/]+)/(${subResourcePattern})$`)
@@ -124,15 +320,27 @@ async function handleAdmin(request, env, pathname) {
   // POST /admin/login — 로그인. 여기가 인증의 시작점이라 verifyAdmin 검사 이전에 처리한다.
   // 비밀번호 해시는 서버(env.ADMIN_PASSWORD_HASH)에만 있고 응답엔 절대 포함하지 않는다.
   if (pathname === '/admin/login' && request.method === 'POST') {
+    const retryAfter = await loginLockedFor(request, env)
+    if (retryAfter > 0) {
+      return json({ error: 'too_many_attempts' }, env, {
+        status: 429,
+        headers: { 'Retry-After': String(retryAfter) },
+      })
+    }
+
     const body = await request.json().catch(() => ({}))
     const password = typeof body?.password === 'string' ? body.password : ''
-    if (!password || !env.ADMIN_PASSWORD_HASH) {
+    const ok = await verifyPassword(password, env.ADMIN_PASSWORD_HASH)
+    if (!ok) {
+      const globalFailures = await recordLoginFailure(request, env)
+      await delay(
+        globalFailures > LOGIN_GLOBAL_THROTTLE_AFTER
+          ? LOGIN_GLOBAL_THROTTLE_MS
+          : LOGIN_FAILURE_DELAY_MS
+      )
       return json({ error: 'invalid_credentials' }, env, { status: 401 })
     }
-    const hash = await sha256hex(password)
-    if (hash !== env.ADMIN_PASSWORD_HASH) {
-      return json({ error: 'invalid_credentials' }, env, { status: 401 })
-    }
+    await clearLoginFailures(request, env)
     const token = await issueSessionToken(env)
     return json({ token }, env)
   }
@@ -148,24 +356,24 @@ async function handleAdmin(request, env, pathname) {
   // POST /admin/events/:eventId/booths|performers — 하위 항목 추가
   if (subOfEventMatch && request.method === 'POST') {
     const eventId = decodeURIComponent(subOfEventMatch[1])
-    const table = SUB_RESOURCES[subOfEventMatch[2]]
+    const { table, columns } = SUB_RESOURCES[subOfEventMatch[2]]
     const body = await request.json()
-    const data = await supabase(env, 'POST', table, { event_id: eventId, ...body })
+    const data = await supabase(env, 'POST', table, { ...pick(body, columns), event_id: eventId })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
   }
 
   // PATCH /admin/booths|performers/:id — 하위 항목 수정
   if (subIdMatch && request.method === 'PATCH') {
-    const table = SUB_RESOURCES[subIdMatch[1]]
+    const { table, columns } = SUB_RESOURCES[subIdMatch[1]]
     const id = decodeURIComponent(subIdMatch[2])
     const body = await request.json()
-    await supabase(env, 'PATCH', `${table}?id=eq.${encodeURIComponent(id)}`, body)
+    await updateRow(env, table, id, pick(body, columns))
     return json({ ok: true }, env)
   }
 
   // DELETE /admin/booths|performers/:id — 하위 항목 삭제
   if (subIdMatch && request.method === 'DELETE') {
-    const table = SUB_RESOURCES[subIdMatch[1]]
+    const { table } = SUB_RESOURCES[subIdMatch[1]]
     const id = decodeURIComponent(subIdMatch[2])
     await supabase(env, 'DELETE', `${table}?id=eq.${encodeURIComponent(id)}`)
     return new Response(null, { status: 204, headers: corsHeaders(env) })
@@ -174,8 +382,10 @@ async function handleAdmin(request, env, pathname) {
   // POST /admin/events — 행사 추가
   if (pathname === '/admin/events' && request.method === 'POST') {
     const body = await request.json()
-    const id = crypto.randomUUID()
-    const data = await supabase(env, 'POST', 'events', { id, ...body })
+    const data = await supabase(env, 'POST', 'events', {
+      ...pick(body, EVENT_COLUMNS),
+      id: crypto.randomUUID(),
+    })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
   }
 
@@ -185,18 +395,18 @@ async function handleAdmin(request, env, pathname) {
   if (idMatch && request.method === 'PATCH') {
     const id = decodeURIComponent(idMatch[1])
     const body = await request.json()
-    await supabase(env, 'PATCH', `events?id=eq.${encodeURIComponent(id)}`, {
-      ...body,
+    await updateRow(env, 'events', id, {
+      ...pick(body, EVENT_COLUMNS),
       admin_edited_at: new Date().toISOString(),
     })
     return json({ ok: true }, env)
   }
 
   // DELETE /admin/events/:id — 행사 삭제
+  // event_drafts.promoted_event_id는 on delete set null이라 따로 정리할 필요가 없다
+  // (supabase/hardening_2026-09-09.sql에서 FK 제약을 그렇게 바꿨다).
   if (idMatch && request.method === 'DELETE') {
     const id = decodeURIComponent(idMatch[1])
-    // FK 제약 해제: event_drafts.promoted_event_id 참조 먼저 NULL 처리
-    await supabase(env, 'PATCH', `event_drafts?promoted_event_id=eq.${encodeURIComponent(id)}`, { promoted_event_id: null })
     await supabase(env, 'DELETE', `events?id=eq.${encodeURIComponent(id)}`)
     return new Response(null, { status: 204, headers: corsHeaders(env) })
   }
@@ -215,7 +425,10 @@ async function handleSeoulCongestion(request, env) {
   if (!place) return json({ error: 'missing_place' }, env, { status: 400 })
 
   const url = `http://openapi.seoul.go.kr:8088/${env.SEOUL_OPENDATA_KEY}/json/citydata/1/1/${encodeURIComponent(place)}`
-  const res = await fetch(url)
+  // 서울시 쪽은 캐시 헤더를 안 주기 때문에 cacheEverything을 명시해야 이 서브리퀘스트가
+  // 엣지 캐시를 탄다. 이게 없으면 방문자 수만큼 그대로 원본을 때려서 일일 호출 한도를
+  // 금방 태운다 (Worker 자기 응답의 Cache-Control은 브라우저/다운스트림용일 뿐이다).
+  const res = await fetch(url, { cf: { cacheTtl: 120, cacheEverything: true } })
   const data = await res.json().catch(() => null)
 
   const resultCode = data?.['RESULT.CODE'] ?? data?.RESULT?.['RESULT.CODE']
@@ -244,7 +457,7 @@ async function handleSeoulCongestion(request, env) {
       })),
     },
     env,
-    // 서울시 쪽 갱신 주기가 대략 5분이라, 그 사이 중복 호출은 엣지에서 캐시로 흡수한다
+    // 서울시 쪽 갱신 주기가 대략 5분이라, 그 사이 중복 호출은 캐시로 흡수한다
     // (여러 명이 동시에 같은 행사를 보고 있어도 서울시 API/키 호출량이 늘지 않게).
     { headers: { 'Cache-Control': 'public, max-age=120' } }
   )
@@ -254,13 +467,6 @@ const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
 
   '/seoul-congestion': handleSeoulCongestion,
-
-  '/transit': (_request, env) =>
-    json(
-      { error: 'not_implemented', message: '교통 경로 API가 아직 연결되지 않았습니다' },
-      env,
-      { status: 501 }
-    ),
 }
 
 export default {
@@ -286,7 +492,11 @@ export default {
       try {
         return await handleAdmin(request, env, pathname)
       } catch (err) {
-        return json({ error: 'internal_error', message: err.message }, env, { status: 500 })
+        if (err instanceof HttpError) return json({ error: err.code }, env, { status: err.status })
+        // Supabase 원문 에러엔 테이블/컬럼/제약 이름이 그대로 들어있다. 클라이언트엔
+        // 마스킹해서 내보내고, 진짜 내용은 Worker 로그(observability)에만 남긴다.
+        console.error('[admin]', request.method, pathname, err)
+        return json({ error: 'internal_error' }, env, { status: 500 })
       }
     }
 
@@ -296,6 +506,7 @@ export default {
     try {
       return await handler(request, env)
     } catch (err) {
+      console.error('[route]', pathname, err)
       return json({ error: 'internal_error' }, env, { status: 500 })
     }
   },

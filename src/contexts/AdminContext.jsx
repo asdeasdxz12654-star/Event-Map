@@ -14,6 +14,10 @@ const Ctx = createContext(null)
 export function AdminProvider({ children }) {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY))
 
+  // { ok, message } 를 돌려준다 — 실패 사유가 "코드가 틀림"뿐이 아니기 때문이다.
+  // Worker가 로그인 시도 횟수를 제한하고 있어서(브루트포스 차단) 차단당한 동안은
+  // 맞는 코드를 넣어도 막히는데, 이때 "코드가 올바르지 않습니다"라고만 보여주면
+  // 관리자가 영문도 모르고 계속 재시도하게 된다.
   const authenticate = useCallback(async (password) => {
     let res
     try {
@@ -23,14 +27,18 @@ export function AdminProvider({ children }) {
         body: JSON.stringify({ password }),
       })
     } catch {
-      return false // 네트워크 오류 — 로그인 폼에서 "코드가 올바르지 않습니다"로 뭉뚱그려 표시됨
+      return { ok: false, message: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.' }
     }
-    if (!res.ok) return false
-    const { token } = await res.json()
-    if (!token) return false
+    if (res.status === 429) {
+      const mins = Math.ceil(Number(res.headers.get('Retry-After') ?? 600) / 60)
+      return { ok: false, message: `로그인 시도가 너무 많습니다. ${mins}분 뒤에 다시 시도해주세요.` }
+    }
+    if (!res.ok) return { ok: false, message: '관리자 코드가 올바르지 않습니다' }
+    const { token } = await res.json().catch(() => ({}))
+    if (!token) return { ok: false, message: '관리자 코드가 올바르지 않습니다' }
     sessionStorage.setItem(TOKEN_KEY, token)
     setToken(token)
-    return true
+    return { ok: true }
   }, [])
 
   const logout = useCallback(() => {
