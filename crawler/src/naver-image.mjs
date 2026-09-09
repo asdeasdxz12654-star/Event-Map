@@ -58,15 +58,21 @@ export function relevanceScore(eventTitle, candidateTitle) {
   // 포스터도 생기지만, 엉뚱한 이미지를 붙이는 것보다는 기본 이미지가 낫다.
   if (eventYears.length > 0 && !candidateYears.some(y => eventYears.includes(y))) return 0
 
+  // 토큰 비교: 짧은 이름은 "단어 자체"가 있어야 인정한다.
+  // 부분 문자열까지 허용했더니 "지스타 2027"이 "지스타캐드 스탠다드 2027"(CAD 소프트웨어)에
+  // 매칭됐다. 반대로 한국어는 "서울코믹월드"처럼 앞말을 붙여 쓰는 경우가 흔해서 무조건
+  // 완전일치만 보면 정상 후보를 놓친다. 4글자 이상 토큰은 부분 일치를 허용해 절충한다.
+  const candidateSet = new Set(candidate)
   const candidateText = candidate.join(' ')
-  const matched = wanted.filter(t => candidateText.includes(t))
+  const hasToken = t => candidateSet.has(t) || (t.length >= 4 && candidateText.includes(t))
+  const matched = wanted.filter(hasToken)
 
   // 행사 고유명(연도를 뺀 가장 긴 토큰)은 반드시 있어야 한다.
   // 연도를 제외하지 않으면 "AGF 2027"의 핵심 토큰이 "2027"이 돼서 이름은 안 맞아도
   // 연도만 같으면 통과해버린다.
   const nameTokens = wanted.filter(t => !/^20[2-4]\d$/.test(t))
   const core = [...nameTokens].sort((a, b) => b.length - a.length)[0]
-  if (core && !candidateText.includes(core)) return 0
+  if (core && !hasToken(core)) return 0
 
   return matched.length / wanted.length
 }

@@ -135,15 +135,13 @@ async function main() {
       if (await isUsableImageUrl(c.link)) { replacement = c; break }
     }
     if (!replacement) {
-      // 여러 행사가 공유하는 범용 이미지는 "그 행사의 포스터가 아님"이 확실하므로,
-      // 대체할 것이 없으면 비워서 카테고리 기본 이미지가 나오게 한다.
-      if (sharedUrls.has(event.poster_url)) {
-        if (await setPoster(event.id, null)) {
-          console.log('  -> 공용 이미지라 비움 (기본 이미지로 표시됨)')
-          stats.cleared++
-        }
-      } else {
-        console.log('  -> 쓸 만한 대체 이미지 없음, 그대로 둠')
+      // 지금 기준으로 "이 행사의 포스터"라고 확인되지 않았고 대신할 이미지도 없다면
+      // 비운다. 그대로 두면 검증에 실패한 이미지가 계속 그 행사의 얼굴로 남는다
+      // (코믹월드 337의 관광공사 공용 사진, 지스타 2027의 CAD 제품 이미지 같은 것들).
+      // 관리자가 직접 넣은 포스터는 위에서 이미 걸러져서 여기까지 오지 않는다.
+      if (await setPoster(event.id, null)) {
+        console.log('  -> 확인되지 않은 이미지라 비움 (기본 이미지로 표시됨)')
+        stats.cleared++
       }
       await sleep(200)
       continue
