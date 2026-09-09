@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { getEventStatus } from '../data/events'
+import { getEventStatus, STATUS } from '../data/events'
 import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
 import CrowdBadge from '../components/CrowdBadge'
@@ -60,6 +60,9 @@ export default function EventDetailPage() {
   }
 
   const status = getEventStatus(event)
+  // 실시간 서울시 혼잡도는 행사가 "진행중"일 때만 의미가 있다 — 시작 전/종료 후에
+  // 보여주면 행사와 무관한 그 장소의 평소 인파를 행사 혼잡도로 오해할 수 있다.
+  const showingLiveCongestion = status === STATUS.ONGOING && !!event.seoulPlaceName
   const bookmarked = isBookmarked(event.id)
   const start = new Date(event.startDate)
   const end = new Date(event.endDate)
@@ -162,7 +165,7 @@ export default function EventDetailPage() {
             <InfoRow icon="📅" label="기간" value={dateStr} />
             <InfoRow icon="📍" label="장소" value={`${event.venue}\n${event.venueAddress}`} />
             <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
-            {event.crowdLevel && !event.seoulPlaceName && (
+            {event.crowdLevel && !showingLiveCongestion && status !== STATUS.ENDED && (
               <InfoRow
                 icon="👥"
                 label="예상 혼잡도"
@@ -188,7 +191,7 @@ export default function EventDetailPage() {
           </div>
 
           {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
-          <LiveCongestion placeName={event.seoulPlaceName} />
+          <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
 
           {/* 신뢰도 카드 */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
