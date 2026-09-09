@@ -195,6 +195,26 @@ const KNOWN_EVENTS = [
 const ONE_OFF_EVENTS = [
   // ── 2026년 하반기 (web 검색 기반 확인, 2026-09-06 조사) ──
   {
+    // 코믹월드 공식 행사일정(comicw.co.kr/c)과 대조하다 빠져 있는 걸 발견해 추가.
+    // 2026-09-10 조사, 인벤·성남시 보도자료로 날짜·장소·주최 확인.
+    slug: 'gxg-2026', year: 2026,
+    data: {
+      is_event: true, title: 'GXG 2026', category: '게임전시',
+      start_date: '2026-09-11', end_date: '2026-09-12',
+      venue: '판교역 광장 일대', venue_address: null,
+      venue_lat: null, venue_lng: null,
+      organizer: '성남시 (주관: 성남산업진흥원·게임문화재단)',
+      description: '"게임, 문화로 즐기다"를 내건 도심형 게임문화축제. 무대·전시(THE ART)·체험(THE PLAY)·강연으로 구성되며 코스프레 프로그램도 함께 열린다. 전년 약 3만 8천명 참가.',
+      ticket_url: null, ticket_open_date: null,
+      // 입장료는 보도자료에 명시가 없어 비워둔다 — 확인되면 채울 것.
+      admission_fee: null,
+      crowd_level: 'medium',
+      website: 'https://gxg.world/',
+      tags: ['게임전시', 'GXG', '성남', '판교', '게임문화축제'],
+      confidence: 'high',
+    },
+  },
+  {
     slug: 'comicworld-336-ilsan', year: 2026,
     data: {
       is_event: true, title: '코믹월드 336 일산', category: '코스프레',
