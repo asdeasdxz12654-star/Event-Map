@@ -141,7 +141,7 @@ export default function HomePage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="행사명, 장소, 주최사 검색..."
-          className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition-colors"
+          className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none transition-colors"
         />
         {search && (
           <button

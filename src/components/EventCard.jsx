@@ -11,6 +11,7 @@ import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { ticketSiteName } from '../lib/ticketSite'
+import PosterImage from './PosterImage'
 
 const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -104,17 +105,19 @@ export default function EventCard({ event, compact = false }) {
       {/* 포스터 */}
       <div className="relative mb-3">
         {showPoster ? (
-          <img
+          // 세로형 포스터가 잘리지 않도록 전체를 보여준다 (PosterImage 주석 참고).
+          // 비율을 16:7에서 4:3으로 키운 것도 같은 이유다 — 16:7 안에 세로형을 통째로
+          // 넣으면 포스터가 카드 폭의 1/3만 차지해서 무슨 그림인지 알아볼 수 없다.
+          <PosterImage
             src={event.posterUrl}
             alt={`${event.title} 포스터`}
-            loading="lazy"
             onError={() => setImgError(true)}
-            className="w-full aspect-[16/7] rounded-xl object-cover"
+            className="w-full aspect-[4/3] rounded-xl"
           />
         ) : (
           // 포스터가 없을 때. 예전엔 카테고리 이모지만 띄워서 "이미지를 못 불러온 건지,
           // 아직 포스터가 안 나온 건지" 구분이 안 됐다. 상태를 글자로 밝힌다.
-          <div className="w-full aspect-[16/7] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex flex-col items-center justify-center gap-1">
+          <div className="w-full aspect-[4/3] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex flex-col items-center justify-center gap-1">
             <span className="text-2xl sm:text-3xl leading-none">{categoryMeta(event.category).emoji}</span>
             <span className="text-[10px] sm:text-xs text-zinc-300">공식 포스터 미정</span>
           </div>

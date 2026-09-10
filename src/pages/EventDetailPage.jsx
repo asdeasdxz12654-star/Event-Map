@@ -22,6 +22,7 @@ import SectionCard from '../components/SectionCard'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
+import PosterImage from '../components/PosterImage'
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -69,8 +70,10 @@ export default function EventDetailPage() {
   // 보여주면 행사와 무관한 그 장소의 평소 인파를 행사 혼잡도로 오해할 수 있다.
   const showingLiveCongestion = status === STATUS.ONGOING && !!event.seoulPlaceName
   const bookmarked = isBookmarked(event.id)
-  const start = new Date(event.startDate)
-  const end = new Date(event.endDate)
+  // 날짜 문자열을 로컬 자정으로 파싱한다. new Date("2026-12-04")는 UTC 자정으로 읽혀서,
+  // UTC보다 뒤진 지역(미주 등)에서 보면 하루 앞당겨 표시된다 (EventCard와 같은 방식).
+  const start = parseLocalDate(event.startDate)
+  const end = parseLocalDate(event.endDate)
   const isSameDay = event.startDate === event.endDate
 
   const dateStr = isSameDay
@@ -109,11 +112,14 @@ export default function EventDetailPage() {
         <div className="lg:max-w-2xl">
           {/* 포스터 */}
           {event.posterUrl && !imgError ? (
-            <img
+            // 포스터 전체를 보여준다. 예전엔 object-cover + max-h라 세로형 포스터가
+            // 가운데 띠만 남았다 — AGF 2026 포스터에서 제목과 하단 날짜·장소가 통째로
+            // 잘려 나갔다(포스터는 그 정보가 그림 안에 인쇄돼 있다).
+            <PosterImage
               src={event.posterUrl}
               alt={`${event.title} 포스터`}
               onError={() => setImgError(true)}
-              className="w-full rounded-2xl object-cover mb-6 max-h-[480px]"
+              className="w-full h-[360px] sm:h-[440px] lg:h-[480px] rounded-2xl mb-6"
             />
           ) : (
             <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex flex-col items-center justify-center gap-2">
@@ -276,6 +282,12 @@ export default function EventDetailPage() {
       {showTicketBar && <TicketStickyBar event={event} />}
     </div>
   )
+}
+
+// "2026-12-04" -> 로컬 시간대의 그 날 자정 (data/events.js의 parseLocalDate와 같은 이유)
+function parseLocalDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 // 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.

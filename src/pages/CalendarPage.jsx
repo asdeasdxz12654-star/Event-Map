@@ -9,6 +9,30 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
+// 목록 한 줄. 날짜를 고른 목록에서는 날짜가 뻔하지만("9월 11일 행사"), 이 달 전체
+// 목록에서는 언제인지가 가장 중요한 정보라 showDate로 날짜를 같이 보여준다.
+function EventRow({ event, showDate = false }) {
+  const dateLabel = event.startDate === event.endDate
+    ? event.startDate?.slice(5).replace('-', '.')
+    : `${event.startDate?.slice(5).replace('-', '.')} ~ ${event.endDate?.slice(5).replace('-', '.')}`
+
+  return (
+    <Link
+      to={`/events/${event.id}`}
+      className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors"
+    >
+      <span className="text-2xl shrink-0">{categoryMeta(event.category).emoji}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white truncate">{event.title}</p>
+        <p className="text-xs text-zinc-400 truncate">
+          {showDate ? `${dateLabel} · ${event.venue ?? ''}` : event.venue}
+        </p>
+      </div>
+      <CategoryBadge category={event.category} />
+    </Link>
+  )
+}
+
 export default function CalendarPage() {
   useDocumentTitle('캘린더')
   const { events, loading, error } = useEvents()
@@ -27,6 +51,14 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null)
   const selectedEvents = selectedDay ? getEventsForDay(selectedDay) : []
   const eventListRef = useRef(null)
+
+  // 날짜를 고르기 전에 보여줄 "이 달 행사" 목록. 예전엔 안내 문구만 띄웠는데,
+  // PC에서는 오른쪽 절반이 통째로 비어 보였고 모바일에서는 달력 아래에 아무것도 없어서
+  // 날짜를 하나씩 눌러보기 전에는 그 달에 무슨 행사가 있는지 알 수가 없었다.
+  const viewMonth = format(viewDate, 'yyyy-MM')
+  const monthEvents = events
+    .filter(e => (e.startDate ?? '') .slice(0, 7) <= viewMonth && (e.endDate ?? e.startDate ?? '').slice(0, 7) >= viewMonth)
+    .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))
 
   function selectDay(day) {
     setSelectedDay(prev => {
@@ -186,26 +218,30 @@ export default function CalendarPage() {
               ) : (
                 <div className="space-y-2">
                   {selectedEvents.map(event => (
-                    <Link
-                      key={event.id}
-                      to={`/events/${event.id}`}
-                      className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors"
-                    >
-                      <span className="text-2xl">{categoryMeta(event.category).emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{event.title}</p>
-                        <p className="text-xs text-zinc-400">{event.venue}</p>
-                      </div>
-                      <CategoryBadge category={event.category} />
-                    </Link>
+                    <EventRow key={event.id} event={event} />
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <div className="hidden lg:flex flex-col items-center justify-center text-center gap-2 text-sm text-zinc-400 bg-white/5 border border-white/10 rounded-2xl p-8 min-h-[200px]">
-              <span className="text-3xl">📅</span>
-              <span>날짜를 선택하면<br />그 날의 행사를 보여드려요</span>
+            <div>
+              <h2 className="text-sm lg:text-base font-semibold text-white mb-3">
+                {format(viewDate, 'M월', { locale: ko })} 행사 {monthEvents.length}건
+              </h2>
+              {monthEvents.length === 0 ? (
+                <p className="text-sm text-zinc-400 py-8 text-center bg-white/5 border border-white/10 rounded-2xl">
+                  이 달에 등록된 행사가 없습니다
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {monthEvents.map(event => (
+                      <EventRow key={event.id} event={event} showDate />
+                    ))}
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3">날짜를 누르면 그 날 행사만 볼 수 있어요</p>
+                </>
+              )}
             </div>
           )}
         </div>

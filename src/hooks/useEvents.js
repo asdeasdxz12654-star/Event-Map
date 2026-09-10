@@ -50,13 +50,17 @@ export function useEvents() {
   useEffect(() => {
     let cancelled = false
 
-    // 목록에는 "올해 행사"만 노출한다 — 내년 행사까지 함께 보이면 지금 갈 수 있는
-    // 행사와 1년 뒤 행사가 같은 목록에 섞여서 "예정" 탭이 실제보다 부풀려 보인다.
-    // (내년 행사도 DB에는 그대로 쌓이고, 해가 바뀌면 자동으로 목록에 들어온다.
-    //  연말에 다음 달 행사가 안 보이는 건 이 정책의 의도된 결과다.)
-    const year = new Date().getFullYear()
-    const rangeStart = `${year}-01-01`
-    const rangeEnd = `${year}-12-31`
+    // 목록에는 "올해 행사 + 앞으로 90일"만 노출한다.
+    //
+    // 내년 행사까지 전부 보이면 지금 갈 수 있는 행사와 1년 뒤 행사가 같은 목록에 섞여서
+    // "예정" 탭이 실제보다 부풀려 보인다. 그렇다고 올해(12/31)로 딱 자르면 연말에
+    // 문제가 생긴다 — 12월에 들어오면 코앞인 1월 행사가 목록에서 통째로 사라진다.
+    // 그래서 연말에는 다음 해로 90일만 창을 넓힌다.
+    const now = new Date()
+    const rangeStart = `${now.getFullYear()}-01-01`
+    const yearEnd = `${now.getFullYear()}-12-31`
+    const in90Days = new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)
+    const rangeEnd = in90Days > yearEnd ? in90Days : yearEnd
 
     // PostgREST는 요청당 기본 1000행까지만 준다 — 에러도 없이 잘려 나가므로,
     // 끝 페이지(요청한 개수보다 적게 온 페이지)가 나올 때까지 range로 이어 받는다.
