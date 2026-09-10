@@ -8,9 +8,13 @@
 // SerpAPI 무료 플랜은 월 250회라, 행사 한 건에 검색 1~3회가 나간다는 걸 감안해서
 // --limit로 나눠 돌리는 편이 안전하다. 한도가 소진되면 이후 행사는 검색 없이 넘어간다.
 //
+// 공식 사이트(website)가 비어 있는 행사는 웹 검색으로 찾아서 함께 채운다
+// (official-site-lookup.mjs) — 포스터 정확도가 거기서 갈린다.
+//
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY
 import { createClient } from '@supabase/supabase-js'
 import { fetchEventPosterUrl, isQuotaExhausted } from './serpapi-image.mjs'
+import { resolveOfficialUrls } from './official-site-lookup.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -31,7 +35,7 @@ async function main() {
   // 크레딧을 아무도 안 보는 카드에 다 쓰게 된다.
   const { data: events, error } = await supabase
     .from('events')
-    .select('id, title, start_date, website, ticket_url')
+    .select('id, title, start_date, website, ticket_url, admin_edited_at')
     .is('poster_url', null)
     .gte('start_date', todayKST())
     .order('start_date')
@@ -45,7 +49,9 @@ async function main() {
 
   for (const event of targets) {
     console.log(`[${event.start_date}] ${event.title}`)
-    const posterUrl = await fetchEventPosterUrl(event.title, [event.website, event.ticket_url], event.start_date ? Number(event.start_date.slice(0, 4)) : null)
+    // 공식 사이트를 알면 "site:도메인 포스터"로 정확히 찾는다. 모르면 먼저 찾아본다.
+    const officialUrls = await resolveOfficialUrls(supabase, event, { save: !DRY_RUN })
+    const posterUrl = await fetchEventPosterUrl(event.title, officialUrls, event.start_date ? Number(event.start_date.slice(0, 4)) : null)
 
     if (!posterUrl) {
       console.log('  -> 이미지 없음, 스킵')

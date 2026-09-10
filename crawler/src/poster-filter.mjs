@@ -56,6 +56,7 @@ const SHARED_PLATFORM_HOSTS = [
   'instagram.com', 'twitter.com', 'x.com', 'facebook.com', 't.co', 'linktr.ee', 'litt.ly',
   'notion.site', 'onoffmix.com', 'festa.io', 'tumblbug.com', 'wadiz.kr',
   'arca.live', 'dcinside.com', 'fmkorea.com', 'ruliweb.com',
+  'dongne.co',  // 동인 행사 신청·안내 플랫폼. 디. 페스타 등 여러 행사가 함께 올라온다
 ]
 
 export function isSharedPlatform(url) {
@@ -133,6 +134,7 @@ export function isResaleUrl(url) {
 const AGGREGATOR_HOSTS = [
   'get-duck.com', 'linkareer.com', 'campuspick.com', 'wevity.com',
   'thinkcontest.com', 'all-con.co.kr', 'eventus.io',
+  'showala.com',  // 전시 포털 — "부산일러스트레이션페어 V.7"의 공식 사이트로 잡혔었다
 ]
 
 // 공유용 카드(오픈그래프) 이미지 경로. 포스터가 아니라 링크 미리보기용으로 만든 그림이다.
@@ -185,21 +187,22 @@ function yearsIn(text) {
   return (stripHtml(text).match(/\b(20[2-4]\d)\b/g) ?? []).map(Number)
 }
 
-// 행사명과 이미지 제목이 얼마나 겹치는지 0~1로 돌려준다. 연도가 서로 다르면 0
-// (작년 포스터가 올라오는 게 가장 흔한 오류라 연도는 강하게 본다).
-function relevanceScore(eventTitle, candidateTitle) {
-  const wanted = tokenize(eventTitle)
-  if (wanted.length === 0) return 0
-  const candidate = tokenize(candidateTitle)
-  if (candidate.length === 0) return 0
+// 행사명에서 그 행사를 가리키는 고유명 하나 — 연도를 뺀 가장 긴 토큰.
+// "2026 대전콘텐츠페어" -> "대전콘텐츠페어", "AGF 2027" -> "agf".
+// 연도를 빼지 않으면 "AGF 2027"의 핵심 토큰이 "2027"이 돼서, 이름은 안 맞고 연도만
+// 같은 이미지가 통과해버린다.
+export function coreNameToken(eventTitle) {
+  const nameTokens = tokenize(eventTitle).filter(t => !/^20[2-4]\d$/.test(t))
+  return [...nameTokens].sort((a, b) => b.length - a.length)[0] ?? ''
+}
 
-  const eventYears = yearsIn(eventTitle)
-  const candidateYears = yearsIn(candidateTitle)
-  // 제목에 연도가 있는 행사는 후보에도 같은 연도가 있어야 한다.
-  // 예전엔 "후보에 다른 연도가 있으면 탈락"이라 연도가 아예 없는 후보는 그냥 통과했고,
-  // 그래서 "AGF 2027"에 주식 차트 이미지가 붙는 일이 생겼다. 연도를 요구하면 놓치는
-  // 포스터도 생기지만, 엉뚱한 이미지를 붙이는 것보다는 기본 이미지가 낫다.
-  if (eventYears.length > 0 && !candidateYears.some(y => eventYears.includes(y))) return 0
+// 행사명(연도 제외)이 어떤 글에 얼마나 들어 있는지 0~1로 돌려준다.
+// 고유명이 없으면 0 — 이름이 안 맞으면 나머지가 겹쳐도 다른 행사다.
+export function nameOverlapScore(eventTitle, text) {
+  const wanted = tokenize(eventTitle).filter(t => !/^20[2-4]\d$/.test(t))
+  if (wanted.length === 0) return 0
+  const candidate = tokenize(text)
+  if (candidate.length === 0) return 0
 
   // 토큰 비교: 짧은 이름은 "단어 자체"가 있어야 인정한다.
   // 부분 문자열까지 허용했더니 "지스타 2027"이 "지스타캐드 스탠다드 2027"(CAD 소프트웨어)에
@@ -208,16 +211,25 @@ function relevanceScore(eventTitle, candidateTitle) {
   const candidateSet = new Set(candidate)
   const candidateText = candidate.join(' ')
   const hasToken = t => candidateSet.has(t) || (t.length >= 4 && candidateText.includes(t))
-  const matched = wanted.filter(hasToken)
 
-  // 행사 고유명(연도를 뺀 가장 긴 토큰)은 반드시 있어야 한다.
-  // 연도를 제외하지 않으면 "AGF 2027"의 핵심 토큰이 "2027"이 돼서 이름은 안 맞아도
-  // 연도만 같으면 통과해버린다.
-  const nameTokens = wanted.filter(t => !/^20[2-4]\d$/.test(t))
-  const core = [...nameTokens].sort((a, b) => b.length - a.length)[0]
+  const core = coreNameToken(eventTitle)
   if (core && !hasToken(core)) return 0
 
-  return matched.length / wanted.length
+  return wanted.filter(hasToken).length / wanted.length
+}
+
+// 행사명과 이미지 제목이 얼마나 겹치는지 0~1로 돌려준다. 연도가 서로 다르면 0
+// (작년 포스터가 올라오는 게 가장 흔한 오류라 연도는 강하게 본다).
+function relevanceScore(eventTitle, candidateTitle) {
+  const eventYears = yearsIn(eventTitle)
+  const candidateYears = yearsIn(candidateTitle)
+  // 제목에 연도가 있는 행사는 후보에도 같은 연도가 있어야 한다.
+  // 예전엔 "후보에 다른 연도가 있으면 탈락"이라 연도가 아예 없는 후보는 그냥 통과했고,
+  // 그래서 "AGF 2027"에 주식 차트 이미지가 붙는 일이 생겼다. 연도를 요구하면 놓치는
+  // 포스터도 생기지만, 엉뚱한 이미지를 붙이는 것보다는 기본 이미지가 낫다.
+  if (eventYears.length > 0 && !candidateYears.some(y => eventYears.includes(y))) return 0
+
+  return nameOverlapScore(eventTitle, candidateTitle)
 }
 
 // 행사명에 든 숫자(회차·연도)가 서로 어긋나는지. 연도만 보던 검사를 회차까지 넓힌 것이다.
@@ -240,6 +252,25 @@ function hasIdentityNumber(eventTitle, haystack) {
   const wanted = [...String(eventTitle).matchAll(/\d{2,}/g)].map(m => m[0])
   if (wanted.length === 0) return true // 숫자가 없는 행사명이면 이 검사로 걸 게 없다
   return wanted.some(n => new RegExp(`(?<!\\d)${n}(?!\\d)`).test(haystack))
+}
+
+// 같은 이름으로 지역을 옮겨 가며 여는 행사가 많다 — 코믹월드(일산·울산·수원·부산),
+// 일러스트코리아(코엑스·인천·수원). 공식 사이트 한 곳이 그 회차를 전부 담고 있어서
+// "2026 인천 일러스트코리아"에 코엑스 회차 키비주얼이 붙었다. 행사명에 지역이 박혀 있는데
+// 후보가 다른 지역을 말하고 있으면 다른 회차다.
+const REGION_WORDS = [
+  '서울', '인천', '부산', '대구', '광주', '대전', '울산', '세종', '제주',
+  '일산', '고양', '수원', '성남', '판교', '부천', '안양', '청주', '전주', '창원', '천안', '경주',
+  '코엑스', '킨텍스', '벡스코', '세텍', 'setec', '송도', 'coex', 'kintex', 'bexco',
+]
+
+function hasRegionConflict(eventTitle, candidateText) {
+  const lowerEvent = eventTitle.toLowerCase()
+  const wanted = REGION_WORDS.filter(r => lowerEvent.includes(r))
+  if (wanted.length === 0) return false
+  const lowerCandidate = String(candidateText).toLowerCase()
+  if (wanted.some(r => lowerCandidate.includes(r))) return false // 같은 지역을 말하고 있으면 통과
+  return REGION_WORDS.some(r => lowerCandidate.includes(r))      // 다른 지역만 말하고 있으면 탈락
 }
 
 // 파일명에 글자와 붙어 있는 연도 (history2024Poster.jpg). yearsInUrl은 /2024/ 처럼
@@ -327,6 +358,12 @@ export function judgeCandidate(item, eventTitle, officialUrls = [], eventYear = 
 
   // 회차가 어긋나도 다른 행사다 (코믹월드 336 ↔ 330).
   if (hasNumberConflict(eventTitle, itemTitle)) return null
+
+  // 지역이 어긋나도 다른 회차다 (인천 일러스트코리아 ↔ 코엑스 일러스트코리아).
+  // 제목뿐 아니라 페이지 주소도 본다 — 회차를 /coex/, /incheon/으로 나눠 둔 사이트가 많다.
+  let decodedPage = pageUrl ?? ''
+  try { decodedPage = decodeURIComponent(decodedPage) } catch { /* 원문 그대로 */ }
+  if (hasRegionConflict(eventTitle, `${itemTitle} ${decodedPage}`)) return null
 
   // 이미지가 포스터라는 표시 — 제목이든 파일 이름이든. 공식 사이트는 페이지 제목이
   // 그대로 이미지 제목이 되는 경우가 많아서(AGF의 "행사정보 - Anime x Game Festival

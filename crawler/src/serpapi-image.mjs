@@ -12,43 +12,12 @@
 // 같다. 조건을 만족하는 게 없으면 null이고, 그러면 카테고리 기본 이미지가 나온다.
 //
 // 검색 횟수 주의: SerpAPI 무료 플랜은 월 250회다. 그래서 후보를 하나라도 건지면
-// 거기서 멈추고, 개발 중 반복 실행은 SERPAPI_CACHE_DIR로 캐시해서 크레딧을 아낀다.
-import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import path from 'node:path'
+// 거기서 멈춘다 (호출·캐시·한도 처리는 serpapi.mjs에 있다).
 import { pathToFileURL } from 'node:url'
 import { judgeCandidate, isUsableImageUrl, isSharedPlatform } from './poster-filter.mjs'
+import { serpapiSearch, isQuotaExhausted, hasSearchAccess } from './serpapi.mjs'
 
-const SERPAPI_URL = 'https://serpapi.com/search'
-
-// 캐시 디렉터리를 지정하면 같은 (엔진, 검색어) 조합은 한 번만 실제로 호출한다.
-// CI에서는 안 켜도 되고, 로컬에서 기준을 손보며 돌려볼 때 쓰라고 만든 스위치다.
-const CACHE_DIR = process.env.SERPAPI_CACHE_DIR ?? ''
-
-// 크레딧이 떨어지면 SerpAPI가 매 호출마다 같은 오류를 준다. 행사 수십 건을 도는
-// 동안 그걸 계속 때리지 않도록, 한 번 확인하면 이후 호출을 아예 건너뛴다.
-let quotaExhausted = false
-
-export function isQuotaExhausted() { return quotaExhausted }
-
-function cachePathFor(engine, query) {
-  const key = createHash('sha1').update(`${engine}\n${query}`).digest('hex').slice(0, 16)
-  return path.join(CACHE_DIR, `${engine}-${key}.json`)
-}
-
-async function readCache(engine, query) {
-  if (!CACHE_DIR) return null
-  try { return JSON.parse(await readFile(cachePathFor(engine, query), 'utf8')) }
-  catch { return null }
-}
-
-async function writeCache(engine, query, data) {
-  if (!CACHE_DIR) return
-  try {
-    await mkdir(CACHE_DIR, { recursive: true })
-    await writeFile(cachePathFor(engine, query), JSON.stringify(data), 'utf8')
-  } catch { /* 캐시는 실패해도 그냥 넘어간다 */ }
-}
+export { isQuotaExhausted }
 
 // 빙은 크기를 "715×971" 문자열로 준다 (× 는 U+00D7).
 function parseBingSize(size) {
@@ -92,38 +61,11 @@ function officialDomains(officialUrls = []) {
 }
 
 async function searchImages(query, engine) {
-  const cached = await readCache(engine, query)
-  if (cached) return normalize(engine, cached)
-  if (quotaExhausted) return []
-  if (!process.env.SERPAPI_KEY) return []
-
-  const url = new URL(SERPAPI_URL)
-  url.searchParams.set('engine', engine)
-  url.searchParams.set('q', query)
-  url.searchParams.set('api_key', process.env.SERPAPI_KEY)
-  if (engine === 'bing_images') {
-    url.searchParams.set('mkt', 'ko-kr')
-  } else {
-    url.searchParams.set('hl', 'ko')
-    url.searchParams.set('gl', 'kr')
-  }
-
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
-  const data = await res.json().catch(() => null)
-  if (!res.ok || data?.error) {
-    const message = data?.error ?? `HTTP ${res.status}`
-    // 무료 플랜 소진("Your account has run out of searches")·요금제 한도는 재시도해도 같다.
-    if (/run out of searches|exceeded your searches|hourly searches/i.test(message)) {
-      quotaExhausted = true
-      console.warn(`  [이미지] SerpAPI 검색 한도 소진 — 이후 검색은 건너뜁니다 (${message})`)
-    } else {
-      console.warn(`  [이미지] SerpAPI(${engine}) 검색 실패: ${message}`)
-    }
-    return []
-  }
-
-  await writeCache(engine, query, data)
-  return normalize(engine, data)
+  const extra = engine === 'bing_images'
+    ? { mkt: 'ko-kr' }
+    : { hl: 'ko', gl: 'kr' }
+  const data = await serpapiSearch(engine, query, extra)
+  return data ? normalize(engine, data) : []
 }
 
 // 행사명과 관련 있고 "공식 홍보물로 볼 근거가 있는" 후보만 점수 높은 순으로 돌려준다.
@@ -135,7 +77,7 @@ async function searchImages(query, engine) {
 //              (/2016/04/25/ 같은 업로드 경로) 걸러낸다.
 export async function findPosterCandidates(title, officialUrls = [], eventYear = null) {
   if (!title) return []
-  if (!process.env.SERPAPI_KEY && !CACHE_DIR) return []
+  if (!hasSearchAccess()) return []
 
   // 공식 사이트를 아는 행사는 그 도메인 안에서만 찾는 게 압도적으로 정확하다.
   // "AGF 2025 포스터"로 그냥 검색하면 상위 결과가 기사 사진과 번개장터 굿즈 매물인데,
@@ -169,7 +111,7 @@ export async function findPosterCandidates(title, officialUrls = [], eventYear =
     }
 
     if (candidates.length > 0) break
-    if (quotaExhausted) break
+    if (isQuotaExhausted()) break
   }
 
   return candidates.sort((a, b) => b.score - a.score)

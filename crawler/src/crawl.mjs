@@ -27,6 +27,7 @@ import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from 
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 import { fetchEventPosterUrl } from './serpapi-image.mjs'
+import { resolveOfficialUrls } from './official-site-lookup.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -171,9 +172,27 @@ async function attachCoords(eventId, venue, venueAddress) {
 
 // 이미지 검색(SerpAPI)으로 포스터를 찾아 events에 업데이트한다.
 // 이미 포스터가 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
+// 공식 사이트를 모르는 행사는 먼저 찾는다 — 포스터 정확도가 거기서 갈린다.
 async function attachPosterImage(eventId, title, officialUrls = [], eventYear = null) {
   if (!eventId) return
-  const posterUrl = await fetchEventPosterUrl(title, officialUrls, eventYear)
+
+  // 검색하기 전에 이미 포스터가 있는지부터 본다. dedup으로 기존 행사에 연결된 경우가
+  // 흔한데, 그때마다 검색을 돌리면 저장도 못 할 결과에 SerpAPI 크레딧만 나간다
+  // (무료 플랜 월 250회).
+  const { data: existing } = await supabase
+    .from('events')
+    .select('poster_url, website, ticket_url')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (existing?.poster_url) return
+
+  const resolved = await resolveOfficialUrls(supabase, {
+    id: eventId,
+    title,
+    website: existing?.website ?? officialUrls[0],
+    ticket_url: existing?.ticket_url ?? officialUrls[1],
+  })
+  const posterUrl = await fetchEventPosterUrl(title, resolved, eventYear)
   if (!posterUrl) return
   const { error } = await supabase
     .from('events')
