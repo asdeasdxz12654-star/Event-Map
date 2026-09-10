@@ -190,13 +190,14 @@ async function attachPosterImage(eventId, title, officialUrls = [], eventYear = 
     website: existing?.website ?? officialUrls[0],
     ticket_url: existing?.ticket_url ?? officialUrls[1],
   })
-  // 공식 사이트 배너를 먼저 보고, 없으면 이미지 검색으로 넘어간다.
+  // 이미지 검색을 먼저 하고, 빈손이면 공식 사이트 배너를 받침으로 쓴다
+  // (순서를 정한 이유는 fix-poster-images.mjs의 findPoster 주석 참고).
   const site = resolved[0]
   const posterUrl =
-    (site && await isDedicatedSite(supabase, site)
+    await fetchEventPosterUrl(title, resolved, eventYear) ??
+    (site && await isDedicatedSite(supabase, site, title)
       ? await fetchPosterFromOfficialSite(site, { eventYear })
-      : null) ??
-    await fetchEventPosterUrl(title, resolved, eventYear)
+      : null)
   if (!posterUrl) return
   const { error } = await supabase
     .from('events')

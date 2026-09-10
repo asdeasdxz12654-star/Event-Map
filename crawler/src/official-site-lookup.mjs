@@ -155,14 +155,18 @@ export async function resolveOfficialUrls(supabase, event, { save = true } = {})
 // 공식 사이트 첫 화면의 배너를 포스터로 쓰려면(official-site-poster.mjs) 이 확인이 꼭
 // 필요하다. comicw.net은 코믹월드·문구전·부코 등 여러 행사의 website로 들어가 있는데,
 // 그 첫 화면 배너는 "지금 미는 행사" 것이라 나머지 행사에 붙이면 남의 포스터가 된다.
-export async function isDedicatedSite(supabase, website) {
+export async function isDedicatedSite(supabase, website, eventTitle = '') {
   if (!website) return false
-  const { count, error } = await supabase
-    .from('events')
-    .select('id', { count: 'exact', head: true })
-    .eq('website', website)
-  if (error) return false
-  return count === 1
+  const { data, error } = await supabase.from('events').select('title').eq('website', website)
+  if (error || !data) return false
+  if (data.length <= 1) return true
+
+  // 다만 "같은 행사의 다른 회차"는 남의 행사가 아니다. AGF 2026과 AGF 2027이
+  // agfkorea.com을 함께 쓴다고 해서 배너를 못 쓰게 하면, 정작 올해 행사가 자기 공식
+  // 사이트의 자기 키비주얼을 못 쓰게 된다. 연도를 뺀 이름이 전부 같으면 전용으로 본다
+  // (지난 회차 배너가 걸리는 건 official-site-poster.mjs의 연도 검사가 막는다).
+  const base = t => String(t).replace(/20[2-4]\d/g, '').replace(/\s+/g, ' ').trim()
+  return data.every(row => base(row.title) === base(eventTitle))
 }
 
 // DB 없이 한 건만 확인해 보고 싶을 때:

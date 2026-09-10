@@ -176,6 +176,10 @@ function yearConflicts(url, eventYear) {
 //   eventYear: 행사 개최 연도 — 지난 회차 배너를 거르는 데 쓴다
 export async function fetchPosterFromOfficialSite(siteUrl, { eventYear = null } = {}) {
   if (!siteUrl || !siteUrl.startsWith('http')) return null
+  // 내년 행사는 사이트에 아직 이번 회차 자료가 안 올라와 있다. 그 상태로 배너를 집으면
+  // 지난 회차 키비주얼이 그대로 붙는다 — 파일 이름에 연도가 없으면 연도 검사도 못 걸러낸다
+  // (AGF 2027에 AGF 2026 캐릭터 이미지가 붙었다). 이미지 검색 쪽과 같은 정책으로 막는다.
+  if (eventYear && eventYear > new Date().getFullYear()) return null
   // 여러 행사가 함께 쓰는 곳의 배너는 이 행사 것이 아니다
   if (isSharedPlatform(siteUrl) || isAggregatorUrl(siteUrl) || isNewsPhotoUrl(siteUrl)) return null
 
