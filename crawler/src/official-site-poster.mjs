@@ -22,9 +22,12 @@ const IMAGE_HEAD_BYTES = 65_536 // 크기 정보는 파일 앞부분에 있다 �
 // 그걸 목록 카드에 그대로 걸면 모바일에서 목록 한 화면에 수십 MB를 받게 된다.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
-// 메인 비주얼이 들어 있는 영역의 class/id에 흔히 쓰이는 말
+// 메인 비주얼이 들어 있는 영역의 class/id에 흔히 쓰이는 말.
+// 'visual' 하나만으로 잡으면 sub-visual-navigation 같은 것까지 걸린다 — 대전콘텐츠페어
+// 행사개요 페이지가 그래서 본문 안내 그래픽을 포스터로 내놨다. 메인 비주얼을 가리키는
+// 표현만 남긴다.
 const VISUAL_HINTS = ['main-visual', 'mainvisual', 'main_visual', 'key-visual', 'keyvisual',
-  'key_visual', 'visual', 'banner', 'hero', 'poster', 'kv']
+  'key_visual', 'main-banner', 'mainbanner', 'hero', 'poster']
 
 // 로고·아이콘·버튼처럼 포스터일 리 없는 이미지.
 // 뒷줄은 "사이트 공용 공유 이미지" — 행사와 무관한 기본 썸네일이라 포스터로 쓰면 안 된다
@@ -133,9 +136,10 @@ export function extractImageCandidates(html, baseUrl) {
   for (const m of flat.matchAll(/<(section|div|header)([^>]*)>/gi)) {
     const attrs = m[2].toLowerCase()
     if (!VISUAL_HINTS.some(h => attrs.includes(h))) continue
-    // 그 태그 이후 3000자 안의 <img>를 그 영역의 이미지로 본다 (닫는 태그 매칭은
-    // 정규식으로 안정적이지 않아서, 거리로 자른다).
-    const chunk = flat.slice(m.index, m.index + 3000)
+    // 그 태그 이후 800자 안의 <img>만 그 영역의 이미지로 본다. 닫는 태그 매칭은 정규식으로
+    // 안정적이지 않아 거리로 자르는데, 넓게 잡으면 영역 밖 본문 이미지까지 딸려온다
+    // (3000자로 뒀더니 대전콘텐츠페어 본문 그래픽이 메인 비주얼로 잡혔다).
+    const chunk = flat.slice(m.index, m.index + 800)
     for (const img of chunk.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)) push(img[1], 1)
   }
 
@@ -150,7 +154,10 @@ export function extractImageCandidates(html, baseUrl) {
 
 // 포스터로 쓸 만한 크기·비율인지. 키비주얼은 크게 만들기 때문에 짧은 변이 400px은 넘는다.
 const MIN_SIDE_PX = 400
-const MAX_PORTRAIT_RATIO = 3    // 세로로 너무 긴 띠 제외
+// 포스터는 A4(1.41:1) 언저리다. 세로로 그보다 훨씬 긴 건 포스터가 아니라 페이지에
+// 길게 늘여놓은 안내 그래픽이다 — 대전콘텐츠페어 행사개요 페이지의 480x1301(2.7:1)짜리
+// "공공캐릭터 IP / 게이미피케이션 / 서브컬처" 설명 이미지가 그렇게 포스터로 잡혔다.
+const MAX_PORTRAIT_RATIO = 1.8
 const MAX_LANDSCAPE_RATIO = 2.6 // 가로형 키비주얼(1920x775 = 2.48)까지는 인정
 // og:image가 아닌 후보는 이 정도로 커야 인정한다 (키비주얼은 인쇄용 원본을 그대로 올린다)
 const MIN_LONG_SIDE_PX = 1000
