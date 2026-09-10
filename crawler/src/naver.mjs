@@ -8,6 +8,8 @@
 // openapi.naver.com과 도메인/경로/인증 헤더가 다르니 주의. 실제로 두 방식 다 curl로 확인함:
 // 구버전(X-Naver-Client-Id 등, openapi.naver.com)은 401, API HUB 방식은 200 정상 응답.)
 
+import { monthKST, monthDayKST } from './date-kst.mjs'
+
 const NAVER_NEWS_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/news'
 const NAVER_CAFE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/cafearticle'
 
@@ -55,12 +57,13 @@ const CAFE_SEARCH_QUERIES = [
   ...SEASONAL_CAFE_QUERIES,
 ]
 
+// 기간 판정은 KST 기준이다. 크롤이 21:00 UTC(=06:00 KST 다음날)에 돌기 때문에 UTC로
+// 판단하면 매 실행이 "한국 기준 어제"가 되고, 월 경계에서 하루씩 어긋난다.
 function isActiveNow(activeWindow) {
   if (!activeWindow) return true // 기간 제한 없음 — 상시 검색
-  const now = new Date()
-  if (activeWindow.months) return activeWindow.months.includes(now.getMonth() + 1)
+  if (activeWindow.months) return activeWindow.months.includes(monthKST())
   if (activeWindow.fromMonthDay && activeWindow.toMonthDay) {
-    const monthDay = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const monthDay = monthDayKST()
     return monthDay >= activeWindow.fromMonthDay && monthDay <= activeWindow.toMonthDay
   }
   return true
@@ -139,6 +142,7 @@ async function searchNaverNews(query) {
       'X-NCP-APIGW-API-KEY-ID': process.env.NAVER_CLIENT_ID,
       'X-NCP-APIGW-API-KEY': process.env.NAVER_CLIENT_SECRET,
     },
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -157,6 +161,7 @@ async function searchNaverCafe(query) {
       'X-NCP-APIGW-API-KEY-ID': process.env.NAVER_CLIENT_ID,
       'X-NCP-APIGW-API-KEY': process.env.NAVER_CLIENT_SECRET,
     },
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -195,7 +200,7 @@ export async function fetchNaverCafeCandidates() {
 // 제목 필터(naverLooksRelevant)를 여기서 바로 적용한다 — 필터 키워드가 같은 파일의
 // NAVER_SEARCH_QUERIES 바로 아래 있어서, 쿼리를 추가하면서 필터를 깜빡할 위험을 줄인다.
 export async function fetchNaverCandidates() {
-  const currentMonth = new Date().getMonth() + 1
+  const currentMonth = monthKST()
   const results = []
 
   for (const { text: query, activeMonths } of NAVER_SEARCH_QUERIES) {

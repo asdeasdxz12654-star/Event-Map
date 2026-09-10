@@ -14,7 +14,8 @@
 // 상세 응답: 위 필드 + prfcast, entrpsnmP/H/A/S, pcseguidance, sty(줄거리/프로그램), mt10id,
 //           relates.relate.relateurl (최상위 필드가 아니라 중첩 객체/배열 안에 있음, 아래 getRelateUrl 참고)
 import { EventExtractionSchema } from './schema.mjs'
-import { xmlParser, asArray, formatDateCompact } from './xml-utils.mjs'
+import { xmlParser, asArray } from './xml-utils.mjs'
+import { compactKST } from './date-kst.mjs'
 
 const KOPIS_BASE_URL = 'https://kopis.or.kr/openApi/restful/pblprfr'
 const KOPIS_DETAIL_VIEW_URL = 'https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do'
@@ -75,7 +76,8 @@ async function requestKopis(path, params) {
     url.searchParams.set(key, value)
   }
 
-  const res = await fetch(url)
+  // 응답이 없으면 그날 크롤 전체가 여기서 멈춘다 — 기다리지 말고 끊는다.
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`KOPIS 요청 실패: HTTP ${res.status}`)
 
   const xml = await res.text()
@@ -98,10 +100,9 @@ async function fetchKopisDetail(mt20id) {
 }
 
 export async function fetchKopisCandidates() {
-  const today = new Date()
-  const to = new Date(today.getTime() + LOOKAHEAD_DAYS * 86400000)
-  const stdate = formatDateCompact(today)
-  const eddate = formatDateCompact(to)
+  // 기준일은 KST — UTC로 잡으면 크롤이 도는 시각(06:00 KST) 기준으로 하루 전부터 조회한다.
+  const stdate = compactKST()
+  const eddate = compactKST(LOOKAHEAD_DAYS)
 
   const matched = []
   for (let cpage = 1; cpage <= MAX_PAGES; cpage++) {

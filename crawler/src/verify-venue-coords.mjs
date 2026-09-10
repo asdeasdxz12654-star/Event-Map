@@ -10,6 +10,7 @@
 // 관리자가 직접 손댄 행사(admin_edited_at)는 보고만 하고 건드리지 않는다.
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 import { lookupVenue } from './naver-local.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -32,13 +33,14 @@ function distanceKm(a, b) {
 }
 
 async function main() {
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, venue, venue_address, venue_lat, venue_lng, admin_edited_at')
-    .not('venue_lat', 'is', null)
-    .order('start_date', { ascending: false })
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, venue, venue_address, venue_lat, venue_lng, admin_edited_at')
+      .not('venue_lat', 'is', null)
+      .order('start_date', { ascending: false }))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`좌표가 있는 행사 ${events.length}건 검증${FIX ? ' (--fix: 교체까지)' : ' (보고만)'}\n`)
 
   const stats = { ok: 0, drift: 0, fixed: 0, unverifiable: 0, adminSkipped: 0 }

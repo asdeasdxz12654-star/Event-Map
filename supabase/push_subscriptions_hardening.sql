@@ -1,5 +1,11 @@
 -- push_subscriptions 보안 강화
 -- Supabase 대시보드 > SQL Editor 에서 실행하세요.
+--
+-- ⚠️ 이 파일은 지난 마이그레이션 기록이다. 이미 실행했다면 다시 실행하지 말 것 —
+--    아래 cleanup_stale_push_tokens()는 search_path가 안 잡혀 있고 created_at 기준이라,
+--    나중 파일(hardening_2026-09-09.sql)에서 고친 정의를 이 옛 버전으로 되돌리게 된다.
+--    또 3)의 user_agent 길이 제한은 실제로는 안 걸린다 —
+--    이유와 정정은 fix_push_user_agent_check_2026-09-10.sql 참고.
 
 -- 1) 오래된 토큰 정리 함수 (90일 이상 미사용 토큰 삭제)
 --    GitHub Actions 등 서버 사이드에서 주기적으로 호출하거나,

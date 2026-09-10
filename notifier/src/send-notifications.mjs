@@ -111,7 +111,12 @@ async function touchTokens(tokens) {
 // 이번 실행에서 한 번이라도 발송에 성공한 토큰 (마지막에 모아서 last_seen_at 갱신)
 const deliveredTokens = new Set()
 
-async function notify(tokens, { title, body, url }) {
+// 무효로 확인돼 이미 지운 토큰. 한 번 실행에서 알림을 여러 건 보내는데(예매 오픈 + 행사
+// 임박), 죽은 토큰을 걸러내지 않으면 남은 알림마다 같은 토큰으로 또 보내고 또 실패한다.
+const deadTokens = new Set()
+
+async function notify(allTokens, { title, body, url }) {
+  const tokens = allTokens.filter(t => !deadTokens.has(t))
   if (tokens.length === 0) {
     console.log('  구독자 없음, 발송 스킵')
     return
@@ -136,7 +141,10 @@ async function notify(tokens, { title, body, url }) {
 
   console.log(`  발송 결과: 성공 ${successCount} / 실패 ${failureCount}`)
   await deleteTokens(invalid)
-  for (const token of invalid) deliveredTokens.delete(token)
+  for (const token of invalid) {
+    deliveredTokens.delete(token)
+    deadTokens.add(token)
+  }
 }
 
 async function main() {

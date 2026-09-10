@@ -13,8 +13,10 @@
 //
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 import { fetchEventPosterUrl, isQuotaExhausted } from './serpapi-image.mjs'
 import { resolveOfficialUrls } from './official-site-lookup.mjs'
+import { todayKST } from './date-kst.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -23,24 +25,19 @@ const LIMIT = Number(process.argv[process.argv.indexOf('--limit') + 1]) || Infin
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-// 한국 기준 오늘 (notifier/send-notifications.mjs, known-events.mjs와 같은 이유/방식)
-function todayKST() {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().slice(0, 10)
-}
-
 async function main() {
   // 지난 행사는 검색하지 않는다. 포스터가 필요한 건 앞으로 열릴 행사고, 끝난 행사까지
   // 훑으면 (start_date 오름차순이라 목록 앞이 전부 지난 행사다) 한정된 SerpAPI
   // 크레딧을 아무도 안 보는 카드에 다 쓰게 된다.
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, start_date, website, ticket_url, admin_edited_at')
-    .is('poster_url', null)
-    .gte('start_date', todayKST())
-    .order('start_date')
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, start_date, website, ticket_url, admin_edited_at')
+      .is('poster_url', null)
+      .gte('start_date', todayKST())
+      .order('start_date'))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   const targets = events.slice(0, LIMIT)
   console.log(`포스터 없는 예정 행사 ${events.length}건 중 ${targets.length}건 처리${DRY_RUN ? ' (dry-run)' : ''}\n`)
 

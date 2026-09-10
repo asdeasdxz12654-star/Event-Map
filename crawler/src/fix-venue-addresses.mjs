@@ -2,6 +2,7 @@
 // 실행: node src/fix-venue-addresses.mjs
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -26,13 +27,14 @@ function resolveAddress(venue) {
 }
 
 async function main() {
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, venue, venue_address, start_date')
-    .is('venue_lat', null)
-    .order('start_date')
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, venue, venue_address, start_date')
+      .is('venue_lat', null)
+      .order('start_date'))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`좌표 없는 행사 ${events.length}건\n`)
 
   let updated = 0

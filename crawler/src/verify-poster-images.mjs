@@ -20,6 +20,7 @@
 //
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY(--repick일 때만)
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 import { findPosterCandidates } from './serpapi-image.mjs'
 import { isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isResaleUrl, isOfficialHost } from './poster-filter.mjs'
 
@@ -45,13 +46,14 @@ async function setPoster(eventId, posterUrl) {
 }
 
 async function main() {
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, poster_url, admin_edited_at, website, ticket_url, start_date')
-    .not('poster_url', 'is', null)
-    .order('start_date', { ascending: false })
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, poster_url, admin_edited_at, website, ticket_url, start_date')
+      .not('poster_url', 'is', null)
+      .order('start_date', { ascending: false }))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   console.log(`포스터가 있는 행사 ${events.length}건 검증${DRY_RUN ? ' (dry-run)' : ''}${REPICK ? ' + 의심 건 교체' : ''}\n`)
 

@@ -1,5 +1,6 @@
 // 날짜를 공식으로 계산할 수 있는 정기 행사를 LLM 없이 event_drafts에 직접 삽입한다.
 import { lookupVenueCoords } from './naver-local.mjs'
+import { todayKST } from './date-kst.mjs'
 // source_url: known-event://{slug}/{year} 형식으로 연도별 중복 삽입을 방지한다.
 // promote_event_draft() 트리거의 title+start_date dedup으로 events 테이블 중복도 방지된다.
 
@@ -22,14 +23,6 @@ const KINTEX_LNG = 126.7460896
 
 function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
-}
-
-// 이 행사들은 한국 기준(KST) 행사라 "오늘"도 KST로 계산한다 — UTC로 계산하면
-// 자정 근처(00:00~08:59 KST, 전날 UTC) 9시간 동안 하루 전으로 잘못 판단해서 연도 계산이
-// 어긋날 수 있다 (notifier/send-notifications.mjs의 todayKST()와 동일한 이유/방식).
-function todayKST() {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().slice(0, 10)
 }
 
 // 해당 연도·월의 N번째 특정 요일을 반환한다 (n: 1-indexed).

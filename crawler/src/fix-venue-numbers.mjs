@@ -4,6 +4,7 @@
 // 실행(수정): node src/fix-venue-numbers.mjs --fix
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const FIX = process.argv.includes('--fix')
@@ -19,12 +20,13 @@ function hasBadVenue(venue) {
 }
 
 async function main() {
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, venue, start_date')
-    .order('start_date', { ascending: true })
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, venue, start_date')
+      .order('start_date', { ascending: true }))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   const bad = events.filter(e => hasBadVenue(e.venue))
 

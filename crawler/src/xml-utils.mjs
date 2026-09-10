@@ -10,10 +10,5 @@ export function asArray(value) {
   return Array.isArray(value) ? value : [value]
 }
 
-// Date -> "YYYYMMDD" (KOPIS/KMRB 요청 파라미터 형식)
-export function formatDateCompact(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}${m}${d}`
-}
+// "YYYYMMDD" 포맷은 date-kst.mjs의 compactKST()로 옮겼다 — 여기 있던 구현은 실행 환경의
+// 지역 시간(GitHub Actions에서는 UTC)을 써서 KST 기준 날짜와 하루씩 어긋났다.

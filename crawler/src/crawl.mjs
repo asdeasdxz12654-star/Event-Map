@@ -98,6 +98,7 @@ async function callGroq(articleText) {
         ],
         max_tokens: 1024,
       }),
+      signal: AbortSignal.timeout(60_000),
     })
 
     if (res.ok) return res

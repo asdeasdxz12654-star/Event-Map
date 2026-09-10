@@ -21,7 +21,8 @@
 // 보고 조기 종료한다(MAX_PAGES는 그래도 못 멈출 경우의 최종 안전장치).
 import { XMLParser } from 'fast-xml-parser'
 import { EventExtractionSchema } from './schema.mjs'
-import { asArray, formatDateCompact } from './xml-utils.mjs'
+import { asArray } from './xml-utils.mjs'
+import { compactKST } from './date-kst.mjs'
 
 // xml-utils.mjs의 공유 xmlParser(엔티티 확장 기본 한도 1000)를 안 쓰고 별도 인스턴스를 둔다 —
 // 이 API는 응답 하나에 항목이 100개씩 들어있고 각 항목의 description에 &amp;/&nbsp;/&lt;br/&gt;
@@ -117,7 +118,7 @@ async function requestCulture(params) {
     url.searchParams.set(key, value)
   }
 
-  const res = await fetch(url)
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`문화예술공연통합 요청 실패: HTTP ${res.status}`)
 
   const xml = await res.text()
@@ -141,7 +142,7 @@ function buildSourceUrl(row) {
 }
 
 export async function fetchCulturePerformanceCandidates() {
-  const todayCompact = formatDateCompact(new Date())
+  const todayCompact = compactKST()
 
   const matched = []
   let fetched = 0

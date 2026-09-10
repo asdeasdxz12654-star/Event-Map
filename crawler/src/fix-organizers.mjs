@@ -2,6 +2,7 @@
 // 실행: node src/fix-organizers.mjs [--fix]
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, GROQ_API_KEY
 import { createClient } from '@supabase/supabase-js'
+import { fetchAllRows } from './db.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const FIX = process.argv.includes('--fix')
@@ -96,13 +97,14 @@ async function extractOrganizerWithGroq(title, snippets) {
 }
 
 async function main() {
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('id, title, start_date, venue')
-    .is('organizer', null)
-    .order('start_date')
-
-  if (error) { console.error('조회 실패:', error.message); process.exit(1) }
+  let events
+  try {
+    events = await fetchAllRows(() => supabase
+      .from('events')
+      .select('id, title, start_date, venue')
+      .is('organizer', null)
+      .order('start_date'))
+  } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`주최측 없는 행사 ${events.length}건 (--fix: ${FIX})\n`)
 
   let updated = 0

@@ -283,6 +283,20 @@ async function updateRow(env, table, id, body) {
   return rows[0]
 }
 
+// 요청 body를 JSON으로 읽는다. 깨진 JSON이 오면 500(internal_error)이 아니라 400으로
+// 답한다 — 서버 잘못이 아니라 요청이 잘못된 것이고, 500은 로그를 뒤지게 만든다.
+async function readJsonBody(request) {
+  try {
+    const body = await request.json()
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new Error('not an object')
+    }
+    return body
+  } catch {
+    throw new HttpError(400, 'invalid_json')
+  }
+}
+
 // 클라이언트 body에서 허용된 컬럼만 뽑는다. id·created_at처럼 서버/DB가 정하는 값은
 // 목록에 없으므로 body에 실려와도 무시된다 — 예전엔 { id, ...body } 순서 탓에 body의
 // id가 서버가 만든 UUID를 덮어썼고, PATCH로는 기본키를 통째로 갈아치울 수도 있었다.
@@ -328,7 +342,7 @@ async function handleAdmin(request, env, pathname) {
       })
     }
 
-    const body = await request.json().catch(() => ({}))
+    const body = await readJsonBody(request).catch(() => ({}))
     const password = typeof body?.password === 'string' ? body.password : ''
     const ok = await verifyPassword(password, env.ADMIN_PASSWORD_HASH)
     if (!ok) {
@@ -357,7 +371,7 @@ async function handleAdmin(request, env, pathname) {
   if (subOfEventMatch && request.method === 'POST') {
     const eventId = decodeURIComponent(subOfEventMatch[1])
     const { table, columns } = SUB_RESOURCES[subOfEventMatch[2]]
-    const body = await request.json()
+    const body = await readJsonBody(request)
     const data = await supabase(env, 'POST', table, { ...pick(body, columns), event_id: eventId })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
   }
@@ -366,7 +380,7 @@ async function handleAdmin(request, env, pathname) {
   if (subIdMatch && request.method === 'PATCH') {
     const { table, columns } = SUB_RESOURCES[subIdMatch[1]]
     const id = decodeURIComponent(subIdMatch[2])
-    const body = await request.json()
+    const body = await readJsonBody(request)
     await updateRow(env, table, id, pick(body, columns))
     return json({ ok: true }, env)
   }
@@ -381,7 +395,7 @@ async function handleAdmin(request, env, pathname) {
 
   // POST /admin/events — 행사 추가
   if (pathname === '/admin/events' && request.method === 'POST') {
-    const body = await request.json()
+    const body = await readJsonBody(request)
     const data = await supabase(env, 'POST', 'events', {
       ...pick(body, EVENT_COLUMNS),
       id: crypto.randomUUID(),
@@ -394,7 +408,7 @@ async function handleAdmin(request, env, pathname) {
   // 이 행을 건너뛰게 해서, 관리자가 고친 값이 크롤러 값으로 덮어써지지 않게 막는다.
   if (idMatch && request.method === 'PATCH') {
     const id = decodeURIComponent(idMatch[1])
-    const body = await request.json()
+    const body = await readJsonBody(request)
     await updateRow(env, 'events', id, {
       ...pick(body, EVENT_COLUMNS),
       admin_edited_at: new Date().toISOString(),

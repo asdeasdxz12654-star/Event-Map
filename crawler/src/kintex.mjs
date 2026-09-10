@@ -14,6 +14,7 @@
 // 브라우저처럼 보이는 User-Agent를 붙일 것.
 import { EventExtractionSchema } from './schema.mjs'
 import { xmlParser, asArray } from './xml-utils.mjs'
+import { todayKST } from './date-kst.mjs'
 
 const KINTEX_API_URL = 'https://openapi.gg.go.kr/KintexEventFixatn'
 const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
@@ -77,7 +78,7 @@ async function fetchKintexPage(pIndex) {
   url.searchParams.set('pIndex', String(pIndex))
   url.searchParams.set('pSize', String(ROWS_PER_PAGE))
 
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const xml = await res.text()
@@ -95,6 +96,15 @@ async function fetchKintexPage(pIndex) {
   }
 }
 
+// 이미 끝난 행사인지. 이 API는 조회 기간 파라미터가 없어서 등록된 행사를 연 단위로
+// 통째로 돌려준다 — 걸러내지 않으면 작년에 끝난 행사가 그대로 후보가 되고, 프랜차이즈
+// 키워드에 걸리면 confidence:high라 검수 없이 사이트에 올라간다.
+// (KOPIS·영등위·문화예술공연은 요청 단계나 필터에서 이미 지난 행사를 빼고 있다.)
+function isFinished(row) {
+  const { end } = parsePeriod(row.EVENT_PERD)
+  return Boolean(end) && end < todayKST()
+}
+
 export async function fetchKintexCandidates() {
   const matched = []
   let fetched = 0
@@ -108,7 +118,7 @@ export async function fetchKintexCandidates() {
       break
     }
 
-    matched.push(...page.rows.filter(looksLikeGameEvent))
+    matched.push(...page.rows.filter(row => looksLikeGameEvent(row) && !isFinished(row)))
     fetched += page.rows.length
     if (fetched >= page.total || page.rows.length < ROWS_PER_PAGE) break // 마지막 페이지
   }

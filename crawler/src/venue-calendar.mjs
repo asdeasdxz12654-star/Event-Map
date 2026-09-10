@@ -21,6 +21,7 @@
 //   경우가 있는데, 그건 검수 화면에서 보고 반려하면 된다. source_url로 중복 방지가
 //   되므로 한 번 반려한 항목이 다시 올라오지는 않는다.
 import { EventExtractionSchema } from './schema.mjs'
+import { todayKST } from './date-kst.mjs'
 
 const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
 
@@ -62,11 +63,6 @@ function inferCategory(text) {
     if (rule.keywords.some(k => lower.includes(k))) return rule.category
   }
   return '게임전시'
-}
-
-function todayKST() {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().slice(0, 10)
 }
 
 // 오늘부터 올해 말까지의 달 목록 (YYYY, M). 전시장 캘린더가 달 단위라 필요하다.

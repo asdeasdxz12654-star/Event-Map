@@ -21,7 +21,8 @@
 //   (공연기간, "YYYY-MM-DD"), rtNo(추천번호, dedup 키로 사용), rtDate(추천일자), kindName
 //   (공연물 종류), Gubun(분류), minorMalefYn(연소자유해여부)
 import { EventExtractionSchema } from './schema.mjs'
-import { xmlParser, asArray, formatDateCompact } from './xml-utils.mjs'
+import { xmlParser, asArray } from './xml-utils.mjs'
+import { compactKST } from './date-kst.mjs'
 
 const KMRB_API_URL = 'https://apis.data.go.kr/B551008/pfm/v1/pfm_search'
 const ROWS_PER_PAGE = 100
@@ -81,7 +82,7 @@ async function fetchKmrbPage(pIndex, stDate, edDate) {
   const params = new URLSearchParams({ pageNo: String(pIndex), numOfRows: String(ROWS_PER_PAGE), stDate, edDate })
   const fullUrl = `${KMRB_API_URL}?serviceKey=${process.env.KMRB_API_KEY}&${params.toString()}`
 
-  const res = await fetch(fullUrl)
+  const res = await fetch(fullUrl, { signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const xml = await res.text()
@@ -100,10 +101,9 @@ async function fetchKmrbPage(pIndex, stDate, edDate) {
 }
 
 export async function fetchKmrbCandidates() {
-  const today = new Date()
-  const from = new Date(today.getTime() - LOOKBACK_DAYS * 86400000)
-  const stDate = formatDateCompact(from)
-  const edDate = formatDateCompact(today)
+  // 기준일은 KST — UTC로 잡으면 크롤이 도는 시각(06:00 KST) 기준으로 하루가 밀린다.
+  const stDate = compactKST(-LOOKBACK_DAYS)
+  const edDate = compactKST()
   const todayStr = edDate
 
   const matched = []

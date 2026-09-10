@@ -17,6 +17,7 @@
 //   /admin/drafts에서 보고 승인하도록 남긴다.
 
 import { EventExtractionSchema } from './schema.mjs'
+import { todayKST } from './date-kst.mjs'
 
 const CALENDAR_URL = 'https://comicw.co.kr/c'
 const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
@@ -56,11 +57,6 @@ function splitPlace(place) {
   if (!value) return { venue: null, address: null }
   if (REGION_PREFIX.test(value)) return { venue: value, address: value }
   return { venue: value, address: null }
-}
-
-function todayKST() {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().slice(0, 10)
 }
 
 export function parseCalendarEvents(html) {
