@@ -13,8 +13,11 @@
 // 공식 포스터로 부적합한 도메인 — 핀터레스트 등 개인 큐레이션 이미지 제외
 const EXCLUDED_DOMAINS = ['pinimg.com', 'pinterest.com', 'pinterest.co.kr']
 
-const MIN_SIDE_PX = 200        // 너무 작은 썸네일 제외
-const MAX_ASPECT_RATIO = 3     // 배너·파노라마 제외 (포스터는 세로형~정사각형)
+const MIN_SIDE_PX = 200          // 너무 작은 썸네일 제외
+const MAX_PORTRAIT_RATIO = 3     // 세로로 너무 긴 띠 제외 (A4 포스터가 1.41이다)
+// 가로형은 1.4까지만 본다. 포스터는 세로형~정사각형이고, 가로로 넓은 건 배너 아니면
+// 공유용 카드다 — 1200x630(1.90)짜리 오픈그래프 이미지가 대표적이다.
+const MAX_LANDSCAPE_RATIO = 1.4
 const MIN_TOKEN_OVERLAP = 0.5  // 행사명 토큰이 절반 이상 겹쳐야 채택
 
 // "공식 홍보물"로 볼 근거 — 이미지·페이지 제목에 아래 단어가 있거나, 행사 공식 사이트·
@@ -117,14 +120,45 @@ const RESALE_HOSTS = [
   'aliexpress.com', 'ebay.com', 'amazon.com', 'idus.com', 'danawa.com',
   'smartstore.naver.com', 'brand.naver.com',
 ]
-const RESALE_KEYWORDS = ['중고', '팝니다', '삽니다', '판매합니다', '양도', '대리구매', '미개봉', '택배비', '일괄판매']
-
 export function isResaleUrl(url) {
   const host = hostOf(url)
   if (!host) return false
   const domain = registrableDomain(host)
   return RESALE_HOSTS.some(h => domain === h || host === h || host.endsWith('.' + h))
 }
+
+// 행사 정보를 모아 보여주는 사이트. 공식 자료가 아니라 남의 행사를 옮겨 싣거나,
+// 아예 이미지를 자동 생성해서 쓴다. get-duck.com이 "일러스타 페스 14 | 이벤트 포스터"
+// 라는 제목으로 내놓은 og/events/*.png는 글자 하나 없는 1200x630 그라데이션 배경이었다.
+const AGGREGATOR_HOSTS = [
+  'get-duck.com', 'linkareer.com', 'campuspick.com', 'wevity.com',
+  'thinkcontest.com', 'all-con.co.kr', 'eventus.io',
+]
+
+// 공유용 카드(오픈그래프) 이미지 경로. 포스터가 아니라 링크 미리보기용으로 만든 그림이다.
+const SOCIAL_CARD_PATHS = ['/og/', '/og-image', '/og_image', '/opengraph', '/lookaside/crawler/', '/seo/google_widget/']
+
+export function isAggregatorUrl(url) {
+  const host = hostOf(url)
+  if (!host) return false
+  const domain = registrableDomain(host)
+  if (AGGREGATOR_HOSTS.some(h => domain === h || host === h || host.endsWith('.' + h))) return true
+  try {
+    const path = new URL(url).pathname.toLowerCase()
+    return SOCIAL_CARD_PATHS.some(p => path.includes(p))
+  } catch {
+    return false
+  }
+}
+
+// 제목에 이게 있으면 이 행사의 공식 포스터가 아니다.
+const REJECT_TITLE_KEYWORDS = [
+  // 중고거래 매물 — 남의 방바닥에 놓인 특전 굿즈 사진이다
+  '중고', '팝니다', '삽니다', '판매합니다', '양도', '대리구매', '미개봉', '택배비', '일괄판매',
+  // 포스터 "공모전"은 행사 포스터가 아니라 별개 대회다. 실제로 "부산일러스트레이션페어 V.7"에
+  // THE POSTER BUSAN 2026 공모전 포스터(접수기간 4/29~8/10)가 붙을 뻔했다 — 날짜부터 틀리다.
+  '공모전', '공모 요강', '수상작',
+]
 
 function yearsInUrl(url) {
   // /2016/04/25/ 같은 업로드 경로뿐 아니라 2019.agfkorea.com 처럼 호스트에 박힌 연도도 잡는다
@@ -223,8 +257,7 @@ function hasUsableSize({ width, height }) {
   const h = Number(height)
   if (!Number.isFinite(w) || !Number.isFinite(h) || w === 0 || h === 0) return true // 정보 없으면 통과
   if (w < MIN_SIDE_PX || h < MIN_SIDE_PX) return false
-  const ratio = Math.max(w / h, h / w)
-  return ratio <= MAX_ASPECT_RATIO
+  return w > h ? w / h <= MAX_LANDSCAPE_RATIO : h / w <= MAX_PORTRAIT_RATIO
 }
 
 // URL이 실제로 열리고 이미지인지 확인한다. 검색 결과에는 핫링크가 막혀 403이 나거나
@@ -265,11 +298,12 @@ export function judgeCandidate(item, eventTitle, officialUrls = [], eventYear = 
   if (pageUrl && isExcludedDomain(pageUrl)) return null
   if (isNewsPhotoUrl(link) || (pageUrl && isNewsPhotoUrl(pageUrl))) return null
   if (isResaleUrl(link) || (pageUrl && isResaleUrl(pageUrl))) return null
+  if (isAggregatorUrl(link) || (pageUrl && isAggregatorUrl(pageUrl))) return null
   if (!hasUsableSize(item)) return null
 
   const itemTitle = stripHtml(item.title ?? '')
   const lowerTitle = itemTitle.toLowerCase()
-  if (RESALE_KEYWORDS.some(k => itemTitle.includes(k))) return null
+  if (REJECT_TITLE_KEYWORDS.some(k => itemTitle.includes(k))) return null
 
   // 공식 사이트·예매처 도메인에서 온 이미지인지. 이미지가 CDN에 있어도 실린 페이지가
   // 공식 사이트면 공식으로 본다 (반대로 기사 CDN은 위 isNewsPhotoUrl에서 걸린다).
