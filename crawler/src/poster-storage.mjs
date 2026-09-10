@@ -21,7 +21,10 @@ import { UA } from './util.mjs'
 
 const BUCKET = 'posters'
 // 이 크기를 넘는 포스터만 줄여서 다시 올린다.
-const MAX_INLINE_BYTES = 400 * 1024
+// 처음엔 400KB로 뒀는데, 그러고도 첫 화면이 2.2MB였다 — 300px 남짓으로 보여주는 카드에
+// 300KB짜리를 받고 있었다. 1000px webp로 줄이면 대개 40~80KB라, 그보다 큰 원본은
+// 줄이는 편이 항상 이득이다.
+const MAX_INLINE_BYTES = 150 * 1024
 // 카드·상세 어디서도 1000px이면 충분하다(상세 최대 높이가 480px, 2배 해상도 화면 고려).
 const TARGET_WIDTH = 1000
 const WEBP_QUALITY = 80
