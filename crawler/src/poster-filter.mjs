@@ -57,6 +57,10 @@ const SHARED_PLATFORM_HOSTS = [
   'notion.site', 'onoffmix.com', 'festa.io', 'tumblbug.com', 'wadiz.kr',
   'arca.live', 'dcinside.com', 'fmkorea.com', 'ruliweb.com',
   'dongne.co',  // 동인 행사 신청·안내 플랫폼. 디. 페스타 등 여러 행사가 함께 올라온다
+  // 전시장. 행사의 website가 전시장 행사 페이지인 경우가 있는데(venue-calendar.mjs),
+  // 전시장에는 남의 행사 포스터가 훨씬 많아서 "이 도메인에서 왔으니 공식"으로 볼 수 없다.
+  'bexco.co.kr', 'setec.or.kr', 'suwonmesse.com', 'kintex.com', 'ueco.or.kr',
+  'coex.co.kr', 'kdjcenter.or.kr', 'exco.co.kr', 'songdoconvensia.com',
 ]
 
 export function isSharedPlatform(url) {

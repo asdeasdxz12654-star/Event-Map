@@ -13,6 +13,8 @@
 // 쓰지 않는다 — 네이버가 이 매체들을 포함해 전부 색인하므로, 매체별 RSS/스크래핑을 유지
 // 보수하는 대신 naver.mjs의 검색어에 원하는 키워드를 추가하는 쪽이 훨씬 안정적이다
 // (매체 사이트 개편에 안 깨지고, 원문 링크도 그대로 나옴).
+// 전시장(벡스코·SETEC·수원메쎄) 행사일정도 훑는다 (venue-calendar.mjs) — 행사를 실제로
+// 유치한 주체라 기사보다 먼저 일정이 뜬다. 킨텍스는 kintex.mjs가 공식 API로 이미 받고 있다.
 // confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
@@ -32,6 +34,7 @@ import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
 import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
+import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-calendar.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -359,6 +362,8 @@ async function main() {
     { label: '문화예술공연통합', envVar: 'CULTURE_PERFORMANCE_API_KEY', fetchFn: fetchCulturePerformanceCandidates, buildFn: buildCulturePerformanceDraft },
     // API 키가 필요 없는 공개 일정표 — 뉴스에 안 난 행사를 찾는 용도(검수 대기로만 들어간다)
     { label: '행사일정', fetchFn: fetchSubcultureCalendarCandidates, buildFn: buildSubcultureCalendarDraft },
+    // 전시장(벡스코·SETEC·수원메쎄) 행사일정 — 기사가 나기 전에 일정이 올라온다
+    { label: '전시장일정', fetchFn: fetchVenueCalendarCandidates, buildFn: buildVenueCalendarDraft },
   ]
   for (const source of STRUCTURED_SOURCES) {
     await processStructuredSource(source)
