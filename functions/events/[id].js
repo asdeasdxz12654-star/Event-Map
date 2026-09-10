@@ -79,6 +79,21 @@ export function buildPreview(event, origin, pathname) {
   }
 }
 
+// 이 함수가 실제로 돌았는지, 안 됐다면 왜인지 헤더 하나로 확인할 수 있게 표시를 남긴다.
+// (미리보기 태그는 봇만 읽어서, 잘못돼도 화면상으로는 아무 차이가 없다 — 그래서 확인할
+//  방법이 없으면 "됐겠거니" 하고 넘어가게 된다.)
+//   curl -I https://<도메인>/events/<id> | grep x-event-preview
+//     헤더 없음 -> 함수가 배포되지 않았다(=Pages가 functions/ 를 못 찾음)
+//     no-env    -> SUPABASE_URL/SUPABASE_ANON_KEY가 안 붙었다. 환경변수는 추가 후
+//                  "재배포"를 해야 기존 배포에 적용된다.
+//     no-event  -> 그 id의 행사를 못 찾았거나 조회 실패
+//     hit       -> 정상 (그 행사 값으로 태그가 바뀜)
+function withMarker(response, marker) {
+  const out = new Response(response.body, response)
+  out.headers.set('x-event-preview', marker)
+  return out
+}
+
 export async function onRequestGet(context) {
   const { request, env, params } = context
 
@@ -86,8 +101,10 @@ export async function onRequestGet(context) {
   const pageUrl = new URL(request.url)
   const asset = await env.ASSETS.fetch(new URL('/index.html', pageUrl.origin))
 
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return withMarker(asset, 'no-env')
+
   const event = await fetchEvent(env, params.id)
-  if (!event) return asset
+  if (!event) return withMarker(asset, 'no-event')
 
   const { title, description, image, canonical, isPoster } = buildPreview(event, pageUrl.origin, pageUrl.pathname)
 
@@ -116,5 +133,5 @@ export async function onRequestGet(context) {
       .on('meta[name="twitter:card"]', setContent('summary'))
   }
 
-  return rewriter.transform(asset)
+  return rewriter.transform(withMarker(asset, 'hit'))
 }
