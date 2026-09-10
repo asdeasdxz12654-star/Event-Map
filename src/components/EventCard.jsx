@@ -5,7 +5,7 @@ import { ko } from 'date-fns/locale'
 import StatusBadge from './StatusBadge'
 import CategoryBadge from './CategoryBadge'
 import CrowdBadge from './CrowdBadge'
-import { getEventStatus, getDaysUntil, categoryMeta, STATUS } from '../data/events'
+import { getEventStatus, getDaysUntil, categoryMeta, parseLocalDate, STATUS } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
@@ -36,11 +36,8 @@ export default function EventCard({ event, compact = false }) {
     }
   }
 
-  // 날짜 문자열을 로컬 자정으로 파싱 (UTC 파싱 시 타임존 오차 방지)
-  const [sy, sm, sd] = event.startDate.split('-').map(Number)
-  const [ey, em, ed] = event.endDate.split('-').map(Number)
-  const start = new Date(sy, sm - 1, sd)
-  const end   = new Date(ey, em - 1, ed)
+  const start = parseLocalDate(event.startDate)
+  const end = parseLocalDate(event.endDate)
   const isSameDay = event.startDate === event.endDate
 
   const dateStr = isSameDay

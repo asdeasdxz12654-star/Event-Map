@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { getEventStatus, categoryMeta, STATUS } from '../data/events'
+import { getEventStatus, categoryMeta, parseLocalDate, STATUS } from '../data/events'
 import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
 import CrowdBadge from '../components/CrowdBadge'
@@ -70,8 +70,6 @@ export default function EventDetailPage() {
   // 보여주면 행사와 무관한 그 장소의 평소 인파를 행사 혼잡도로 오해할 수 있다.
   const showingLiveCongestion = status === STATUS.ONGOING && !!event.seoulPlaceName
   const bookmarked = isBookmarked(event.id)
-  // 날짜 문자열을 로컬 자정으로 파싱한다. new Date("2026-12-04")는 UTC 자정으로 읽혀서,
-  // UTC보다 뒤진 지역(미주 등)에서 보면 하루 앞당겨 표시된다 (EventCard와 같은 방식).
   const start = parseLocalDate(event.startDate)
   const end = parseLocalDate(event.endDate)
   const isSameDay = event.startDate === event.endDate
@@ -282,12 +280,6 @@ export default function EventDetailPage() {
       {showTicketBar && <TicketStickyBar event={event} />}
     </div>
   )
-}
-
-// "2026-12-04" -> 로컬 시간대의 그 날 자정 (data/events.js의 parseLocalDate와 같은 이유)
-function parseLocalDate(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return new Date(y, m - 1, d)
 }
 
 // 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.

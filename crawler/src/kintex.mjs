@@ -15,9 +15,9 @@
 import { EventExtractionSchema } from './schema.mjs'
 import { xmlParser, asArray } from './xml-utils.mjs'
 import { todayKST } from './date-kst.mjs'
+import { UA } from './util.mjs'
 
 const KINTEX_API_URL = 'https://openapi.gg.go.kr/KintexEventFixatn'
-const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
 
 const ROWS_PER_PAGE = 100
 const MAX_PAGES = 5 // 안전장치 — 전체 등록 건수가 몇백 건을 넘어갈 일은 없음

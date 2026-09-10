@@ -36,6 +36,7 @@ import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
 import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
 import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-calendar.mjs'
+import { sleep, htmlToText } from './util.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -69,14 +70,6 @@ title은 반드시 "행사 자체의 정식 명칭"이어야 한다 (예: "지�
 {"is_event":boolean,"title":string|null,"category":"게임전시"|"코스프레"|"게임음악"|"일러스트"|null,"start_date":"YYYY-MM-DD"|null,"end_date":"YYYY-MM-DD"|null,"venue":string|null,"venue_address":string|null,"organizer":string|null,"description":string|null,"ticket_url":string|null,"ticket_open_date":"YYYY-MM-DD"|null,"ticket_open_time":string|null,"ticket_open_note":string|null,"admission_fee":string|null,"website":string|null,"tags":string[]|null,"confidence":"high"|"medium"|"low"}
 ticket_open_time은 기사에 "오후 8시 오픈", "20:00부터 예매 시작"처럼 예매 시작 시각이 명시된 경우에만 그 표현 그대로 채우고, 시각이 안 나와 있으면 null로 둬라.
 ticket_open_note는 "선예매 9/1, 일반예매 9/29"처럼 예매 단계가 여러 개일 때만 전체 일정을 한 문장으로 요약해 채우고, 단계가 하나뿐이면 null로 둬라. 이때 ticket_open_date/ticket_open_time에는 그중 가장 이른(선예매) 단계의 날짜/시각을 채워라.`
-
-function stripHtml(html = '') {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 const GROQ_MAX_RETRIES = 5 // 무료 티어 분당 토큰 한도(TPM)에 자주 걸려서, 서버가 알려주는
 // 대기 시간만큼 기다렸다가 재시도한다 (고정 딜레이보다 실제 토큰 버킷 상태에 맞게 정확함).
@@ -133,7 +126,7 @@ function isOverseasVenue(venue, venueAddress) {
 async function extractEvent(item) {
   const articleText = [
     `제목: ${item.title}`,
-    `요약: ${stripHtml(item.contentSnippet ?? item.content ?? '')}`,
+    `요약: ${htmlToText(item.contentSnippet ?? item.content ?? '')}`,
     item.pubDate ? `발행일: ${item.pubDate}` : null,
     `링크: ${item.link}`,
   ].filter(Boolean).join('\n')

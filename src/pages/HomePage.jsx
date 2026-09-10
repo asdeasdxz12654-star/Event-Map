@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import EventCard from '../components/EventCard'
 import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
@@ -63,20 +63,27 @@ export default function HomePage() {
     setMonth: setActiveMonth,
   } = useHomeFilters()
 
-  const statusCounts = {
+  // 목록 전체를 세 번 훑는 집계라, 검색어를 한 글자 칠 때마다 다시 돌 이유가 없다.
+  const statusCounts = useMemo(() => ({
     [STATUS.UPCOMING]: filterByStatus(events, STATUS.UPCOMING).length,
     [STATUS.ONGOING]:  filterByStatus(events, STATUS.ONGOING).length,
     [STATUS.ENDED]:    filterByStatus(events, STATUS.ENDED).length,
-  }
+  }), [events])
 
-  const baseBeforeMonth = filterBySearch(
+  // 상태·카테고리·검색·매진까지 거른 목록. 월 필터 버튼(activeMonths)은 "이 조건에서
+  // 행사가 있는 달"이라 월 선택 전 단계의 결과로 만들어야 한다.
+  const baseBeforeMonth = useMemo(() => filterBySearch(
     filterByCategory(filterByStatus(events, activeStatus), activeCategory),
     search
-  ).filter(e => !hideSoldout || e.ticketStatus !== 'soldout')
+  ).filter(e => !hideSoldout || e.ticketStatus !== 'soldout'),
+  [events, activeStatus, activeCategory, search, hideSoldout])
 
-  const activeMonths = getActiveMonths(baseBeforeMonth) // ['2026-09', '2026-10', ...]
-  const base = filterByMonth(baseBeforeMonth, activeMonth)
-  const filtered = sort === 'newest' ? sortByNewest(base) : base
+  const activeMonths = useMemo(() => getActiveMonths(baseBeforeMonth), [baseBeforeMonth]) // ['2026-09', ...]
+
+  const filtered = useMemo(() => {
+    const base = filterByMonth(baseBeforeMonth, activeMonth)
+    return sort === 'newest' ? sortByNewest(base) : base
+  }, [baseBeforeMonth, activeMonth, sort])
 
   // 한 해 안이면 "9월", 내년 행사까지 섞여 보이면 "26.9월"처럼 연도를 붙여 구분한다.
   const spansMultipleYears = new Set(activeMonths.map(ym => ym.slice(0, 4))).size > 1

@@ -18,9 +18,9 @@
 
 import { EventExtractionSchema } from './schema.mjs'
 import { todayKST } from './date-kst.mjs'
+import { UA } from './util.mjs'
 
 const CALENDAR_URL = 'https://comicw.co.kr/c'
-const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
 
 // 해외 개최 행사는 이 사이트 범위가 아니다 (crawl.mjs의 해외 필터와 같은 취지).
 const OVERSEAS_HINTS = [

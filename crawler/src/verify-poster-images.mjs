@@ -21,6 +21,7 @@
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY(--repick일 때만)
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
+import { sleep } from './util.mjs'
 import { findPosterCandidates } from './serpapi-image.mjs'
 import { isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isResaleUrl, isOfficialHost } from './poster-filter.mjs'
 
@@ -28,8 +29,6 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 const REPICK = process.argv.includes('--repick')
 const DRY_RUN = process.argv.includes('--dry-run')
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 async function setPoster(eventId, posterUrl) {
   if (DRY_RUN) return true

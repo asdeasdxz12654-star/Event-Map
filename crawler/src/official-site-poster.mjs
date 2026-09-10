@@ -15,9 +15,8 @@
 //   호출하는 쪽에서 isDedicatedSite()로 "이 행사 전용 사이트인지" 확인하고 부른다.
 //   예매처·SNS·전시장·행사 모음 사이트는 여기서도 한 번 더 막는다.
 import { isAggregatorUrl, isNewsPhotoUrl, isSharedPlatform, isUsableImageUrl } from './poster-filter.mjs'
+import { UA, fetchHtml } from './util.mjs'
 
-const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
-const HTML_TIMEOUT_MS = 15_000
 const IMAGE_HEAD_BYTES = 65_536 // 크기 정보는 파일 앞부분에 있다 — 통째로 받지 않는다
 // 카드 썸네일로 쓰기엔 너무 무거운 원본은 거른다. 포켓몬 키비주얼 원본이 8.2MB였는데,
 // 그걸 목록 카드에 그대로 걸면 모바일에서 목록 한 화면에 수십 MB를 받게 된다.
@@ -37,18 +36,6 @@ const NOT_POSTER_HINTS = ['logo', 'icon', 'btn_', '/btn', 'button', 'sprite', 'b
 
 function absoluteUrl(src, baseUrl) {
   try { return new URL(src, baseUrl).href } catch { return null }
-}
-
-async function fetchHtml(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(HTML_TIMEOUT_MS),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const type = res.headers.get('content-type') ?? ''
-  if (!type.includes('html')) throw new Error(`HTML이 아님 (${type})`)
-  return await res.text()
 }
 
 // 이미지 파일 앞부분만 받아 가로·세로를 읽는다. 포스터인지 로고인지는 크기·비율로

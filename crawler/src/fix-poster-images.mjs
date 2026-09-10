@@ -18,13 +18,12 @@ import { fetchEventPosterUrl, isQuotaExhausted } from './serpapi-image.mjs'
 import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
 import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
 import { todayKST } from './date-kst.mjs'
+import { sleep } from './util.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
 const DRY_RUN = process.argv.includes('--dry-run')
 const LIMIT = Number(process.argv[process.argv.indexOf('--limit') + 1]) || Infinity
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 // 포스터를 찾는 순서: 공식 사이트 배너 -> 이미지 검색.
 // 앞쪽은 주최 측이 직접 올린 자료라 더 정확하고 검색 크레딧도 안 든다. 다만 여러 행사가

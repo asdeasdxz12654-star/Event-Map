@@ -33,7 +33,7 @@ const PROMO_KEYWORDS = ['포스터', '포스타', '키비주얼', '키 비주얼
 // ("a.co.kr"과 "b.co.kr"이 같은 도메인으로 잡힌다).
 const SECOND_LEVEL_KR = new Set(['co', 'or', 'ne', 'go', 're', 'pe', 'ac', 'hs', 'ms', 'es', 'sc', 'kg'])
 
-function hostOf(url) {
+export function hostOf(url) {
   try { return new URL(url).hostname.toLowerCase().replace(/^www\./, '') } catch { return '' }
 }
 

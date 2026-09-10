@@ -3,6 +3,7 @@
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, GROQ_API_KEY
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
+import { sleep, htmlToText } from './util.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const FIX = process.argv.includes('--fix')
@@ -10,9 +11,6 @@ const FIX = process.argv.includes('--fix')
 const NAVER_NEWS_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/news'
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const GROQ_MODEL = 'openai/gpt-oss-20b'
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-function stripHtml(s = '') { return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }
 
 // 타이틀 패턴으로 주최사를 확정할 수 있는 경우를 먼저 처리한다.
 const KNOWN_ORGANIZERS = [
@@ -152,7 +150,7 @@ async function main() {
       continue
     }
 
-    const snippets = items.map(i => `${stripHtml(i.title)} — ${stripHtml(i.description)}`).slice(0, 5)
+    const snippets = items.map(i => `${htmlToText(i.title)} — ${htmlToText(i.description)}`).slice(0, 5)
     const organizer = await extractOrganizerWithGroq(event.title, snippets)
 
     if (!organizer) {

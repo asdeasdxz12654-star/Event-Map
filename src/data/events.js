@@ -36,7 +36,10 @@ export function categoryMeta(category) {
   return CATEGORY_META[category] ?? UNKNOWN_CATEGORY_META
 }
 
-function parseLocalDate(dateStr) {
+// "2026-12-04" -> 로컬 시간대의 그 날 자정.
+// new Date("2026-12-04")는 UTC 자정으로 읽혀서, UTC보다 뒤진 지역에서 보면 하루 앞당겨
+// 표시된다. 날짜만 있는 값(행사 시작·종료일)은 전부 이 함수로 파싱한다.
+export function parseLocalDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d)
 }

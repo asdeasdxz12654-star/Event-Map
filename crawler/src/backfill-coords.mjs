@@ -4,12 +4,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
+import { sleep } from './util.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms))
-}
 
 async function main() {
   let events

@@ -23,6 +23,7 @@ import { XMLParser } from 'fast-xml-parser'
 import { EventExtractionSchema } from './schema.mjs'
 import { asArray } from './xml-utils.mjs'
 import { compactKST } from './date-kst.mjs'
+import { htmlToText } from './util.mjs'
 
 // xml-utils.mjs의 공유 xmlParser(엔티티 확장 기본 한도 1000)를 안 쓰고 별도 인스턴스를 둔다 —
 // 이 API는 응답 하나에 항목이 100개씩 들어있고 각 항목의 description에 &amp;/&nbsp;/&lt;br/&gt;
@@ -59,22 +60,8 @@ const GENERIC_KEYWORDS = [
   '만화축제', '만화페스티벌',
 ]
 
-function stripHtml(html = '') {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 function rowText(row) {
-  return `${row.title ?? ''} ${stripHtml(row.description ?? '')}`
+  return `${row.title ?? ''} ${htmlToText(row.description ?? '')}`
 }
 
 function looksRelevant(row) {
@@ -201,7 +188,7 @@ export function buildCulturePerformanceDraft(candidate) {
     venue: raw.eventSite ?? null,
     venue_address: null, // 응답에 주소 필드 없음 (장소명만 제공)
     organizer: null, // contactPoint는 전화번호/문의처라 조직명으로 쓰기 부적절해 비움
-    description: stripHtml(raw.description ?? '').slice(0, 200) || null,
+    description: htmlToText(raw.description ?? '').slice(0, 200) || null,
     ticket_url: null,
     ticket_open_date: null,
     ticket_open_time: null,

@@ -3,11 +3,10 @@
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
+import { sleep } from './util.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 // 장소명 키워드 → 도로명 주소 매핑
 const VENUE_ADDRESS_MAP = [

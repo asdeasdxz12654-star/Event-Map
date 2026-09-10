@@ -11,14 +11,13 @@
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
+import { sleep } from './util.mjs'
 import { lookupVenue } from './naver-local.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
 const FIX = process.argv.includes('--fix')
 const MAX_DRIFT_KM = 2
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 // 하버사인 — 두 좌표 사이 거리(km)
 function distanceKm(a, b) {

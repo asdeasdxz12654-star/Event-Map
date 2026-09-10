@@ -26,18 +26,13 @@
 import { pathToFileURL } from 'node:url'
 import {
   coreNameToken, isAggregatorUrl, isExcludedDomain, isNewsPhotoUrl,
-  isResaleUrl, isSharedPlatform, nameOverlapScore,
+  isResaleUrl, isSharedPlatform, hostOf, nameOverlapScore,
 } from './poster-filter.mjs'
 import { serpapiSearch, hasSearchAccess } from './serpapi.mjs'
+import { UA } from './util.mjs'
 
 // 행사를 설명하지만 공식 사이트는 아닌 곳 — 여기 링크를 "공식 사이트"로 걸면 안 된다.
 const REFERENCE_HOSTS = ['namu.wiki', 'wikipedia.org', 'wikiwand.com', 'fandom.com', 'everytime.kr']
-
-const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
-
-function hostOf(url) {
-  try { return new URL(url).hostname.toLowerCase().replace(/^www\./, '') } catch { return '' }
-}
 
 function isReferenceHost(url) {
   const host = hostOf(url)

@@ -22,8 +22,7 @@
 //   되므로 한 번 반려한 항목이 다시 올라오지는 않는다.
 import { EventExtractionSchema } from './schema.mjs'
 import { todayKST } from './date-kst.mjs'
-
-const UA = 'Mozilla/5.0 (compatible; EventMapCrawler/1.0; +https://github.com)'
+import { decodeEntities, fetchHtml } from './util.mjs'
 
 // 전시장 일정표에서 "우리 사이트가 다루는 행사"로 볼 제목 키워드.
 // 없는 것보다 좁게 잡는다 — 놓친 행사는 다른 소스(뉴스·서브컬처 일정표)에서 잡히지만,
@@ -78,27 +77,6 @@ function monthsToScan(today = todayKST()) {
 
 function collapse(html) {
   return html.replace(/\s+/g, ' ')
-}
-
-function decodeEntities(text = '') {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#160;/g, ' ')
-    .trim()
-}
-
-async function fetchHtml(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA },
-    signal: AbortSignal.timeout(20_000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return await res.text()
 }
 
 // ── 벡스코 ────────────────────────────────────────────────────────────────
