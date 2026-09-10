@@ -13,5 +13,9 @@ export function useBookmarks() {
     setIds(ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
   }
 
-  return { bookmarkIds: ids, isBookmarked, toggleBookmark }
+  function clearBookmarks() {
+    setIds([])
+  }
+
+  return { bookmarkIds: ids, isBookmarked, toggleBookmark, clearBookmarks }
 }

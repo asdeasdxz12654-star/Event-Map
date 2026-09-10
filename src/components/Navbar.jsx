@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
-import NotificationBell from './NotificationBell'
-import InstallAppButton from './InstallAppButton'
-import AdminModal from './AdminModal'
+import SettingsModal from './SettingsModal'
 import { useAdmin } from '../contexts/AdminContext'
 
 const tabs = [
@@ -12,7 +10,7 @@ const tabs = [
 ]
 
 export default function Navbar() {
-  const [showAdmin, setShowAdmin] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const { isAdmin } = useAdmin()
 
   return (
@@ -45,23 +43,23 @@ export default function Navbar() {
               <span className="hidden sm:inline"> {label}</span>
             </NavLink>
           ))}
-          <InstallAppButton />
-          <NotificationBell />
+          {/* 알림·앱 설치·관리자는 전부 설정 안으로 옮겼다 — 이모지 아이콘만 늘어놓으면
+              무슨 기능인지 알 수 없고, 좁은 화면에서 탭과 뒤엉킨다. */}
           <button
-            onClick={() => setShowAdmin(true)}
-            title="관리자"
-            aria-label="관리자"
+            onClick={() => setShowSettings(true)}
+            title="설정"
+            aria-label="설정"
             className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-colors ${
               isAdmin
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+                : 'text-zinc-400 hover:text-white hover:bg-white/10'
             }`}
           >
             ⚙
           </button>
         </nav>
       </div>
-      {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </header>
   )
 }
