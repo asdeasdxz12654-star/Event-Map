@@ -29,7 +29,8 @@ import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from 
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 import { fetchEventPosterUrl } from './serpapi-image.mjs'
-import { resolveOfficialUrls } from './official-site-lookup.mjs'
+import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
+import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -196,7 +197,13 @@ async function attachPosterImage(eventId, title, officialUrls = [], eventYear = 
     website: existing?.website ?? officialUrls[0],
     ticket_url: existing?.ticket_url ?? officialUrls[1],
   })
-  const posterUrl = await fetchEventPosterUrl(title, resolved, eventYear)
+  // 공식 사이트 배너를 먼저 보고, 없으면 이미지 검색으로 넘어간다.
+  const site = resolved[0]
+  const posterUrl =
+    (site && await isDedicatedSite(supabase, site)
+      ? await fetchPosterFromOfficialSite(site, { eventYear })
+      : null) ??
+    await fetchEventPosterUrl(title, resolved, eventYear)
   if (!posterUrl) return
   const { error } = await supabase
     .from('events')

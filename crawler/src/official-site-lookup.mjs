@@ -19,8 +19,10 @@
 // 사이트라 1·2번만으론 다 통과한다 — 실제로 "2026 대전콘텐츠페어"는 아이뉴스24 기사가,
 // "제35회 디. 페스타"는 동인 행사 모음(dongne.co)이 1등이었다. 첫 화면 제목을 보면
 // 갈린다: dcfair.co.kr는 "대전콘텐츠페어"인데 m.inews24.com은 "아이뉴스24 모바일"이다.
-// 대신 회사 사이트 안에 행사 페이지만 있는 경우(포켓몬코리아의 "피카츄의 가을 나들이")는
-// 놓친다. 그건 known-events.mjs에 손으로 넣는 편이 안전하다.
+// 회사 사이트 안에 행사 페이지만 있는 경우(포켓몬코리아의 "피카츄의 가을 나들이")는 3번을
+// 만족할 수 없어서 못 찾는다. 그 페이지 자체의 <title>로 대신 판정해 봤더니 기사 제목에도
+// 행사명이 그대로 들어 있어서 뉴스 기사가 통과했다(대전콘텐츠페어 -> 아이뉴스24 기사).
+// 그런 행사는 known-events.mjs에 주소를 손으로 넣는 편이 안전하다.
 import { pathToFileURL } from 'node:url'
 import {
   coreNameToken, isAggregatorUrl, isExcludedDomain, isNewsPhotoUrl,
@@ -66,11 +68,11 @@ async function isReachable(url) {
 // 도메인 첫 화면의 <title>. 같은 호스트를 여러 번 받지 않게 한 번 본 건 기억해둔다.
 const rootTitleCache = new Map()
 
-async function rootTitle(host) {
-  if (rootTitleCache.has(host)) return rootTitleCache.get(host)
+async function pageTitleOf(pageUrl) {
+  if (rootTitleCache.has(pageUrl)) return rootTitleCache.get(pageUrl)
   let title = ''
   try {
-    const res = await fetch(`https://${host}/`, {
+    const res = await fetch(pageUrl, {
       headers: { 'User-Agent': UA },
       redirect: 'follow',
       signal: AbortSignal.timeout(10_000),
@@ -80,9 +82,12 @@ async function rootTitle(host) {
       title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() ?? ''
     }
   } catch { /* 못 받으면 빈 제목 = 확인 실패 = 채택 안 함 */ }
-  rootTitleCache.set(host, title)
+  rootTitleCache.set(pageUrl, title)
   return title
 }
+
+// 도메인 첫 화면의 <title>
+const rootTitle = host => pageTitleOf(`https://${host}/`)
 
 // 행사명으로 공식 사이트를 찾는다. 못 찾으면 null.
 // 찾으면 { url, host, title } — url은 검색 결과가 가리킨 페이지 그대로다
@@ -148,6 +153,21 @@ export async function resolveOfficialUrls(supabase, event, { save = true } = {})
     if (error) console.warn(`  -> 공식 사이트 저장 실패: ${error.message}`)
   }
   return [site.url]
+}
+
+// 이 주소가 "그 행사 전용 사이트"인지. 같은 website를 쓰는 행사가 둘 이상이면 전용이 아니다.
+//
+// 공식 사이트 첫 화면의 배너를 포스터로 쓰려면(official-site-poster.mjs) 이 확인이 꼭
+// 필요하다. comicw.net은 코믹월드·문구전·부코 등 여러 행사의 website로 들어가 있는데,
+// 그 첫 화면 배너는 "지금 미는 행사" 것이라 나머지 행사에 붙이면 남의 포스터가 된다.
+export async function isDedicatedSite(supabase, website) {
+  if (!website) return false
+  const { count, error } = await supabase
+    .from('events')
+    .select('id', { count: 'exact', head: true })
+    .eq('website', website)
+  if (error) return false
+  return count === 1
 }
 
 // DB 없이 한 건만 확인해 보고 싶을 때:
