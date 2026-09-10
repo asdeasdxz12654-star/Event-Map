@@ -48,3 +48,12 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+
+      # 이미 저장돼 있는 포스터 중 큰 것도 같이 줄인다. 주최 측이 인쇄용 원본을 그대로
+      # 올려두는 경우가 많아서(7MB짜리도 있었다) 목록 첫 화면이 무거워진다.
+      # 검색을 안 쓰므로 SerpAPI 크레딧과는 무관하다.
+      - name: 큰 포스터 용량 줄이기
+        run: node src/optimize-poster-images.mjs ${{ inputs.apply && '--apply' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

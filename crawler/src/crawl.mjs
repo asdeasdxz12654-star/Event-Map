@@ -31,6 +31,7 @@ import { lookupVenueCoords } from './naver-local.mjs'
 import { fetchEventPosterUrl } from './serpapi-image.mjs'
 import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
 import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
+import { storePoster } from './poster-storage.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -199,9 +200,11 @@ async function attachPosterImage(eventId, title, officialUrls = [], eventYear = 
       ? await fetchPosterFromOfficialSite(site, { eventYear })
       : null)
   if (!posterUrl) return
+  // 큰 포스터는 줄여서 우리 저장소 사본으로 (poster-storage.mjs)
+  const finalUrl = await storePoster(supabase, eventId, posterUrl) ?? posterUrl
   const { error } = await supabase
     .from('events')
-    .update({ poster_url: posterUrl })
+    .update({ poster_url: finalUrl })
     .eq('id', eventId)
     .is('poster_url', null) // 이미 포스터가 있으면 덮어쓰지 않음
   if (error) console.warn('  [이미지] 포스터 저장 실패:', error.message)

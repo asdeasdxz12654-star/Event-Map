@@ -17,6 +17,7 @@ import { fetchAllRows } from './db.mjs'
 import { fetchEventPosterUrl, isQuotaExhausted } from './serpapi-image.mjs'
 import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
 import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
+import { storePoster } from './poster-storage.mjs'
 import { todayKST } from './date-kst.mjs'
 import { sleep } from './util.mjs'
 
@@ -83,14 +84,19 @@ async function main() {
     }
 
     if (DRY_RUN) {
+      // 저장은 안 하지만 "얼마나 줄어드는지"는 미리 보여준다
+      await storePoster(supabase, event.id, posterUrl, { dryRun: true })
       updated++
       await sleep(300)
       continue
     }
 
+    // 인쇄용 원본처럼 큰 포스터는 줄여서 우리 저장소에 두고 그 주소를 쓴다.
+    const finalUrl = await storePoster(supabase, event.id, posterUrl) ?? posterUrl
+
     const { error: updateError } = await supabase
       .from('events')
-      .update({ poster_url: posterUrl })
+      .update({ poster_url: finalUrl })
       .eq('id', event.id)
 
     if (updateError) {
