@@ -7,7 +7,8 @@
 body {
   background-color: #0f0f1a;
   color: #f1f1f5;
-  font-family: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+  /* Pretendard Variable = index.html에서 불러오는 웹폰트, Pretendard = 기기에 깔려 있는 경우 */
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
   overflow-wrap: break-word;

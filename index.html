@@ -11,6 +11,17 @@
     <meta name="description" content="국내 게임·코스프레·게임음악·일러스트 행사 통합 정보 플랫폼" />
     <title>게임이벤트허브</title>
 
+    <!-- 본문 서체(Pretendard). 지금까지 CSS에 이름만 적어두고 실제로 불러오지는 않아서,
+         Pretendard가 깔려 있지 않은 기기(=대부분)에서는 시스템 폰트로 대체되고 있었다.
+         한글은 자소가 많아 통째로 받으면 무거우므로, 페이지에 실제로 쓰인 글자에 해당하는
+         조각만 내려받는 dynamic subset을 쓴다(font-display: swap 포함).
+         이 CDN은 public/_headers의 CSP(style-src/font-src)에도 함께 등록해야 한다. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+
     <!-- iOS 사파리는 웹앱 매니페스트의 display/이름을 안 보고 아래 메타를 본다.
          홈 화면에 추가했을 때 주소창 없는 앱처럼 뜨게 하는 설정. -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -18,10 +29,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="이벤트허브" />
 
-    <!-- 정적 SPA(GitHub Pages)라 카카오톡·트위터 등 링크 미리보기 봇은 JS를 안 돌리고
-         이 태그들만 읽는다 — 그래서 "행사별" 미리보기는 서버 렌더링 없인 못 만들고,
-         최소한 사이트 전체를 공유했을 때 제목/설명/이미지가 나오도록 기본값을 둔다.
-         (individual event 공유는 document.title만 바뀔 뿐 og 태그는 그대로임 — 알려진 한계) -->
+    <!-- 정적 SPA라 카카오톡·트위터 등 링크 미리보기 봇은 JS를 안 돌리고 이 태그들만 읽는다.
+         여기 있는 값은 "사이트 전체를 공유했을 때"의 기본값이다.
+         행사별 미리보기(/events/:id)는 Cloudflare Pages에서 functions/events/[id].js가
+         이 태그들을 그 행사 값으로 바꿔서 내려준다 — 아래 태그를 지우거나 이름을 바꾸면
+         그 함수의 선택자도 같이 고쳐야 한다.
+         GitHub Pages 배포는 함수를 못 돌리므로 거기서는 이 기본값이 그대로 나간다. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="게임이벤트허브" />
     <meta property="og:title" content="게임이벤트허브 — 국내 게임·코스프레·게임음악·일러스트 행사 정보" />
