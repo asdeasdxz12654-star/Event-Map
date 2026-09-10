@@ -1,7 +1,7 @@
 // poster_url이 없는 행사에 이미지 검색(SerpAPI)으로 포스터를 일괄 등록한다.
 //
 // 실행:
-//   node src/fix-poster-images.mjs            # 찾아서 저장
+//   node src/fix-poster-images.mjs            # 찾아서 저장 (--apply를 붙여도 같다)
 //   node src/fix-poster-images.mjs --dry-run  # 무엇을 넣을지 출력만 (저장 안 함)
 //   node src/fix-poster-images.mjs --limit 10 # 가까운 행사부터 N건만 (SerpAPI 크레딧 절약)
 //

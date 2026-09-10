@@ -41,7 +41,9 @@ jobs:
       - run: npm install
 
       - name: 포스터 채우기
-        run: node src/fix-poster-images.mjs --limit ${{ inputs.count }} ${{ inputs.apply && '' || '--dry-run' }}
+        # --apply는 저장을 뜻하는 게 아니라(저장이 기본) 여기서 빈 문자열을 못 쓰기 때문이다.
+        # GitHub 식에서 빈 문자열은 거짓이라 `apply && '' || '--dry-run'`은 항상 --dry-run이 된다.
+        run: node src/fix-poster-images.mjs --limit ${{ inputs.count }} ${{ inputs.apply && '--apply' || '--dry-run' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
