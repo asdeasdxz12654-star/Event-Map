@@ -8,13 +8,20 @@
 //
 // 판정 기준
 //   깨짐   : URL이 안 열리거나 이미지가 아님 -> poster_url을 비운다(카테고리 기본 이미지로 표시)
-//   의심   : 열리긴 하는데, 지금 기준으로 다시 검색했을 때 관련 후보 목록에 없음
-//            -> 기본은 보고만, --repick이면 관련 있는 이미지로 교체
+//   부적합 : 열리지만 기사 사진·중고거래 매물 사진이라 쓸 수 없음 -> 깨짐과 같이 처리
+//   의심   : 여러 행사가 같은 이미지를 쓰고 있거나(공용 사진), --repick으로 다시 검색했을 때
+//            관련 후보 목록에 없음 -> 기본은 보고만, --repick이면 교체하거나 비운다
 //
 // 관리자가 직접 손댄 행사(admin_edited_at)는 건드리지 않고 보고만 한다.
-// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
+//
+// SerpAPI 무료 플랜은 월 250회라 "행사마다 재검색"을 아무 때나 돌릴 수 없다. 그래서
+// 검색은 --repick일 때만 한다 — 기본 실행은 검색 없이 할 수 있는 검사(링크가 열리는지,
+// 기사·중고거래 사진인지, 여러 행사가 같은 이미지를 쓰는지)만 하고 보고한다.
+//
+// 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY(--repick일 때만)
 import { createClient } from '@supabase/supabase-js'
-import { findPosterCandidates, isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isOfficialHost } from './naver-image.mjs'
+import { findPosterCandidates } from './serpapi-image.mjs'
+import { isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isResaleUrl, isOfficialHost } from './poster-filter.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -64,13 +71,16 @@ async function main() {
   for (const event of events) {
     // 언론사 기사 사진·스톡 이미지는 열리더라도 쓸 수 없다 (공식 홍보물이 아니고,
     // 식별 가능한 개인이 찍혀 있으며, 언론사 서버 핫링크다).
+    // 중고거래 매물 사진도 마찬가지다 — 남의 방바닥에 놓인 굿즈 사진이다.
     const newsPhoto = isNewsPhotoUrl(event.poster_url)
-    const reachable = !newsPhoto &&
+    const resale = isResaleUrl(event.poster_url)
+    const reachable = !newsPhoto && !resale &&
       !isExcludedDomain(event.poster_url) &&
       await isUsableImageUrl(event.poster_url)
 
     if (!reachable) {
-      console.log(`[${newsPhoto ? '부적합(기사·스톡 사진)' : '깨짐'}] ${event.title}`)
+      const reason = newsPhoto ? '부적합(기사·스톡 사진)' : resale ? '부적합(중고거래 사진)' : '깨짐'
+      console.log(`[${reason}] ${event.title}`)
       console.log(`  ${event.poster_url}`)
       if (event.admin_edited_at) {
         console.log('  -> 관리자 수정 행사라 건드리지 않음')
@@ -105,10 +115,11 @@ async function main() {
     const fromOfficialSite = isOfficialHost(event.poster_url, officialUrls)
 
     // 그 외에는 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
-    const candidates = await findPosterCandidates(event.title, officialUrls, eventYear)
+    // 검색은 SerpAPI 크레딧을 쓰므로 --repick(고칠 준비가 된 실행)일 때만 한다.
+    const candidates = REPICK ? await findPosterCandidates(event.title, officialUrls, eventYear) : []
     // 다른 행사와 같은 이미지를 쓰고 있으면 관련성 결과와 무관하게 의심으로 본다.
     const stillRelevant = fromOfficialSite ||
-      (!sharedUrls.has(event.poster_url) && candidates.some(c => c.link === event.poster_url))
+      (!sharedUrls.has(event.poster_url) && (!REPICK || candidates.some(c => c.link === event.poster_url)))
 
     // 예전엔 "검색 결과가 없으면 판단 근거가 없다"며 그대로 뒀는데, 공식 자료만 채택하도록
     // 기준을 조인 뒤로는 후보가 0건인 게 흔해져서 그 경로로 잘못된 이미지가 계속 살아남았다
@@ -134,7 +145,8 @@ async function main() {
     }
 
     if (!REPICK) {
-      console.log(`  -> 후보 ${candidates.length}건 있음 (--repick으로 교체)`)
+      // 검색을 안 했으므로 여기까지 온 건 "여러 행사가 같은 이미지를 쓰는" 경우다.
+      console.log('  -> 여러 행사가 공유 중인 이미지 (--repick으로 재검색·교체)')
       await sleep(200)
       continue
     }

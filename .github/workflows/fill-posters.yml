@@ -1,0 +1,48 @@
+name: Fill event posters
+
+# poster_url이 비어 있는 행사에 공식 포스터를 채운다 (SerpAPI 구글·빙 이미지 검색).
+#
+# SerpAPI 무료 플랜이 월 250회뿐이라 정기 실행이 아니라 Actions 탭에서 필요할 때
+# 수동으로 돌린다. 행사 한 건에 검색 1~3회가 나가므로 count로 나눠서 돌리는 게 안전하다
+# (공식 사이트를 아는 행사는 대개 1회로 끝난다).
+#
+# 기본값은 "찾기만" 이다 — 어떤 이미지가 들어갈지 로그로 먼저 확인하고,
+# 납득이 되면 apply를 켜서 다시 돌리면 실제로 저장한다.
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: '몇 건이나 처리할지 (SerpAPI 크레딧 절약)'
+        type: choice
+        options:
+          - '10'
+          - '25'
+          - '50'
+          - '100'
+        default: '10'
+      apply:
+        description: '실제로 저장까지 할지 (끄면 찾기만)'
+        type: boolean
+        default: false
+
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: 포스터 채우기
+        run: node src/fix-poster-images.mjs --limit ${{ inputs.count }} ${{ inputs.apply && '' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}

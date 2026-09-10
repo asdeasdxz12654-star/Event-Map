@@ -17,7 +17,7 @@
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택), KINTEX_API_KEY(선택),
-//         KMRB_API_KEY(선택), CULTURE_PERFORMANCE_API_KEY(선택)
+//         KMRB_API_KEY(선택), CULTURE_PERFORMANCE_API_KEY(선택), SERPAPI_KEY(선택, 포스터 검색)
 import { createClient } from '@supabase/supabase-js'
 import { EventExtractionSchema } from './schema.mjs'
 import { fetchKopisCandidates, buildKopisDraft } from './kopis.mjs'
@@ -26,7 +26,7 @@ import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
 import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from './culture-performance.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
-import { fetchEventPosterUrl } from './naver-image.mjs'
+import { fetchEventPosterUrl } from './serpapi-image.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -169,7 +169,7 @@ async function attachCoords(eventId, venue, venueAddress) {
   else console.log(`  -> 좌표 설정: ${coords.lat}, ${coords.lng}`)
 }
 
-// 네이버 이미지 검색으로 포스터를 찾아 events에 업데이트한다.
+// 이미지 검색(SerpAPI)으로 포스터를 찾아 events에 업데이트한다.
 // 이미 포스터가 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
 async function attachPosterImage(eventId, title, officialUrls = [], eventYear = null) {
   if (!eventId) return
