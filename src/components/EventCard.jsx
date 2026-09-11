@@ -157,7 +157,9 @@ export default function EventCard({ event, compact = false }) {
             {dDayLabel}
           </span>
         )}
-        {status !== STATUS.ENDED && (
+        {/* 혼잡도는 행사가 열리고 있을 때만 붙인다. 예정 행사 카드에 "혼잡"이 달려 있으면
+            지금 사람이 몰려 있다는 뜻으로 읽히는데, 아직 시작도 안 한 행사다. */}
+        {status === STATUS.ONGOING && (
           <CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />
         )}
       </div>
@@ -186,8 +188,11 @@ export default function EventCard({ event, compact = false }) {
 
       {ticketNotOpenYet && (
         <div className="mt-2.5 pt-2.5 border-t border-ink/10 text-xs text-indigo-400">
+          {/* 오픈 "시각"이 실제로 줄을 서는 기준이라 목록에서도 같이 보여준다.
+              아직 공식 발표가 없으면 비워두지 않고 미정이라고 밝힌다 — 비어 있으면
+              "종일 아무 때나 열리나?"로 읽힌다. */}
           🎟 예매 오픈: {format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M월 d일', { locale: ko })}
-          {event.ticketOpenTime && ` ${event.ticketOpenTime}`}
+          {event.ticketOpenTime ? ` ${event.ticketOpenTime}` : ' (시간 미정)'}
           {siteName && ` · ${siteName}`}
         </div>
       )}

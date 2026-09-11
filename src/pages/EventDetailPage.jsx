@@ -11,7 +11,7 @@ import NaverMap from '../components/NaverMap'
 import { useEvents } from '../hooks/useEvents'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useBookmarks } from '../hooks/useBookmarks'
-import { downloadEventIcs } from '../utils/ics'
+import { addEventToCalendar, calendarButtonLabel } from '../utils/ics'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
@@ -79,6 +79,20 @@ export default function EventDetailPage() {
     : `${format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })}\n~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
 
   const hasCoords = event.venueLat != null && event.venueLng != null
+
+  // 예매 오픈 안내. 예전엔 ticket_open_date가 있을 때만 줄을 띄웠는데, 그러면 날짜를
+  // 모르는 행사는 "예매 정보가 원래 없는 행사"인지 "아직 안 정해진 것"인지 구분이 안 됐다.
+  // 아는 만큼 적고, 모르면 모른다고 적는다.
+  const ticketOpenText = event.ticketOpenDate
+    ? [
+        format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'yyyy년 M월 d일', { locale: ko }),
+        event.ticketOpenTime ?? '시간 미정',
+        ticketSiteName(event.ticketUrl),
+      ].filter(Boolean).join(' · ')
+    : event.ticketUrl
+      ? [event.ticketStatus === 'soldout' ? '매진' : '예매 진행 중', ticketSiteName(event.ticketUrl)]
+          .filter(Boolean).join(' · ')
+      : '공식 발표 전 (미정)'
 
   // 모바일 하단 고정 예매 바는 "실제로 누를 수 있을 때"만 띄운다 — 매진 행사에서는
   // 누를 수 없는 회색 "매진" 블록이 화면 아래를 계속 차지하기만 했다.
@@ -176,8 +190,15 @@ export default function EventDetailPage() {
             <InfoRow icon="📅" label="기간" value={dateStr} />
             {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
             <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
+            {/* 예매 오픈은 입장료보다 위에 둔다 — "언제부터 살 수 있나"가 "얼마인가"보다
+                먼저 찾는 정보다. 끝난 행사에는 의미가 없으니 그때만 감춘다. */}
+            {status !== STATUS.ENDED && (
+              <InfoRow icon="🎟" label="예매 오픈" value={ticketOpenText} />
+            )}
             <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
-            {event.crowdLevel && !showingLiveCongestion && status !== STATUS.ENDED && (
+            {/* 혼잡도는 행사가 열리고 있을 때만. 예정 행사에 "혼잡" 딱지가 붙어 있으면
+                지금 사람이 몰려 있다는 뜻으로 읽힌다. */}
+            {event.crowdLevel && !showingLiveCongestion && status === STATUS.ONGOING && (
               <InfoRow
                 icon="👥"
                 label="예상 혼잡도"
@@ -186,17 +207,6 @@ export default function EventDetailPage() {
               />
             )}
             <InfoRow icon="🏢" label="주최" value={event.organizer} />
-            {event.ticketOpenDate && (
-              <InfoRow
-                icon="🎟"
-                label="예매 오픈"
-                value={[
-                  format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'yyyy년 M월 d일', { locale: ko }),
-                  event.ticketOpenTime,
-                  ticketSiteName(event.ticketUrl),
-                ].filter(Boolean).join(' · ')}
-              />
-            )}
             {event.ticketOpenNote && (
               <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
             )}
@@ -375,25 +385,30 @@ function TicketStickyBar({ event }) {
   )
 }
 
+// 공식 사이트 버튼. 주소를 아는 행사는 바로 열고, 아직 모르는 행사는 행사명으로
+// 검색 결과를 연다 — 예전엔 website가 없으면 버튼 자체가 사라져서, 행사마다 버튼이
+// 있다 없다 했고 "공식 정보를 어디서 보나"가 막다른 길이었다.
+// (website는 크롤러가 채우지만 못 찾는 행사가 있다 — crawler/src/fix-official-sites.mjs)
+function OfficialSiteButton({ event, className }) {
+  const known = !!event.website
+  const href = known
+    ? event.website
+    : `https://search.naver.com/search.naver?query=${encodeURIComponent(`${event.title} 공식`)}`
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {known ? '공식 사이트 →' : '🔍 공식 정보 검색'}
+    </a>
+  )
+}
+
 function CtaButtons({ event, showTicket = true }) {
+  const quiet = 'w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors'
   return (
     <div className="flex flex-col gap-2">
       {showTicket && <TicketButton event={event} className="w-full py-3.5 rounded-2xl" />}
-      {event.website && (
-        <a
-          href={event.website}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
-        >
-          공식 사이트 →
-        </a>
-      )}
-      <button
-        onClick={() => downloadEventIcs(event)}
-        className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
-      >
-        📅 캘린더에 추가 (.ics)
+      <OfficialSiteButton event={event} className={quiet} />
+      <button onClick={() => addEventToCalendar(event)} className={quiet}>
+        {calendarButtonLabel()}
       </button>
       <ShareButton event={event} />
     </div>

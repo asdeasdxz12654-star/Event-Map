@@ -108,7 +108,10 @@ export default function BoothManager({ eventId, note }) {
     }
   }
 
-  if (loading || (!isAdmin && booths.length === 0 && !note)) return null
+  // PerformerManager와 같은 이유로 항상 자리를 지킨다 — 등록된 부스가 없다고 섹션을
+  // 감추면 행사마다 상세 화면 구성이 달라져서, 정보가 없는 건지 화면이 다른 건지
+  // 알 수가 없다. 비어 있으면 비어 있다고 적는다(DisclosureNote).
+  if (loading) return null
 
   const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 

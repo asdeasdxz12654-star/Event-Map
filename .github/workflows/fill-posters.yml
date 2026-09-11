@@ -59,6 +59,18 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
 
+      # 공식 사이트(website)가 비어 있는 행사도 같이 채운다. 상세 화면의 "공식 사이트"
+      # 버튼이 이 값을 쓰는데, 포스터 채우기 쪽은 "포스터가 없는 행사"만 훑어서
+      # 예매 링크만 있는 행사는 계속 비어 있었다. 검색을 쓰므로 건수를 작게 잡는다.
+      - name: 공식 사이트 채우기
+        # 빈 문자열을 쓰면 안 된다 — GitHub 식에서 ''는 거짓이라 항상 --dry-run이 된다.
+        # 그래서 저장할 때는 스크립트가 무시하는 --apply를 넘긴다(포스터 단계와 같은 방식).
+        run: node src/fix-official-sites.mjs --limit ${{ inputs.count || '10' }} ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+
       # 이미 저장돼 있는 포스터 중 큰 것도 같이 줄인다. 주최 측이 인쇄용 원본을 그대로
       # 올려두는 경우가 많아서(7MB짜리도 있었다) 목록 첫 화면이 무거워진다.
       # 검색을 안 쓰므로 SerpAPI 크레딧과는 무관하다.

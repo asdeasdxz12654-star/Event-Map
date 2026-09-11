@@ -137,7 +137,11 @@ export default function PerformerManager({ eventId, category, note }) {
     }
   }
 
-  if (loading || (!isAdmin && performers.length === 0 && !note)) return null
+  // 예전엔 등록된 항목도 없고 공개 메모(note)도 없으면 섹션을 통째로 감췄다. 그래서
+  // 행사마다 이 칸이 있다 없다 해서, 보는 쪽에서는 "이 행사는 무대 프로그램이 없나?
+  // 아니면 화면이 원래 이런가?"를 구분할 수 없었다. 이제는 항상 자리를 지키고,
+  // 비어 있으면 비어 있다고 적는다(DisclosureNote).
+  if (loading) return null
 
   const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
