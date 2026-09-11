@@ -14,9 +14,9 @@
 // 환경변수: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SERPAPI_KEY
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
-import { fetchEventPosterUrl, isQuotaExhausted } from './serpapi-image.mjs'
-import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
-import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
+import { isQuotaExhausted } from './serpapi-image.mjs'
+import { resolveOfficialUrls } from './official-site-lookup.mjs'
+import { findEventPoster } from './poster-lookup.mjs'
 import { storePoster } from './poster-storage.mjs'
 import { todayKST } from './date-kst.mjs'
 import { sleep } from './util.mjs'
@@ -25,26 +25,6 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 const DRY_RUN = process.argv.includes('--dry-run')
 const LIMIT = Number(process.argv[process.argv.indexOf('--limit') + 1]) || Infinity
-
-// 포스터를 찾는 순서: 이미지 검색 -> 공식 사이트 배너.
-//
-// 검색이 먼저인 이유는 정확도다. "site:공식도메인 포스터"는 파일 이름이 POSTER인 진짜
-// 포스터를 집어내는데, 첫 화면 배너는 같은 사이트라도 캐릭터 컷이나 배경 이미지인 경우가
-// 있다(AGF 첫 화면에서 집히는 건 AGF_POSTER가 아니라 img_character다).
-// 배너는 검색이 빈손일 때의 받침이다 — 포켓몬 메가페스타처럼 검색으로는 안 나오지만
-// 공식 사이트에는 키비주얼이 걸려 있는 행사가 여기서 채워진다. 크레딧도 안 든다.
-async function findPoster(supabase, { title, officialUrls, eventYear }) {
-  const fromSearch = await fetchEventPosterUrl(title, officialUrls, eventYear)
-  if (fromSearch) return fromSearch
-
-  // 여러 행사가 함께 쓰는 사이트(comicw.net 등)의 배너는 이 행사 것이 아니다.
-  const site = officialUrls[0]
-  if (site && await isDedicatedSite(supabase, site, title)) {
-    return await fetchPosterFromOfficialSite(site, { eventYear })
-  }
-  return null
-}
-
 
 async function main() {
   // 지난 행사는 검색하지 않는다. 포스터가 필요한 건 앞으로 열릴 행사고, 끝난 행사까지
@@ -69,7 +49,7 @@ async function main() {
     console.log(`[${event.start_date}] ${event.title}`)
     // 공식 사이트를 알면 "site:도메인 포스터"로 정확히 찾는다. 모르면 먼저 찾아본다.
     const officialUrls = await resolveOfficialUrls(supabase, event, { save: !DRY_RUN })
-    const posterUrl = await findPoster(supabase, {
+    const posterUrl = await findEventPoster(supabase, {
       title: event.title,
       officialUrls,
       eventYear: event.start_date ? Number(event.start_date.slice(0, 4)) : null,

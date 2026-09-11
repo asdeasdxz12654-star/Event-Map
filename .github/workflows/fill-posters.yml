@@ -2,13 +2,22 @@ name: Fill event posters
 
 # poster_url이 비어 있는 행사에 공식 포스터를 채운다 (SerpAPI 구글·빙 이미지 검색).
 #
-# SerpAPI 무료 플랜이 월 250회뿐이라 정기 실행이 아니라 Actions 탭에서 필요할 때
-# 수동으로 돌린다. 행사 한 건에 검색 1~3회가 나가므로 count로 나눠서 돌리는 게 안전하다
-# (공식 사이트를 아는 행사는 대개 1회로 끝난다).
+# 주 1회 자동으로 돈다. 예전엔 수동 실행만 있어서, 등록될 때 포스터를 못 찾은 행사는
+# 누가 Actions 탭에서 직접 돌려주기 전까지 영영 "공식 포스터 미정"으로 남았다.
+# 공식 포스터는 보통 행사 1~3개월 전에 공개되므로, 그때 다시 찾아보는 주기가 필요하다.
+# 대상은 "오늘 이후에 열리고 포스터가 없는 행사"를 가까운 순으로 — 코앞의 행사부터 채워진다.
 #
-# 기본값은 "찾기만" 이다 — 어떤 이미지가 들어갈지 로그로 먼저 확인하고,
-# 납득이 되면 apply를 켜서 다시 돌리면 실제로 저장한다.
+# SerpAPI 무료 플랜이 월 250회뿐이라 한 번에 처리할 건수를 제한한다(행사 한 건에 검색
+# 1~3회. 공식 사이트를 아는 행사는 대개 1회로 끝난다). 한도가 소진되면 스크립트가
+# 그 자리에서 멈추므로 다음 주에 이어서 채워진다.
+#
+# 수동 실행(workflow_dispatch)의 기본값은 "찾기만" 이다 — 어떤 이미지가 들어갈지 로그로
+# 먼저 확인하고, 납득이 되면 apply를 켜서 다시 돌리면 실제로 저장한다.
+# 자동 실행(schedule)은 저장까지 한다.
 on:
+  schedule:
+    # 매주 월요일 22:30 UTC = 화요일 07:30 KST. 일일 크롤(21:00 UTC)·알림(22:00 UTC) 뒤.
+    - cron: '30 22 * * 1'
   workflow_dispatch:
     inputs:
       count:
@@ -43,7 +52,8 @@ jobs:
       - name: 포스터 채우기
         # --apply는 저장을 뜻하는 게 아니라(저장이 기본) 여기서 빈 문자열을 못 쓰기 때문이다.
         # GitHub 식에서 빈 문자열은 거짓이라 `apply && '' || '--dry-run'`은 항상 --dry-run이 된다.
-        run: node src/fix-poster-images.mjs --limit ${{ inputs.count }} ${{ inputs.apply && '--apply' || '--dry-run' }}
+        # schedule로 돌 때는 inputs가 비어 있다 — 그때는 10건을 실제로 저장한다.
+        run: node src/fix-poster-images.mjs --limit ${{ inputs.count || '10' }} ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -53,7 +63,7 @@ jobs:
       # 올려두는 경우가 많아서(7MB짜리도 있었다) 목록 첫 화면이 무거워진다.
       # 검색을 안 쓰므로 SerpAPI 크레딧과는 무관하다.
       - name: 큰 포스터 용량 줄이기
-        run: node src/optimize-poster-images.mjs ${{ inputs.apply && '--apply' || '--dry-run' }}
+        run: node src/optimize-poster-images.mjs ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

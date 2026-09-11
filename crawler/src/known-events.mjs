@@ -1,5 +1,6 @@
 // 날짜를 공식으로 계산할 수 있는 정기 행사를 LLM 없이 event_drafts에 직접 삽입한다.
 import { lookupVenueCoords } from './naver-local.mjs'
+import { attachEventPoster } from './poster-lookup.mjs'
 import { todayKST } from './date-kst.mjs'
 // source_url: known-event://{slug}/{year} 형식으로 연도별 중복 삽입을 방지한다.
 // promote_event_draft() 트리거의 title+start_date dedup으로 events 테이블 중복도 방지된다.
@@ -568,6 +569,19 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
         .is('admin_edited_at', null)
       if (posterError) console.warn(`[known-events] 포스터 저장 실패:`, posterError.message)
       else console.log(`[known-events] 포스터 설정됨`)
+    } else if (approved?.promoted_event_id) {
+      // 코드에 박아둔 포스터가 없으면 크롤러와 같은 방식으로 찾아본다.
+      // 예전엔 여기서 아무것도 하지 않아서, known-events로 들어온 정기 행사는
+      // (하드코딩된 코스앤코믹 95회 하나를 빼면) 전부 "공식 포스터 미정"으로 남았다.
+      // 회차 행사(제29회·코믹월드 336)도 그대로 찾는다 — 회차는 poster-filter가
+      // 연도와 구분해서 보고, 내년 회차는 poster-lookup이 연도를 보고 건너뛴다.
+      const found = await attachEventPoster(supabase, approved.promoted_event_id, {
+        title: extracted.title,
+        website: extracted.website,
+        ticketUrl: extracted.ticket_url,
+        startDate: extracted.start_date,
+      })
+      if (found) console.log(`[known-events] 포스터 찾음`)
     }
     // crowd_level(예상 혼잡도)은 실시간 데이터가 아니라 과거 참가 규모 기반 수동
     // 추정치라 EventExtractionSchema(AI 크롤러 스키마)엔 넣지 않고 여기서만 채운다.

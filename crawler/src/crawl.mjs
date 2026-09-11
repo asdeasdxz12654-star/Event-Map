@@ -28,10 +28,7 @@ import { fetchKmrbCandidates, buildKmrbDraft } from './kmrb.mjs'
 import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from './culture-performance.mjs'
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
-import { fetchEventPosterUrl } from './serpapi-image.mjs'
-import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
-import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
-import { storePoster } from './poster-storage.mjs'
+import { attachEventPoster } from './poster-lookup.mjs'
 import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
@@ -169,45 +166,15 @@ async function attachCoords(eventId, venue, venueAddress) {
   else console.log(`  -> 좌표 설정: ${coords.lat}, ${coords.lng}`)
 }
 
-// 이미지 검색(SerpAPI)으로 포스터를 찾아 events에 업데이트한다.
-// 이미 포스터가 있는 행사(dedup으로 기존 행사에 연결된 경우)는 덮어쓰지 않는다.
-// 공식 사이트를 모르는 행사는 먼저 찾는다 — 포스터 정확도가 거기서 갈린다.
-async function attachPosterImage(eventId, title, officialUrls = [], eventYear = null) {
-  if (!eventId) return
-
-  // 검색하기 전에 이미 포스터가 있는지부터 본다. dedup으로 기존 행사에 연결된 경우가
-  // 흔한데, 그때마다 검색을 돌리면 저장도 못 할 결과에 SerpAPI 크레딧만 나간다
-  // (무료 플랜 월 250회).
-  const { data: existing } = await supabase
-    .from('events')
-    .select('poster_url, website, ticket_url')
-    .eq('id', eventId)
-    .maybeSingle()
-  if (existing?.poster_url) return
-
-  const resolved = await resolveOfficialUrls(supabase, {
-    id: eventId,
+// 포스터를 찾아 events에 채운다 — 찾는 규칙과 저장은 poster-lookup.mjs에 모여 있다
+// (크롤러·일괄 채우기·정기 행사가 같은 규칙으로 돌게 하려고 한 군데로 뺐다).
+async function attachPosterImage(eventId, title, officialUrls = [], startDate = null) {
+  await attachEventPoster(supabase, eventId, {
     title,
-    website: existing?.website ?? officialUrls[0],
-    ticket_url: existing?.ticket_url ?? officialUrls[1],
+    website: officialUrls[0],
+    ticketUrl: officialUrls[1],
+    startDate,
   })
-  // 이미지 검색을 먼저 하고, 빈손이면 공식 사이트 배너를 받침으로 쓴다
-  // (순서를 정한 이유는 fix-poster-images.mjs의 findPoster 주석 참고).
-  const site = resolved[0]
-  const posterUrl =
-    await fetchEventPosterUrl(title, resolved, eventYear) ??
-    (site && await isDedicatedSite(supabase, site, title)
-      ? await fetchPosterFromOfficialSite(site, { eventYear })
-      : null)
-  if (!posterUrl) return
-  // 큰 포스터는 줄여서 우리 저장소 사본으로 (poster-storage.mjs)
-  const finalUrl = await storePoster(supabase, eventId, posterUrl) ?? posterUrl
-  const { error } = await supabase
-    .from('events')
-    .update({ poster_url: finalUrl })
-    .eq('id', eventId)
-    .is('poster_url', null) // 이미 포스터가 있으면 덮어쓰지 않음
-  if (error) console.warn('  [이미지] 포스터 저장 실패:', error.message)
 }
 
 // RSS/KOPIS/네이버 공통 저장 로직 — 성공하면 true, 실패(로그만 남기고 계속 진행)하면 false.
@@ -252,7 +219,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     } else {
       console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
       await attachCoords(approved?.promoted_event_id, extracted.venue, extracted.venue_address)
-      await attachPosterImage(approved?.promoted_event_id, extracted.title, [extracted.website, extracted.ticket_url], extracted.start_date ? Number(extracted.start_date.slice(0, 4)) : null)
+      await attachPosterImage(approved?.promoted_event_id, extracted.title, [extracted.website, extracted.ticket_url], extracted.start_date)
     }
   }
 

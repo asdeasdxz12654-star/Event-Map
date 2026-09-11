@@ -191,19 +191,30 @@ function yearsIn(text) {
   return (stripHtml(text).match(/\b(20[2-4]\d)\b/g) ?? []).map(Number)
 }
 
-// 행사명에서 그 행사를 가리키는 고유명 하나 — 연도를 뺀 가장 긴 토큰.
+// "제29회"·"35회"처럼 회차를 가리키는 토큰은 행사 "이름"이 아니다.
+// 공식 포스터 제목은 회차 대신 연도를 쓰는 일이 흔해서(제29회 부천국제만화축제의
+// 공식 포스터 제목은 "2026 부천국제만화축제"다) 이걸 이름에 섞으면 일치도가 늘 반 토막
+// 나고, 심하면 고유명 자리까지 차지한다 — "제35회 디. 페스타"의 가장 긴 토큰이
+// "제35회"라서 이름 비교가 통째로 0이 됐다. 회차가 맞는지는 hasNumberConflict가 본다.
+const isEditionToken = t => /^제?\d+회$/.test(t)
+
+// 행사명에서 이름에 해당하는 토큰만 (연도·회차 표기 제외)
+function nameTokensOf(eventTitle) {
+  return tokenize(eventTitle).filter(t => !/^20[2-4]\d$/.test(t) && !isEditionToken(t))
+}
+
+// 행사명에서 그 행사를 가리키는 고유명 하나 — 연도·회차를 뺀 가장 긴 토큰.
 // "2026 대전콘텐츠페어" -> "대전콘텐츠페어", "AGF 2027" -> "agf".
 // 연도를 빼지 않으면 "AGF 2027"의 핵심 토큰이 "2027"이 돼서, 이름은 안 맞고 연도만
 // 같은 이미지가 통과해버린다.
 export function coreNameToken(eventTitle) {
-  const nameTokens = tokenize(eventTitle).filter(t => !/^20[2-4]\d$/.test(t))
-  return [...nameTokens].sort((a, b) => b.length - a.length)[0] ?? ''
+  return [...nameTokensOf(eventTitle)].sort((a, b) => b.length - a.length)[0] ?? ''
 }
 
-// 행사명(연도 제외)이 어떤 글에 얼마나 들어 있는지 0~1로 돌려준다.
+// 행사명(연도·회차 제외)이 어떤 글에 얼마나 들어 있는지 0~1로 돌려준다.
 // 고유명이 없으면 0 — 이름이 안 맞으면 나머지가 겹쳐도 다른 행사다.
 export function nameOverlapScore(eventTitle, text) {
-  const wanted = tokenize(eventTitle).filter(t => !/^20[2-4]\d$/.test(t))
+  const wanted = nameTokensOf(eventTitle)
   if (wanted.length === 0) return 0
   const candidate = tokenize(text)
   if (candidate.length === 0) return 0
@@ -236,16 +247,27 @@ function relevanceScore(eventTitle, candidateTitle) {
   return nameOverlapScore(eventTitle, candidateTitle)
 }
 
-// 행사명에 든 숫자(회차·연도)가 서로 어긋나는지. 연도만 보던 검사를 회차까지 넓힌 것이다.
+// 행사명에 든 회차 숫자가 서로 어긋나는지.
 // "코믹월드 336 일산"으로 검색하면 공식 사이트(comicw.net)에서 "[코믹월드 330 일산] 포스터
 // 1차 발송 완료" 게시물이 딸려 나오는데, 토큰은 2/3이 겹쳐서 예전 기준으로는 통과했다.
 // 회차가 다르면 다른 행사고, 포스터도 당연히 다르다.
-// 한쪽에 숫자가 아예 없으면(예: "일러스타 페스" 사이트 제목) 판단 근거가 없으니 통과시킨다.
+// 한쪽에 회차가 아예 없으면(예: "일러스타 페스" 사이트 제목) 판단 근거가 없으니 통과시킨다.
+//
+// 연도(20xx)는 회차로 세지 않는다. 예전엔 연도까지 같이 봐서, "제29회 부천국제만화축제"의
+// 숫자는 [29]인데 공식 포스터 제목은 "2026 부천국제만화축제"라 [2026] — 겹치는 숫자가
+// 하나도 없으니 항상 "회차 불일치"로 탈락했다. 올해 열리는 제N회 행사들이 통째로 포스터를
+// 못 찾던 이유가 이것이다. 연도가 맞는지는 judgeCandidate의 연도 검사와 relevanceScore가
+// 이미 따로 보고 있어서 여기서 또 볼 필요가 없다.
+function editionNumbers(text) {
+  return [...String(text).matchAll(/\d{2,}/g)]
+    .map(m => m[0])
+    .filter(n => !/^20[0-4]\d$/.test(n))
+}
+
 function hasNumberConflict(eventTitle, candidateTitle) {
-  const numbersIn = text => [...String(text).matchAll(/\d{2,}/g)].map(m => m[0])
-  const wanted = numbersIn(eventTitle)
+  const wanted = editionNumbers(eventTitle)
   if (wanted.length === 0) return false
-  const found = numbersIn(candidateTitle)
+  const found = editionNumbers(candidateTitle)
   if (found.length === 0) return false
   return !found.some(n => wanted.includes(n))
 }
@@ -389,8 +411,17 @@ export function judgeCandidate(item, eventTitle, officialUrls = [], eventYear = 
     // 그리고 한 도메인이 여러 행사를 다루기도 한다. comicw.net(코믹월드 공식)의
     // 행사일정 페이지에는 남의 행사 포스터(MeetTheItasha-Poster.webp)가 올라와 있어서,
     // "코믹월드 336 일산"에도 "문구전 2026 가을"에도 똑같이 딸려 나왔다.
-    // 그래서 행사명의 숫자(연도·회차)가 제목이든 URL이든 어딘가엔 박혀 있어야 한다.
-    if (!hasIdentityNumber(eventTitle, `${itemTitle} ${decodedLink} ${pageUrl ?? ''}`)) return null
+    // 그래서 "이 행사를 가리키는 근거"를 하나는 요구한다 — 행사명의 숫자(연도·회차)가
+    // 제목이든 URL이든 박혀 있거나, 아니면 제목이 행사명과 충분히 겹치거나.
+    //
+    // 숫자만 보던 걸 이름 쪽으로 넓힌 이유: "제29회 부천국제만화축제"처럼 회차만 있고
+    // 연도가 없는 행사는 공식 포스터 파일에 29가 안 들어간다(2026만 들어간다). 그래서
+    // 공식 사이트에서 제 포스터를 찾아놓고도 전부 탈락했다. 이름이 맞으면 그것도 근거다
+    // — 위 문구전 사례는 이름 점수가 0이라 이 완화로도 여전히 걸러진다.
+    const identified =
+      hasIdentityNumber(eventTitle, `${itemTitle} ${decodedLink} ${pageUrl ?? ''}`) ||
+      score >= MIN_TOKEN_OVERLAP
+    if (!identified) return null
     return { link, pageUrl, score: 1 + score + posterBonus(posterInUrl, item), title: itemTitle, official }
   }
 
