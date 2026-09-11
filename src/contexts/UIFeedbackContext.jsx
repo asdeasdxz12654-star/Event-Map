@@ -64,14 +64,14 @@ export function UIFeedbackProvider({ children }) {
           onClick={() => closeConfirm(false)}
         >
           <div
-            className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-5 w-80 shadow-2xl"
+            className="bg-panel border border-ink/10 rounded-2xl p-5 w-80 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <p className="text-white text-sm mb-5 whitespace-pre-line">{confirmState.message}</p>
+            <p className="text-ink text-sm mb-5 whitespace-pre-line">{confirmState.message}</p>
             <div className="flex gap-2">
               <button
                 onClick={() => closeConfirm(false)}
-                className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl text-sm transition-colors"
+                className="flex-1 py-2 bg-ink/5 hover:bg-ink/10 text-zinc-300 rounded-xl text-sm transition-colors"
               >
                 취소
               </button>

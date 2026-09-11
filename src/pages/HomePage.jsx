@@ -24,19 +24,19 @@ const CATEGORY_FILTERS = [
 
 function SkeletonCard() {
   return (
-    <div className="flex flex-col bg-white/5 border border-white/10 rounded-2xl p-4 animate-pulse">
-      <div className="w-full aspect-[16/7] rounded-xl bg-white/10 mb-3" />
+    <div className="flex flex-col bg-ink/5 border border-ink/10 rounded-2xl p-4 animate-pulse">
+      <div className="w-full aspect-[16/7] rounded-xl bg-ink/10 mb-3" />
       <div className="flex items-start gap-2 mb-2 pr-8">
-        <div className="h-4 bg-white/10 rounded w-3/4" />
+        <div className="h-4 bg-ink/10 rounded w-3/4" />
       </div>
       <div className="flex gap-1.5 mb-3">
-        <div className="h-5 bg-white/10 rounded-full w-20" />
-        <div className="h-5 bg-white/10 rounded-full w-12" />
+        <div className="h-5 bg-ink/10 rounded-full w-20" />
+        <div className="h-5 bg-ink/10 rounded-full w-12" />
       </div>
       <div className="space-y-1.5">
-        <div className="h-3 bg-white/10 rounded w-full" />
-        <div className="h-3 bg-white/10 rounded w-4/5" />
-        <div className="h-3 bg-white/10 rounded w-3/5" />
+        <div className="h-3 bg-ink/10 rounded w-full" />
+        <div className="h-3 bg-ink/10 rounded w-4/5" />
+        <div className="h-3 bg-ink/10 rounded w-3/5" />
       </div>
     </div>
   )
@@ -97,7 +97,7 @@ export default function HomePage() {
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 정보</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-ink mb-1">행사 정보</h1>
           <p className="text-sm lg:text-base text-zinc-400">국내 게임·코스프레·게임음악·일러스트 행사를 한눈에</p>
         </div>
         {isAdmin && (
@@ -126,13 +126,13 @@ export default function HomePage() {
             className={`shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl text-sm lg:text-base font-medium transition-all ${
               activeStatus === key
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-                : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
             }`}
           >
             <span>{icon}</span>
             <span>{label}</span>
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeStatus === key ? 'bg-white/20' : 'bg-white/10'
+              activeStatus === key ? 'bg-ink/20' : 'bg-ink/10'
             }`}>
               {statusCounts[key]}
             </span>
@@ -148,12 +148,12 @@ export default function HomePage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="행사명, 장소, 주최사 검색..."
-          className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none transition-colors"
+          className="w-full bg-ink/5 border border-ink/10 focus:border-indigo-500 rounded-xl pl-9 pr-4 py-2.5 text-sm text-ink placeholder:text-zinc-500 focus:outline-none transition-colors"
         />
         {search && (
           <button
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-sm"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-ink text-sm"
             aria-label="검색 지우기"
           >
             ✕
@@ -174,7 +174,7 @@ export default function HomePage() {
               className={`shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 activeCategory === key
                   ? 'bg-violet-600/80 text-white'
-                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                  : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
               }`}
             >
               {label}
@@ -184,7 +184,7 @@ export default function HomePage() {
 
         <div className="flex items-center gap-1.5 ml-auto">
           {/* 목록 열 수 — 좁은 화면에서만. PC는 어차피 3~4열이라 선택할 게 없다. */}
-          <div className="flex rounded-lg overflow-hidden border border-white/10 lg:hidden">
+          <div className="flex rounded-lg overflow-hidden border border-ink/10 lg:hidden">
             {[
               { value: 1, icon: '▤', label: '한 줄에 한 개씩 크게 보기' },
               { value: 2, icon: '▦', label: '한 줄에 두 개씩 보기' },
@@ -195,8 +195,8 @@ export default function HomePage() {
                 aria-label={label}
                 aria-pressed={columns === value}
                 title={label}
-                className={`px-2.5 py-1.5 text-xs transition-colors ${value === 2 ? 'border-l border-white/10' : ''} ${
-                  columns === value ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
+                className={`px-2.5 py-1.5 text-xs transition-colors ${value === 2 ? 'border-l border-ink/10' : ''} ${
+                  columns === value ? 'bg-indigo-600 text-white' : 'bg-ink/5 text-zinc-400 hover:text-ink'
                 }`}
               >
                 {icon}
@@ -205,12 +205,12 @@ export default function HomePage() {
           </div>
 
           {/* 정렬 */}
-          <div className="flex rounded-lg overflow-hidden border border-white/10">
+          <div className="flex rounded-lg overflow-hidden border border-ink/10">
             <button
               onClick={() => setSort('date')}
               aria-pressed={sort === 'date'}
               className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                sort === 'date' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
+                sort === 'date' ? 'bg-indigo-600 text-white' : 'bg-ink/5 text-zinc-400 hover:text-ink'
               }`}
             >
               날짜순
@@ -218,8 +218,8 @@ export default function HomePage() {
             <button
               onClick={() => setSort('newest')}
               aria-pressed={sort === 'newest'}
-              className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-white/10 ${
-                sort === 'newest' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
+              className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-ink/10 ${
+                sort === 'newest' ? 'bg-indigo-600 text-white' : 'bg-ink/5 text-zinc-400 hover:text-ink'
               }`}
             >
               최신순
@@ -233,7 +233,7 @@ export default function HomePage() {
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
               hideSoldout
                 ? 'bg-red-600/20 border-red-500/40 text-red-400'
-                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                : 'bg-ink/5 border-ink/10 text-zinc-400 hover:text-ink'
             }`}
           >
             {hideSoldout ? '매진 숨김 ✓' : '매진 제외'}
@@ -250,7 +250,7 @@ export default function HomePage() {
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
               activeMonth === null
                 ? 'bg-indigo-600 text-white'
-                : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
             }`}
           >
             전체
@@ -263,7 +263,7 @@ export default function HomePage() {
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 activeMonth === ym
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+                  : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
               }`}
             >
               {monthLabel(ym)}

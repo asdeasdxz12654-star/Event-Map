@@ -102,7 +102,7 @@ export default function EventDetailPage() {
   return (
     <div className={`max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10 lg:pb-10 ${showTicketBar ? 'pb-24' : 'pb-6'}`}>
       {/* 뒤로가기 */}
-      <Link to="/" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-6 transition-colors">
+      <Link to="/" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-ink mb-6 transition-colors">
         ← 목록으로
       </Link>
 
@@ -139,7 +139,7 @@ export default function EventDetailPage() {
                 className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border text-lg transition-colors ${
                   bookmarked
                     ? 'bg-indigo-600/80 border-indigo-500/50 text-white'
-                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                    : 'bg-ink/5 border-ink/10 text-zinc-400 hover:text-ink'
                 }`}
               >
                 {bookmarked ? '⭐' : '☆'}
@@ -168,11 +168,11 @@ export default function EventDetailPage() {
           {showEditForm && (
             <AdminEventForm event={event} onClose={() => setShowEditForm(false)} />
           )}
-          <h1 className="text-2xl font-bold text-white mb-1">{event.title}</h1>
+          <h1 className="text-2xl font-bold text-ink mb-1">{event.title}</h1>
           <p className="text-zinc-400 text-sm mb-6">{event.description}</p>
 
           {/* 기본 정보 카드 */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 mb-4">
+          <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 space-y-3 mb-4">
             <InfoRow icon="📅" label="기간" value={dateStr} />
             {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
             <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
@@ -219,7 +219,7 @@ export default function EventDetailPage() {
               <img
                 src={event.floorPlanUrl}
                 alt={`${event.title} 부스 배치도`}
-                className="w-full rounded-xl object-contain bg-white/5"
+                className="w-full rounded-xl object-contain bg-ink/5"
               />
             </SectionCard>
           )}
@@ -228,7 +228,7 @@ export default function EventDetailPage() {
           <BoothManager eventId={event.id} note={event.boothInfoNote} />
 
           {/* 위치 & 경로 */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
+          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
             {hasCoords && (
               <NaverMap
                 lat={event.venueLat}
@@ -238,7 +238,7 @@ export default function EventDetailPage() {
               />
             )}
             <div className="p-4">
-              <h2 className="text-sm font-semibold text-white mb-1">위치 & 경로</h2>
+              <h2 className="text-sm font-semibold text-ink mb-1">위치 & 경로</h2>
               {(venueName || venueAddress) && (
                 <p className="text-xs text-zinc-400 mb-3 whitespace-pre-line">
                   {[venueName, venueAddress].filter(Boolean).join('\n')}
@@ -257,7 +257,7 @@ export default function EventDetailPage() {
           {event.tags?.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
               {event.tags.map(tag => (
-                <span key={tag} className="text-xs px-2.5 py-1 bg-white/5 text-zinc-400 rounded-full border border-white/10">
+                <span key={tag} className="text-xs px-2.5 py-1 bg-ink/5 text-zinc-400 rounded-full border border-ink/10">
                   #{tag}
                 </span>
               ))}
@@ -334,7 +334,7 @@ function ShareButton({ event }) {
   return (
     <button
       onClick={handleShare}
-      className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+      className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
     >
       {copied ? '✓ 링크 복사됨!' : '🔗 공유하기'}
     </button>
@@ -369,7 +369,7 @@ function TicketButton({ event, className }) {
 // 띄울지 말지(예매 링크 없음·매진)는 호출부의 showTicketBar가 판단한다.
 function TicketStickyBar({ event }) {
   return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0f0f1a]/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur border-t border-ink/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <TicketButton event={event} className="block w-full py-3 rounded-xl text-sm" />
     </div>
   )
@@ -384,14 +384,14 @@ function CtaButtons({ event, showTicket = true }) {
           href={event.website}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+          className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
         >
           공식 사이트 →
         </a>
       )}
       <button
         onClick={() => downloadEventIcs(event)}
-        className="w-full py-3 bg-white/10 hover:bg-white/15 text-white text-sm rounded-2xl text-center transition-colors"
+        className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
       >
         📅 캘린더에 추가 (.ics)
       </button>

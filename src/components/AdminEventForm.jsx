@@ -78,7 +78,7 @@ function toPayload(form) {
   }
 }
 
-const cls = 'w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2 text-white placeholder:text-zinc-600 focus:outline-none text-sm'
+const cls = 'w-full bg-ink/5 border border-ink/10 focus:border-indigo-500 rounded-xl px-3 py-2 text-ink placeholder:text-zinc-600 focus:outline-none text-sm'
 
 function Field({ label, children }) {
   return (
@@ -127,12 +127,12 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
       onClick={onClose}
     >
       <div
-        className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 my-auto"
+        className="bg-panel border border-ink/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 my-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-semibold">{isEdit ? '행사 수정' : '행사 추가'}</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
+          <h2 className="text-ink font-semibold">{isEdit ? '행사 수정' : '행사 추가'}</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
         </div>
 
         <form onSubmit={submit} className="space-y-3">

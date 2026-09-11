@@ -30,11 +30,11 @@ export default function AdminDraftsPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <div className="text-5xl mb-4">🛠️</div>
-        <h1 className="text-xl font-bold text-white mb-2">행사 검수</h1>
+        <h1 className="text-xl font-bold text-ink mb-2">행사 검수</h1>
         <p className="text-zinc-400 text-sm mb-8">관리자만 접근 가능합니다. Google 계정으로 로그인해 주세요.</p>
         <button
           onClick={() => signInWithGoogle('/admin/drafts')}
-          className="px-6 py-3 bg-white text-zinc-900 font-semibold rounded-xl hover:bg-zinc-100 transition-colors"
+          className="px-6 py-3 bg-ink text-surface font-semibold rounded-xl hover:opacity-90 transition-opacity"
         >
           Google로 계속하기
         </button>
@@ -47,7 +47,7 @@ export default function AdminDraftsPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <div className="text-5xl mb-4">🚫</div>
-        <h1 className="text-xl font-bold text-white mb-2">접근 권한이 없습니다</h1>
+        <h1 className="text-xl font-bold text-ink mb-2">접근 권한이 없습니다</h1>
         <p className="text-zinc-400 text-sm">이 페이지는 관리자 계정으로만 이용할 수 있습니다.</p>
       </div>
     )
@@ -56,8 +56,8 @@ export default function AdminDraftsPage() {
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-white">행사 검수</h1>
-        <button onClick={signOut} className="text-sm text-zinc-400 hover:text-white transition-colors">
+        <h1 className="text-2xl lg:text-3xl font-bold text-ink">행사 검수</h1>
+        <button onClick={signOut} className="text-sm text-zinc-400 hover:text-ink transition-colors">
           로그아웃
         </button>
       </div>
@@ -70,7 +70,7 @@ export default function AdminDraftsPage() {
             className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
               status === tab.value
                 ? 'bg-indigo-600 text-white font-medium'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                : 'text-zinc-400 hover:text-ink hover:bg-ink/10'
             }`}
           >
             {tab.label}
@@ -127,16 +127,16 @@ function DraftCard({ draft, onChanged }) {
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+    <div className="bg-ink/5 border border-ink/10 rounded-xl p-4">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
         <div>
-          <h2 className="font-semibold text-white">{e.title ?? '(제목 없음)'}</h2>
+          <h2 className="font-semibold text-ink">{e.title ?? '(제목 없음)'}</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
             {draft.sourceName} · {new Date(draft.createdAt).toLocaleDateString('ko-KR')}
           </p>
         </div>
         {e.confidence && (
-          <span className="text-xs px-2 py-1 rounded-lg bg-white/10 text-zinc-300 shrink-0">
+          <span className="text-xs px-2 py-1 rounded-lg bg-ink/10 text-zinc-300 shrink-0">
             신뢰도: {CONFIDENCE_LABEL[e.confidence] ?? e.confidence}
           </span>
         )}

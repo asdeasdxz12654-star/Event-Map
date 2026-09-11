@@ -71,7 +71,7 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
       >
         <div className="text-center">
           <div className="text-3xl mb-2">🗺</div>
-          <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
+          <span className="text-xs text-zinc-400 group-hover:text-ink transition-colors">
             네이버 지도에서 보기 →
           </span>
         </div>

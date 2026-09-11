@@ -60,11 +60,11 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
     }
   }
 
-  const cls = 'bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500'
+  const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   if (editing) {
     return (
-      <div className="py-2 border-b border-white/5 last:border-0 space-y-1.5">
+      <div className="py-2 border-b border-ink/5 last:border-0 space-y-1.5">
         <input value={form.artist_name} onChange={set('artist_name')} placeholder={copy.namePlaceholder} className={cls + ' w-full'} />
         <textarea
           value={form.songs}
@@ -75,16 +75,16 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
         />
         <div className="flex gap-2">
           <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
-          <button onClick={() => setEditing(false)} className="text-xs text-zinc-400 hover:text-white">취소</button>
+          <button onClick={() => setEditing(false)} className="text-xs text-zinc-400 hover:text-ink">취소</button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex items-start justify-between gap-2 py-2 border-b border-white/5 last:border-0 text-sm">
+    <div className="flex items-start justify-between gap-2 py-2 border-b border-ink/5 last:border-0 text-sm">
       <div className="min-w-0">
-        <span className="font-medium text-white">{performer.artistName}</span>
+        <span className="font-medium text-ink">{performer.artistName}</span>
         {performer.songs ? (
           <ul className="text-xs text-zinc-400 mt-1 space-y-0.5 list-disc list-inside">
             {performer.songs.split('\n').map(s => s.trim()).filter(Boolean).map((song, i) => (
@@ -97,7 +97,7 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
       </div>
       {isAdmin && (
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-white">수정</button>
+          <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-ink">수정</button>
           <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400">삭제</button>
         </div>
       )}
@@ -139,7 +139,7 @@ export default function PerformerManager({ eventId, category, note }) {
 
   if (loading || (!isAdmin && performers.length === 0 && !note)) return null
 
-  const cls = 'bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500'
+  const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   return (
     <SectionCard
@@ -159,7 +159,7 @@ export default function PerformerManager({ eventId, category, note }) {
       ))}
 
       {isAdmin && showAddForm && (
-        <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
+        <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-ink/10 space-y-1.5">
           <input value={form.artist_name} onChange={set('artist_name')} placeholder={`${copy.namePlaceholder} *`} className={cls + ' w-full'} required />
           <textarea
             value={form.songs}

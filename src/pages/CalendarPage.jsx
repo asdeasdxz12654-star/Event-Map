@@ -19,11 +19,11 @@ function EventRow({ event, showDate = false }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors"
+      className="flex items-center gap-3 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-xl p-3 transition-colors"
     >
       <span className="text-2xl shrink-0">{categoryMeta(event.category).emoji}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{event.title}</p>
+        <p className="text-sm font-medium text-ink truncate">{event.title}</p>
         <p className="text-xs text-zinc-400 truncate">
           {showDate ? `${dateLabel} · ${event.venue ?? ''}` : event.venue}
         </p>
@@ -89,7 +89,7 @@ export default function CalendarPage() {
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">행사 달력</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-ink mb-1">행사 달력</h1>
         <p className="text-sm lg:text-base text-zinc-400">날짜를 선택해 행사를 확인하세요</p>
       </div>
 
@@ -100,19 +100,19 @@ export default function CalendarPage() {
             <button
               onClick={prevMonth}
               aria-label="이전 달"
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-ink/5 hover:bg-ink/10 text-zinc-300 transition-colors"
             >
               ‹
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-white font-semibold">
+              <span className="text-ink font-semibold">
                 {format(viewDate, 'yyyy년 M월', { locale: ko })}
               </span>
               {/* 다른 달을 보다가 이번 달로 돌아올 방법이 없어서 화살표를 여러 번 눌러야 했다 */}
               {!isSameMonth(viewDate, new Date()) && (
                 <button
                   onClick={goToday}
-                  className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 transition-colors"
+                  className="px-2 py-0.5 rounded-lg bg-ink/5 hover:bg-ink/10 text-xs text-zinc-300 transition-colors"
                 >
                   오늘
                 </button>
@@ -121,7 +121,7 @@ export default function CalendarPage() {
             <button
               onClick={nextMonth}
               aria-label="다음 달"
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-ink/5 hover:bg-ink/10 text-zinc-300 transition-colors"
             >
               ›
             </button>
@@ -135,9 +135,9 @@ export default function CalendarPage() {
           )}
 
           {/* 달력 그리드 */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
+          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
             {/* 요일 헤더 */}
-            <div className="grid grid-cols-7 border-b border-white/10">
+            <div className="grid grid-cols-7 border-b border-ink/10">
               {DOW.map((d, i) => (
                 <div key={d} className={`py-2 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-zinc-400'}`}>
                   {d}
@@ -171,7 +171,7 @@ export default function CalendarPage() {
                     className={`aspect-square flex flex-col items-center justify-start pt-1.5 px-1 relative transition-colors border border-transparent ${
                       isSelected
                         ? 'bg-indigo-600/30 border-indigo-500/50'
-                        : 'hover:bg-white/5'
+                        : 'hover:bg-ink/5'
                     } ${!inMonth ? 'opacity-30' : ''}`}
                   >
                     <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full ${
@@ -210,7 +210,7 @@ export default function CalendarPage() {
         <div ref={eventListRef} className="mt-6 lg:mt-0 lg:sticky lg:top-20">
           {selectedDay ? (
             <div>
-              <h2 className="text-sm lg:text-base font-semibold text-white mb-3">
+              <h2 className="text-sm lg:text-base font-semibold text-ink mb-3">
                 {format(selectedDay, 'M월 d일 (eee)', { locale: ko })} 행사
               </h2>
               {selectedEvents.length === 0 ? (
@@ -225,11 +225,11 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div>
-              <h2 className="text-sm lg:text-base font-semibold text-white mb-3">
+              <h2 className="text-sm lg:text-base font-semibold text-ink mb-3">
                 {format(viewDate, 'M월', { locale: ko })} 행사 {monthEvents.length}건
               </h2>
               {monthEvents.length === 0 ? (
-                <p className="text-sm text-zinc-400 py-8 text-center bg-white/5 border border-white/10 rounded-2xl">
+                <p className="text-sm text-zinc-400 py-8 text-center bg-ink/5 border border-ink/10 rounded-2xl">
                   이 달에 등록된 행사가 없습니다
                 </p>
               ) : (

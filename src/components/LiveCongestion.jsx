@@ -26,10 +26,10 @@ export default function LiveCongestion({ placeName }) {
   const style = LEVEL_STYLE[data.level] ?? 'bg-zinc-700/50 text-zinc-300 border-zinc-600/30'
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+    <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 mb-4">
       <div className="flex items-center gap-1.5 mb-2">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-        <h2 className="text-sm font-semibold text-white">실시간 인구 혼잡도</h2>
+        <h2 className="text-sm font-semibold text-ink">실시간 인구 혼잡도</h2>
         <span className="text-[11px] text-zinc-400">· {data.place}</span>
       </div>
 
@@ -47,7 +47,7 @@ export default function LiveCongestion({ placeName }) {
       {data.forecast?.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {data.forecast.map(f => (
-            <div key={f.time} className="shrink-0 text-center bg-white/5 rounded-lg px-2 py-1">
+            <div key={f.time} className="shrink-0 text-center bg-ink/5 rounded-lg px-2 py-1">
               <div className="text-[10px] text-zinc-400">{formatTime(f.time)}</div>
               <div className="text-[11px] text-zinc-300 whitespace-nowrap">{f.level}</div>
             </div>

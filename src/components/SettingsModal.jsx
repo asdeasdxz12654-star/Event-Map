@@ -6,6 +6,7 @@ import { useBookmarks } from '../hooks/useBookmarks'
 import { useInstallPrompt, isIos } from '../hooks/useInstallPrompt'
 import { useListColumns } from '../hooks/useListColumns'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import { useTheme } from '../hooks/useTheme'
 import AdminModal from './AdminModal'
 
 // 설정 화면.
@@ -19,7 +20,7 @@ function Row({ icon, title, description, children }) {
     <div className="flex items-start gap-3 py-3.5">
       <span className="text-lg leading-none mt-0.5 w-6 text-center shrink-0" aria-hidden="true">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white font-medium">{title}</p>
+        <p className="text-sm text-ink font-medium">{title}</p>
         {description && <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{description}</p>}
       </div>
       {children && <div className="shrink-0 self-center">{children}</div>}
@@ -30,7 +31,7 @@ function Row({ icon, title, description, children }) {
 const actionClass =
   'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50'
 const quietClass =
-  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10'
+  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-ink/5 hover:bg-ink/10 text-zinc-300 border border-ink/10'
 
 function NotificationRow() {
   const { supported, permission, subscribed, loading, error, subscribe } = usePushNotifications()
@@ -80,24 +81,56 @@ function InstallRow({ onShowIosGuide }) {
   )
 }
 
+// 두 갈래 중 하나를 고르는 작은 토글. 테마·목록 보기가 같은 모양을 쓴다.
+function SegmentedControl({ value, onChange, options, label }) {
+  return (
+    <div role="group" aria-label={label} className="flex rounded-lg overflow-hidden border border-ink/10">
+      {options.map(({ value: optionValue, label: optionLabel }, i) => (
+        <button
+          key={optionValue}
+          onClick={() => onChange(optionValue)}
+          aria-pressed={value === optionValue}
+          className={`px-3 py-1.5 text-xs font-medium transition-colors ${i > 0 ? 'border-l border-ink/10' : ''} ${
+            value === optionValue ? 'bg-indigo-600 text-white' : 'bg-ink/5 text-zinc-400 hover:text-ink'
+          }`}
+        >
+          {optionLabel}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ThemeRow() {
+  const [theme, setTheme] = useTheme()
+  return (
+    <Row
+      icon={theme === 'light' ? '☀' : '🌙'}
+      title="화면 색"
+      description={theme === 'light'
+        ? '밝은 배경으로 봅니다 · 이 기기에만 저장됩니다'
+        : '어두운 배경으로 봅니다 · 이 기기에만 저장됩니다'}
+    >
+      <SegmentedControl
+        label="화면 색"
+        value={theme}
+        onChange={setTheme}
+        options={[{ value: 'dark', label: '다크' }, { value: 'light', label: '라이트' }]}
+      />
+    </Row>
+  )
+}
+
 function ListColumnsRow() {
   const [columns, setColumns] = useListColumns()
   return (
     <Row icon="▤" title="목록 보기" description="좁은 화면에서 행사 카드를 몇 개씩 보여줄지 정합니다">
-      <div className="flex rounded-lg overflow-hidden border border-white/10">
-        {[{ value: 1, label: '크게' }, { value: 2, label: '두 개씩' }].map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setColumns(value)}
-            aria-pressed={columns === value}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${value === 2 ? 'border-l border-white/10' : ''} ${
-              columns === value ? 'bg-indigo-600 text-white' : 'bg-white/5 text-zinc-400 hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        label="목록 보기"
+        value={columns}
+        onChange={setColumns}
+        options={[{ value: 1, label: '크게' }, { value: 2, label: '두 개씩' }]}
+      />
     </Row>
   )
 }
@@ -174,17 +207,18 @@ export default function SettingsModal({ onClose }) {
           role="dialog"
           aria-modal="true"
           aria-label="설정"
-          className="bg-[#1a1a2e] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full sm:w-96 max-h-[85vh] overflow-y-auto shadow-2xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
+          className="bg-panel border border-ink/10 rounded-t-2xl sm:rounded-2xl w-full sm:w-96 max-h-[85vh] overflow-y-auto shadow-2xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-[#1a1a2e] flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10">
-            <h2 className="text-white font-semibold">설정</h2>
-            <button onClick={onClose} aria-label="닫기" className="text-zinc-400 hover:text-white text-2xl leading-none">×</button>
+          <div className="sticky top-0 bg-panel flex items-center justify-between px-5 pt-5 pb-3 border-b border-ink/10">
+            <h2 className="text-ink font-semibold">설정</h2>
+            <button onClick={onClose} aria-label="닫기" className="text-zinc-400 hover:text-ink text-2xl leading-none">×</button>
           </div>
 
-          <div className="px-5 divide-y divide-white/5">
+          <div className="px-5 divide-y divide-ink/5">
             <NotificationRow />
             <InstallRow onShowIosGuide={() => setShowIosGuide(true)} />
+            <ThemeRow />
             <ListColumnsRow />
             <BookmarkRow />
             <AdminRow onOpenAdmin={() => setShowAdmin(true)} />
@@ -208,17 +242,17 @@ export default function SettingsModal({ onClose }) {
             role="dialog"
             aria-modal="true"
             aria-label="홈 화면에 추가하는 방법"
-            className="bg-[#1a1a2e] border border-white/10 rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
+            className="bg-panel border border-ink/10 rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white font-semibold text-sm">홈 화면에 추가</h2>
-              <button onClick={() => setShowIosGuide(false)} aria-label="닫기" className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
+              <h2 className="text-ink font-semibold text-sm">홈 화면에 추가</h2>
+              <button onClick={() => setShowIosGuide(false)} aria-label="닫기" className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
             </div>
             <ol className="text-sm text-zinc-300 space-y-2.5">
-              <li>1. 사파리 아래쪽 <span className="text-white">공유 버튼(⬆)</span>을 누르세요</li>
-              <li>2. 메뉴를 내려서 <span className="text-white">&quot;홈 화면에 추가&quot;</span>를 선택하세요</li>
-              <li>3. 오른쪽 위 <span className="text-white">&quot;추가&quot;</span>를 누르면 끝입니다</li>
+              <li>1. 사파리 아래쪽 <span className="text-ink">공유 버튼(⬆)</span>을 누르세요</li>
+              <li>2. 메뉴를 내려서 <span className="text-ink">&quot;홈 화면에 추가&quot;</span>를 선택하세요</li>
+              <li>3. 오른쪽 위 <span className="text-ink">&quot;추가&quot;</span>를 누르면 끝입니다</li>
             </ol>
             <p className="text-xs text-zinc-400 mt-4">앱처럼 전체 화면으로 열리고, 알림도 받을 수 있습니다.</p>
           </div>

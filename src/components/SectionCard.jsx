@@ -3,9 +3,9 @@
 // 막고, 새 섹션을 추가할 때도 자동으로 같은 모양이 되게 한다.
 export default function SectionCard({ title, action, children }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+    <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 mb-4">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+        <h2 className="text-sm font-semibold text-ink">{title}</h2>
         {action}
       </div>
       {children}

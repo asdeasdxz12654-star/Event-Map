@@ -8,6 +8,11 @@
          이게 없으면 아이폰 하단 홈 인디케이터 영역에 고정 예매 바가 깔려버린다. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#6366f1" />
+
+    <!-- 저장해 둔 화면 테마(다크/라이트)를 첫 그리기 전에 입힌다.
+         React가 뜬 뒤에 입히면 라이트를 쓰는 사람에게 다크 화면이 한 번 번쩍인다.
+         CSP(script-src 'self')상 인라인 스크립트를 못 써서 파일로 뒀다. -->
+    <script src="/theme-init.js"></script>
     <meta name="description" content="국내 게임·코스프레·게임음악·일러스트 행사 통합 정보 플랫폼" />
     <title>게임이벤트허브</title>
 

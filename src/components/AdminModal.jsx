@@ -30,12 +30,12 @@ export default function AdminModal({ onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-80 shadow-2xl"
+        className="bg-panel border border-ink/10 rounded-2xl p-6 w-80 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-semibold text-sm">관리자</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">×</button>
+          <h2 className="text-ink font-semibold text-sm">관리자</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
         </div>
 
         {isAdmin ? (
@@ -59,7 +59,7 @@ export default function AdminModal({ onClose }) {
               placeholder="관리자 코드 입력"
               autoComplete="new-password"
               autoFocus
-              className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-white placeholder:text-zinc-600 focus:outline-none text-sm mb-3 tracking-widest"
+              className="w-full bg-ink/5 border border-ink/10 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-ink placeholder:text-zinc-600 focus:outline-none text-sm mb-3 tracking-widest"
             />
             {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
             <button

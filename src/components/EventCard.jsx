@@ -71,7 +71,7 @@ export default function EventCard({ event, compact = false }) {
     // 링크 안에 버튼을 넣는 건 유효하지 않은 HTML이고 키보드·스크린리더 동작도 어그러진다.
     // 카드는 일반 div로 두고, 카드 전체를 덮는 투명한 링크를 따로 깔았다(z-[1]).
     // 버튼은 그보다 위(z-10)라 그대로 눌린다.
-    <div className="relative flex flex-col bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group">
+    <div className="relative flex flex-col bg-ink/5 hover:bg-ink/10 border border-ink/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group">
       <Link
         to={`/events/${event.id}`}
         aria-label={`${event.title} 상세 보기`}
@@ -126,17 +126,18 @@ export default function EventCard({ event, compact = false }) {
             </span>
           </div>
         )}
-        {/* NEW 뱃지 — 흰 글씨 + emerald-500은 10px 글씨 기준 대비가 2.5:1뿐이라
-            어두운 글자색으로 바꿨다 */}
+        {/* NEW 뱃지 — 10px 글씨라 대비를 따로 맞춰야 한다(흰 글씨 + emerald-500은 2.5:1뿐).
+            테마마다 조합이 뒤집혀야 해서(다크: 밝은 초록 바탕+짙은 글씨, 라이트: 짙은
+            초록 바탕+흰 글씨) 색을 index.css의 badge-new 토큰으로 뺐다. */}
         {isNew && (
-          <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-400 text-emerald-950 text-[10px] font-bold rounded-md tracking-wide">
+          <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-badge-new text-badge-new-fg text-[10px] font-bold rounded-md tracking-wide">
             NEW
           </span>
         )}
       </div>
 
       <div className="flex items-start justify-between gap-2 mb-2 pr-8">
-        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors text-sm leading-snug line-clamp-2">
+        <h3 className="font-semibold text-ink group-hover:text-indigo-300 transition-colors text-sm leading-snug line-clamp-2">
           {event.title}
         </h3>
       </div>
@@ -184,7 +185,7 @@ export default function EventCard({ event, compact = false }) {
       </div>
 
       {ticketNotOpenYet && (
-        <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400">
+        <div className="mt-2.5 pt-2.5 border-t border-ink/10 text-xs text-indigo-400">
           🎟 예매 오픈: {format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M월 d일', { locale: ko })}
           {event.ticketOpenTime && ` ${event.ticketOpenTime}`}
           {siteName && ` · ${siteName}`}
@@ -193,7 +194,7 @@ export default function EventCard({ event, compact = false }) {
       {/* 매진이면 "예매 중"이 아니다 — 포스터엔 매진 오버레이가 걸려 있는데 바로 아래에
           "예매 중"이 같이 뜨는 모순이 있었다. */}
       {!ticketNotOpenYet && status !== STATUS.ENDED && event.ticketUrl && event.ticketStatus !== 'soldout' && (
-        <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-indigo-400 truncate">
+        <div className="mt-2.5 pt-2.5 border-t border-ink/10 text-xs text-indigo-400 truncate">
           🎟 예매 중{siteName && ` · ${siteName}`}
         </div>
       )}

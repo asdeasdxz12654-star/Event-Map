@@ -22,7 +22,7 @@ export default class ErrorBoundary extends Component {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <div className="text-5xl mb-4">😵</div>
-        <h1 className="text-xl font-bold text-white mb-2">화면을 표시하지 못했습니다</h1>
+        <h1 className="text-xl font-bold text-ink mb-2">화면을 표시하지 못했습니다</h1>
         <p className="text-zinc-400 text-sm mb-8">
           일시적인 오류일 수 있습니다. 새로고침해도 같은 화면이 나오면 잠시 후 다시 시도해 주세요.
         </p>
@@ -35,7 +35,7 @@ export default class ErrorBoundary extends Component {
           </button>
           <a
             href={import.meta.env.BASE_URL}
-            className="px-5 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl transition-colors"
+            className="px-5 py-3 bg-ink/10 hover:bg-ink/15 text-ink rounded-xl transition-colors"
           >
             홈으로
           </a>

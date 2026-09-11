@@ -22,7 +22,7 @@ export default function ScrollToTopButton() {
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="맨 위로 이동"
-      className="fixed bottom-20 lg:bottom-6 right-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 text-white shadow-lg transition-colors"
+      className="fixed bottom-20 lg:bottom-6 right-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-ink/10 hover:bg-ink/20 backdrop-blur border border-ink/10 text-ink shadow-lg transition-colors"
     >
       ↑
     </button>

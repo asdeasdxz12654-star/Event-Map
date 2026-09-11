@@ -1,12 +1,88 @@
 @import "tailwindcss";
 
+/* ── 테마 색 ────────────────────────────────────────────────────────────────
+   화면 색은 다크가 기본이고, 설정에서 라이트로 바꿀 수 있다(useTheme.js).
+   전환은 <html data-theme="light">를 다는 것으로 끝난다 — 아래에서 색 토큰만
+   갈아끼우기 때문이다.
+
+   왜 이렇게 했나: 테일윈드 v4는 색 유틸리티를 변수 참조로 컴파일한다
+   (`.text-zinc-400 { color: var(--color-zinc-400) }`). 그래서 컴포넌트마다
+   dark:/light: 변형을 200군데 넘게 붙이는 대신, 변수 값만 테마별로 바꾸면 된다.
+
+   토큰 세 개는 우리가 만든 것이다.
+     surface : 페이지 바닥
+     panel   : 모달·시트처럼 바닥 위에 뜨는 면
+     ink     : 글자와 면·테두리에 쓰는 "잉크". 다크에선 흰색, 라이트에선 먹색이라
+               bg-ink/5 · border-ink/10 · text-ink가 두 테마에서 그대로 뜻이 통한다.
+               (강조색 버튼 위의 글자는 테마와 무관하게 흰색이어야 하므로
+                거기엔 text-white를 그대로 둔다 — 그게 ink와 white를 나눈 이유다.)
+   ────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-surface: #0f0f1a;
+  --color-panel: #1a1a2e;
+  --color-ink: #ffffff;
+  /* NEW 뱃지 — 10px 글씨라 대비를 맞추려면 테마마다 바탕·글씨가 통째로 뒤집혀야 한다 */
+  --color-badge-new: #34d399;
+  --color-badge-new-fg: #022c22;
+}
+
 :root {
-  --bg-dark: #0f0f1a;
+  --body-fg: #f1f1f5;
+  --scrollbar-thumb: #4f4f7a;
+  color-scheme: dark;
+}
+
+/* 라이트 테마 — 값만 바꾼다.
+   중립(zinc) 계열은 위아래를 뒤집는다. 다크에선 200이 가장 밝은 글자, 700~900이 면이었는데
+   라이트에선 정반대여야 한다. 강조색은 300·400을 "어두운 바탕 위의 밝은 글자"로만 써 왔으므로
+   (배경으로는 500 이상만 쓴다) 그 두 단계만 진한 쪽으로 내린다. */
+:root[data-theme='light'] {
+  --color-surface: #f2f3f7;
+  --color-panel: #ffffff;
+  --color-ink: #15151f;
+  --body-fg: #15151f;
+  --scrollbar-thumb: #c3c5d0;
+  --color-badge-new: #047857;
+  --color-badge-new-fg: #ffffff;
+  color-scheme: light;
+
+  /* 중립 — 보조 글자(200~600)는 진하게, 면(700~950)은 연하게 */
+  --color-zinc-200: #18181b;
+  --color-zinc-300: #27272a;
+  --color-zinc-400: #52525b;
+  --color-zinc-500: #6b6b75;
+  --color-zinc-600: #7f7f89; /* 입력칸 안내문(placeholder) — 너무 흐리면 안 읽힌다 */
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #ebebef;
+  --color-zinc-950: #f4f4f5;
+
+  /* 강조 글자 — 밝은 바탕에서 읽히도록 진한 단계로 */
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4f46e5;
+  --color-violet-300: #6d28d9;
+  --color-pink-300: #9d174d;
+  --color-sky-300: #075985;
+  --color-amber-300: #92400e;
+  --color-amber-400: #d97706;
+  --color-yellow-300: #854d0e;
+  --color-orange-300: #9a3412;
+  --color-emerald-400: #047857;
+  --color-green-300: #166534;
+  --color-green-400: #16a34a;
+  --color-red-300: #b91c1c;
+  --color-red-400: #991b1b;
+  --color-blue-400: #2563eb;
+
+  /* 포스터가 아직 없을 때 깔리는 그라데이션(from-indigo-900 to-violet-900)과
+     버튼 그림자(shadow-indigo-900/50). 라이트에선 옅은 색이라야 한다. */
+  --color-indigo-900: #c7d2fe;
+  --color-violet-900: #ddd6fe;
 }
 
 body {
-  background-color: #0f0f1a;
-  color: #f1f1f5;
+  background-color: var(--color-surface);
+  color: var(--body-fg);
   /* Pretendard Variable = index.html에서 불러오는 웹폰트, Pretendard = 기기에 깔려 있는 경우 */
   font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -47,8 +123,8 @@ input[type='search']::-webkit-search-results-decoration {
 
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1a1a2e; }
-::-webkit-scrollbar-thumb { background: #4f4f7a; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--color-panel); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 
 /* 가로 스크롤 영역의 스크롤바 숨김 */
 .scrollbar-hide {
