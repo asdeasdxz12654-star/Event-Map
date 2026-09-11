@@ -14,6 +14,25 @@ import { todayKST } from './date-kst.mjs'
 // (포스터가 없으면 카테고리 기본 이미지가 나온다).
 const COSANDCOMIC_95_POSTER = 'https://pbs.twimg.com/media/HOo8nV4bUAAdTNo?format=webp&name=medium'
 
+// 아래는 검색으로는 못 찾아서 사람이 확인하고 넣은 회차 포스터들이다.
+// 전부 해당 행사 포스터가 맞는지(행사명·날짜·장소가 그림 안에 찍혀 있다) 눈으로 확인했다.
+//
+// 뒤쪽 세 개(문구전·일러스타 페스·대전콘텐츠페어)는 구글 이미지 검색의 썸네일 캐시
+// (encrypted-tbn0.gstatic.com) 주소라 200~400px밖에 안 되고, 구글이 캐시를 비우면 깨질 수
+// 있다. 공식 원본이 올라오면 그때 바꾸는 게 좋다 — 공식 사이트 첫 화면에서는 못 집어왔다
+// (대전은 첫 화면에 공모전 팝업만, 일러스타는 이미지가 전부 공유용 카드였다).
+const DFESTA_35_POSTER = 'https://pbs.twimg.com/media/HR6Q-5XbgAADpjH?format=webp&name=large'
+const POWERDUKJIL_2_POSTER = 'https://pbs.twimg.com/media/HQR91BSbwAANXFM.jpg'
+const SKYCHORD_33_POSTER = 'https://pbs.twimg.com/media/HRIm9pzbUAAmcre?format=webp&name=medium'
+// 관광공사 서버(tong.visitkorea.or.kr)에 올라와 있지만 내용은 BIF 공식 포스터가 맞다.
+// poster-filter는 이 도메인을 "여러 행사가 돌려 쓰는 공용 사진"으로 보고 막는데,
+// 그래서 자동 검색으로는 절대 안 들어온다 — 사람이 확인했으니 여기 박아 둔다.
+const BUSAN_ILLUST_V7_POSTER = 'https://tong.visitkorea.or.kr/cms/resource/80/4093280_image2_1.jpg'
+const FINECHARACTER_2026_POSTER = 'https://www.culture.go.kr/upload/ucms/oneCltInfo/2026/202607/2771faf551ce4225826410959608a6e9.jpg'
+const MUNGUJEON_2026_FALL_POSTER = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtgOnpphA699wDu0lfU6A-yWAbWcXxmVoHnASgcKWlC4d9q8MR2MQLDD8&s=10'
+const ILLUSTARFES_14_POSTER = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThoQD8dS7fTeh35RTs8VsjB_R9NFzzBaBQHrFMSK4wSg&s'
+const DAEJEON_CONTENT_FAIR_2026_POSTER = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRg5lzZmrKkmn4RR7SIc9h1hqrQcBNDj9sKmHTciNv-ig&s'
+
 // KINTEX 좌표. AGF·코믹월드 등 다른 행사들은 이미 네이버 지역검색으로 정확히
 // geocode된 37.669119 / 126.7460896을 쓰고 있어서 그 값에 맞췄다 — 위키백과 좌표
 // (37.66889, 126.74556)와도 40m 이내로 거의 같다.
@@ -228,10 +247,11 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'dfesta-35', year: 2026,
+    slug: 'dfesta-35', year: 2026, posterUrl: DFESTA_35_POSTER,
     data: {
       is_event: true, title: '제35회 디. 페스타', category: '코스프레',
-      start_date: '2026-10-03', end_date: '2026-10-03',
+      // 공식 포스터에 "10월 3일부터 4일까지"로 적혀 있다 (하루짜리로 잘못 들어가 있었다)
+      start_date: '2026-10-03', end_date: '2026-10-04',
       venue: 'SETEC', venue_address: null, venue_lat: null, venue_lng: null,
       organizer: null,
       description: '동인 창작물 판매·전시 중심의 서브컬처 행사.',
@@ -241,7 +261,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'powerdukjil-2', year: 2026,
+    slug: 'powerdukjil-2', year: 2026, posterUrl: POWERDUKJIL_2_POSTER,
     data: {
       is_event: true, title: '제2회 파워덕질 페스티벌', category: '코스프레',
       start_date: '2026-10-03', end_date: '2026-10-03',
@@ -254,7 +274,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'mungujeon-2026-fall', year: 2026,
+    slug: 'mungujeon-2026-fall', year: 2026, posterUrl: MUNGUJEON_2026_FALL_POSTER,
     data: {
       is_event: true, title: '문구전 2026 가을', category: '일러스트',
       start_date: '2026-10-09', end_date: '2026-10-09',
@@ -267,7 +287,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'daejeon-content-fair-2026', year: 2026,
+    slug: 'daejeon-content-fair-2026', year: 2026, posterUrl: DAEJEON_CONTENT_FAIR_2026_POSTER,
     data: {
       is_event: true, title: '2026 대전콘텐츠페어', category: '게임전시',
       start_date: '2026-10-16', end_date: '2026-10-18',
@@ -295,7 +315,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'busan-illustration-fair-v7', year: 2026,
+    slug: 'busan-illustration-fair-v7', year: 2026, posterUrl: BUSAN_ILLUST_V7_POSTER,
     data: {
       is_event: true, title: '부산일러스트레이션페어 V.7', category: '일러스트',
       start_date: '2026-11-06', end_date: '2026-11-08',
@@ -309,11 +329,12 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'skychord-festival-2026', year: 2026,
+    slug: 'skychord-festival-2026', year: 2026, posterUrl: SKYCHORD_33_POSTER,
     data: {
-      is_event: true, title: '스카이코드 페스티벌', category: '코스프레',
+      // 공식 포스터 상단에 "스카이코드 제33회 행사"로 회차가 찍혀 있다
+      is_event: true, title: '제33회 스카이코드 페스티벌', category: '코스프레',
       start_date: '2026-11-22', end_date: '2026-11-22',
-      venue: '광주디자인진흥원', venue_address: null, venue_lat: null, venue_lng: null,
+      venue: '광주디자인진흥원 1층 이벤트홀', venue_address: null, venue_lat: null, venue_lng: null,
       organizer: null,
       description: '광주에서 열리는 서브컬처 동인 행사. 코스프레 무대·경연 프로그램이 함께 열린다.',
       ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
@@ -322,7 +343,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'finecharacter-2026', year: 2026,
+    slug: 'finecharacter-2026', year: 2026, posterUrl: FINECHARACTER_2026_POSTER,
     data: {
       is_event: true, title: '파인캐릭터 2026', category: '일러스트',
       start_date: '2026-11-27', end_date: '2026-11-29',
@@ -331,7 +352,7 @@ const ONE_OFF_EVENTS = [
       organizer: null,
       description: '캐릭터·아트토이 등 창작 캐릭터 상품 전시·판매 행사.',
       ticket_url: null, ticket_open_date: null, admission_fee: null, crowd_level: null,
-      website: null, tags: ['일러스트', '캐릭터', '서울', 'DDP'],
+      website: 'https://www.finecharacter.kr/', tags: ['일러스트', '캐릭터', '서울', 'DDP'],
       confidence: 'high',
     },
   },
@@ -413,7 +434,7 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
-    slug: 'illustarfes-12-kintex', year: 2026,
+    slug: 'illustarfes-12-kintex', year: 2026, posterUrl: ILLUSTARFES_14_POSTER,
     data: {
       is_event: true, title: '일러스타 페스 14', category: '코스프레',
       start_date: '2026-10-10', end_date: '2026-10-11',
@@ -512,7 +533,7 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
     .maybeSingle()
 
   if (existing) {
-    await syncExistingEvent(supabase, slug, year, extracted, existing.promoted_event_id)
+    await syncExistingEvent(supabase, slug, year, extracted, existing.promoted_event_id, posterUrl)
     return
   }
 
@@ -629,10 +650,28 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
 // 이미 event_drafts에 등록된(=예전에 upsertOneEvent가 한 번 삽입·승인한) 고정 행사를
 // 다시 만났을 때, known-events.mjs에 적힌 최신 값으로 events 테이블을 동기화한다.
 // 단, 관리자가 화면에서 직접 수정해 admin_edited_at이 찍힌 행은 절대 덮어쓰지 않는다.
-async function syncExistingEvent(supabase, slug, year, extracted, promotedEventId) {
+async function syncExistingEvent(supabase, slug, year, extracted, promotedEventId, posterUrl = null) {
   if (!promotedEventId) {
     console.log(`[known-events] ${slug}/${year} 이미 등록됨(미승인 상태), 스킵`)
     return
+  }
+
+  // 코드에 박아둔 포스터는 이미 등록된 행사에도 채운다. 예전엔 최초 삽입 때만 넣어서,
+  // 이미 들어와 있는 행사에 포스터를 새로 확인해 적어 넣어도 화면에는 영영 안 나왔다.
+  //
+  // poster_url이 비어 있을 때만 넣는다 — 이미 있는 값은 건드리지 않는다.
+  // (optimize-poster-images.mjs가 용량을 줄여 우리 저장소 사본으로 바꿔둔 주소를
+  //  매번 원본으로 되돌려 놓으면 줄이는 작업이 무한 반복된다.)
+  if (posterUrl) {
+    const { data, error } = await supabase
+      .from('events')
+      .update({ poster_url: posterUrl })
+      .eq('id', promotedEventId)
+      .is('poster_url', null)
+      .is('admin_edited_at', null)
+      .select('id')
+    if (error) console.warn(`[known-events] ${slug}/${year} 포스터 저장 실패:`, error.message)
+    else if (data.length > 0) console.log(`[known-events] ${slug}/${year} 포스터 채움`)
   }
 
   const patch = {
