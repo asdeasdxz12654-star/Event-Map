@@ -162,21 +162,25 @@ export default function HomePage() {
       </div>
 
       {/* 카테고리 필터 + 정렬 + 매진 제외 */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        {CATEGORY_FILTERS.map(({ key, label }) => (
-          <button
-            key={String(key)}
-            onClick={() => setActiveCategory(key)}
-            aria-pressed={activeCategory === key}
-            className={`shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
-              activeCategory === key
-                ? 'bg-violet-600/80 text-white'
-                : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-3">
+        {/* 카테고리 — 버튼이 늘면서 좁은 화면에서 다음 줄로 넘어갔다. 월 필터처럼
+            이 줄 안에서만 가로로 스크롤되게 하고, 넓은 화면에서만 줄바꿈을 쓴다. */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 lg:pb-0 lg:flex-wrap lg:overflow-visible">
+          {CATEGORY_FILTERS.map(({ key, label }) => (
+            <button
+              key={String(key)}
+              onClick={() => setActiveCategory(key)}
+              aria-pressed={activeCategory === key}
+              className={`shrink-0 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+                activeCategory === key
+                  ? 'bg-violet-600/80 text-white'
+                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center gap-1.5 ml-auto">
           {/* 목록 열 수 — 좁은 화면에서만. PC는 어차피 3~4열이라 선택할 게 없다. */}
