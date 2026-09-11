@@ -101,7 +101,7 @@ async function main() {
       .from('events')
       .select('id, title, start_date, venue')
       .is('organizer', null)
-      .order('start_date'))
+      .order('start_date').order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`주최측 없는 행사 ${events.length}건 (--fix: ${FIX})\n`)
 

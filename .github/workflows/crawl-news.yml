@@ -10,6 +10,14 @@ on:
     paths:
       - 'crawler/**' # 크롤러 코드(예: known-events.mjs 값 수정)가 바뀔 때만 즉시 실행
 
+# 크롤이 두 번 겹쳐 돌지 않게 한다. 스케줄(21:00 UTC)과 crawler/** push가 같은 시간대에
+# 걸리면 두 실행이 같은 후보를 동시에 처리하면서 Groq·SerpAPI 호출만 두 배로 나간다
+# (source_url unique 덕에 중복 저장은 안 되지만, 무료 티어 한도는 그만큼 먼저 소진된다).
+# 돌고 있는 쪽을 끊지 않고 뒤엣것을 기다리게 한다 — 중간에 끊기면 그날 수집이 반만 된다.
+concurrency:
+  group: crawl-news
+  cancel-in-progress: false
+
 jobs:
   crawl:
     runs-on: ubuntu-latest

@@ -334,6 +334,15 @@ async function handleAdmin(request, env, pathname) {
   // POST /admin/login — 로그인. 여기가 인증의 시작점이라 verifyAdmin 검사 이전에 처리한다.
   // 비밀번호 해시는 서버(env.ADMIN_PASSWORD_HASH)에만 있고 응답엔 절대 포함하지 않는다.
   if (pathname === '/admin/login' && request.method === 'POST') {
+    // 시크릿이 안 붙은 배포는 로그인을 아예 막는다. 예전엔 SESSION_SECRET이 없어도 로그인이
+    // "성공"하면서 토큰을 내줬는데(서명 키가 문자열 "undefined"가 된다) verifySessionToken은
+    // 그 상태에서 무조건 false를 돌려주니, 관리자는 "로그인은 되는데 이후 요청이 전부 401"인
+    // 원인 모를 상태에 빠졌다. 설정 누락은 설정 누락이라고 말해주는 편이 낫다.
+    if (!env.ADMIN_PASSWORD_HASH || !env.SESSION_SECRET) {
+      console.error('[admin] ADMIN_PASSWORD_HASH 또는 SESSION_SECRET 시크릿이 등록되지 않았습니다')
+      return json({ error: 'not_configured' }, env, { status: 501 })
+    }
+
     const retryAfter = await loginLockedFor(request, env)
     if (retryAfter > 0) {
       return json({ error: 'too_many_attempts' }, env, {

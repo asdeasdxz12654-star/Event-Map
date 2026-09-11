@@ -24,6 +24,7 @@ import { fetchAllRows } from './db.mjs'
 import { sleep } from './util.mjs'
 import { findPosterCandidates } from './serpapi-image.mjs'
 import { isUsableImageUrl, isExcludedDomain, isNewsPhotoUrl, isResaleUrl, isOfficialHost } from './poster-filter.mjs'
+import { isOurStorage } from './poster-storage.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -51,7 +52,7 @@ async function main() {
       .from('events')
       .select('id, title, poster_url, admin_edited_at, website, ticket_url, start_date')
       .not('poster_url', 'is', null)
-      .order('start_date', { ascending: false }))
+      .order('start_date', { ascending: false }).order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   console.log(`포스터가 있는 행사 ${events.length}건 검증${DRY_RUN ? ' (dry-run)' : ''}${REPICK ? ' + 의심 건 교체' : ''}\n`)
@@ -113,7 +114,10 @@ async function main() {
     // 행사 공식 사이트·예매처 도메인에서 온 이미지는 검색으로 다시 못 찾더라도 인정한다.
     const officialUrls = [event.website, event.ticket_url]
     const eventYear = event.start_date ? Number(event.start_date.slice(0, 4)) : null
-    const fromOfficialSite = isOfficialHost(event.poster_url, officialUrls)
+    // 우리 저장소 사본(optimize-poster-images.mjs가 줄여서 올린 것)도 마찬가지다.
+    // 주소가 원본과 달라져서 재검색 결과에는 절대 안 나오는데, 그걸 "확인 안 됨"으로
+    // 보면 --repick이 돌 때마다 정상 포스터를 통째로 비워버린다.
+    const fromOfficialSite = isOurStorage(event.poster_url) || isOfficialHost(event.poster_url, officialUrls)
 
     // 그 외에는 지금 기준으로 다시 검색해서 관련 후보에 들어 있는지 본다.
     // 검색은 SerpAPI 크레딧을 쓰므로 --repick(고칠 준비가 된 실행)일 때만 한다.

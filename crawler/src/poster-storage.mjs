@@ -31,7 +31,11 @@ const WEBP_QUALITY = 80
 // 원본이 이보다 크면 받다가 그만둔다 — 어쩌다 100MB짜리를 만나도 CI가 멈추지 않게.
 const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 
-function isOurStorage(url) {
+// 우리 저장소(Supabase Storage) 사본인지. optimize-poster-images.mjs가 원본을 줄여
+// 여기로 옮겨두면 주소가 바뀌므로, 검증 쪽(verify-poster-images.mjs)에서도 이걸 보고
+// "이미 우리가 확인해서 올린 사본"으로 인정해야 한다 — 안 그러면 재검색 결과에 없다는
+// 이유로 멀쩡한 포스터를 비워버린다.
+export function isOurStorage(url) {
   return typeof url === 'string' && url.includes('/storage/v1/object/public/')
 }
 
@@ -54,9 +58,22 @@ async function download(url) {
   if (!type.startsWith('image/')) throw new Error(`이미지가 아님 (${type})`)
   const declared = Number(res.headers.get('content-length') ?? 0)
   if (declared > MAX_DOWNLOAD_BYTES) throw new Error(`너무 큼 (${(declared / 1048576).toFixed(1)}MB)`)
-  const buffer = Buffer.from(await res.arrayBuffer())
-  if (buffer.byteLength > MAX_DOWNLOAD_BYTES) throw new Error('너무 큼')
-  return buffer
+
+  // 실제로 읽으면서 상한을 넘기면 그 자리에서 끊는다. 예전엔 arrayBuffer()로 전부 받은
+  // 뒤에 크기를 쟀는데, 그러면 Content-Length를 안 주는 서버(청크 전송)에서는 100MB를
+  // 다 받고 나서야 "너무 큼"이 됐다 — 막으려던 상황이 그대로 일어난다.
+  const chunks = []
+  let received = 0
+  for await (const chunk of res.body) {
+    received += chunk.byteLength
+    // for await 중간에 throw하면 스트림이 알아서 취소된다 (별도 cancel()은 이미
+    // 이터레이터가 락을 쥐고 있어서 오히려 예외가 난다).
+    if (received > MAX_DOWNLOAD_BYTES) {
+      throw new Error(`너무 큼 (${(MAX_DOWNLOAD_BYTES / 1048576).toFixed(0)}MB 초과)`)
+    }
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks.map(c => Buffer.from(c)))
 }
 
 // 포스터를 우리 저장소 사본으로 바꾼다. 바꿀 필요가 없거나 실패하면 null —

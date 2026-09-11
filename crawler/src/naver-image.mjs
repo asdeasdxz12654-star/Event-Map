@@ -10,6 +10,7 @@
 // 채택 기준은 poster-filter.mjs에 공통으로 있다 — 엔진만 다르지 판정은 똑같다.
 // 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET (naver.mjs, naver-local.mjs와 동일)
 import { judgeCandidate, isUsableImageUrl } from './poster-filter.mjs'
+import { todayKST } from './date-kst.mjs'
 
 const NAVER_IMAGE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/image'
 
@@ -76,7 +77,7 @@ export async function findPosterCandidates(title, officialUrls = [], eventYear =
 export async function fetchEventPosterUrl(title, officialUrls = [], eventYear = null) {
   // 아직 한참 남은(내년 이후) 행사는 공식 포스터가 나오기 전이라, 검색해봐야 옛 회차
   // 포스터나 엉뚱한 이미지가 걸린다. 해가 바뀌면 그때 다시 채우면 된다.
-  if (eventYear && eventYear > new Date().getFullYear()) {
+  if (eventYear && eventYear > Number(todayKST().slice(0, 4))) { // 연도 판정도 KST 기준
     console.log(`  -> 포스터: ${eventYear}년 행사라 아직 검색하지 않음`)
     return null
   }

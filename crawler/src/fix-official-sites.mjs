@@ -38,7 +38,7 @@ async function main() {
       .select('id, title, start_date')
       .is('website', null)
       .gte('start_date', todayKST())
-      .order('start_date'))
+      .order('start_date').order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   const targets = events.slice(0, LIMIT)

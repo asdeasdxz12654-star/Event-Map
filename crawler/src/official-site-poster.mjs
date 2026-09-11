@@ -15,6 +15,7 @@
 //   호출하는 쪽에서 isDedicatedSite()로 "이 행사 전용 사이트인지" 확인하고 부른다.
 //   예매처·SNS·전시장·행사 모음 사이트는 여기서도 한 번 더 막는다.
 import { isAggregatorUrl, isNewsPhotoUrl, isSharedPlatform, isUsableImageUrl } from './poster-filter.mjs'
+import { todayKST } from './date-kst.mjs'
 import { UA, fetchHtml } from './util.mjs'
 
 const IMAGE_HEAD_BYTES = 65_536 // 크기 정보는 파일 앞부분에 있다 — 통째로 받지 않는다
@@ -186,7 +187,7 @@ export async function fetchPosterFromOfficialSite(siteUrl, { eventYear = null } 
   // 내년 행사는 사이트에 아직 이번 회차 자료가 안 올라와 있다. 그 상태로 배너를 집으면
   // 지난 회차 키비주얼이 그대로 붙는다 — 파일 이름에 연도가 없으면 연도 검사도 못 걸러낸다
   // (AGF 2027에 AGF 2026 캐릭터 이미지가 붙었다). 이미지 검색 쪽과 같은 정책으로 막는다.
-  if (eventYear && eventYear > new Date().getFullYear()) return null
+  if (eventYear && eventYear > Number(todayKST().slice(0, 4))) return null // 연도 판정도 KST 기준
   // 여러 행사가 함께 쓰는 곳의 배너는 이 행사 것이 아니다
   if (isSharedPlatform(siteUrl) || isAggregatorUrl(siteUrl) || isNewsPhotoUrl(siteUrl)) return null
 

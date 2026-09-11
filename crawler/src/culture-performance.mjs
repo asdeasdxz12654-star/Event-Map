@@ -31,6 +31,9 @@ import { htmlToText } from './util.mjs'
 // 넘는다(정상 응답인데 막힘, 확인함). 공식 API가 보내는 신뢰할 수 있는 응답이라 한도를 넉넉히 올린다.
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
+  // 숫자처럼 보이는 텍스트를 숫자로 바꾸지 않는다 (xml-utils.mjs와 같은 이유 —
+  // charge가 "10000"이면 number가 돼서 admission_fee(z.string()) 검증에 걸린다).
+  parseTagValue: false,
   processEntities: { enabled: true, maxTotalExpansions: 20_000, maxExpandedLength: 2_000_000 },
 })
 

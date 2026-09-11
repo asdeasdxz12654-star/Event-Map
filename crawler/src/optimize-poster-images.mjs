@@ -30,7 +30,7 @@ async function main() {
       .from('events')
       .select('id, title, poster_url, admin_edited_at')
       .not('poster_url', 'is', null)
-      .order('start_date', { ascending: false }))
+      .order('start_date', { ascending: false }).order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   const targets = SKIP_ADMIN ? events.filter(e => !e.admin_edited_at) : events

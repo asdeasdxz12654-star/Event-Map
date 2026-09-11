@@ -32,7 +32,7 @@ async function main() {
       .from('events')
       .select('id, title, venue, venue_address, start_date')
       .is('venue_lat', null)
-      .order('start_date'))
+      .order('start_date').order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`좌표 없는 행사 ${events.length}건\n`)
 

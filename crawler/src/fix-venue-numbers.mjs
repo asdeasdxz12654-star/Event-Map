@@ -25,7 +25,7 @@ async function main() {
     events = await fetchAllRows(() => supabase
       .from('events')
       .select('id, title, venue, start_date')
-      .order('start_date', { ascending: true }))
+      .order('start_date', { ascending: true }).order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
 
   const bad = events.filter(e => hasBadVenue(e.venue))

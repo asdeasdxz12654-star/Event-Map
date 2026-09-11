@@ -38,7 +38,7 @@ async function main() {
       .from('events')
       .select('id, title, venue, venue_address, venue_lat, venue_lng, admin_edited_at')
       .not('venue_lat', 'is', null)
-      .order('start_date', { ascending: false }))
+      .order('start_date', { ascending: false }).order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   console.log(`좌표가 있는 행사 ${events.length}건 검증${FIX ? ' (--fix: 교체까지)' : ' (보고만)'}\n`)
 

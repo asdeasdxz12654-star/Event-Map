@@ -91,6 +91,14 @@ export function buildPreview(event, origin, pathname) {
 function withMarker(response, marker) {
   const out = new Response(response.body, response)
   out.headers.set('x-event-preview', marker)
+
+  // 이 응답은 /index.html에서 출발했지만 행사마다 내용이 다르다. 원본의 검증자·캐시
+  // 지시자를 그대로 달고 나가면 중간 캐시(브라우저·CDN)가 "index.html"로 알아보고
+  // 한 행사의 미리보기를 다른 행사 주소에 그대로 내줄 수 있다. ETag/Last-Modified는
+  // 떼고, 짧게만 캐시하게 바꾼다 — 미리보기 봇이 다시 긁을 때 최신 값을 받게.
+  out.headers.delete('etag')
+  out.headers.delete('last-modified')
+  out.headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, must-revalidate')
   return out
 }
 

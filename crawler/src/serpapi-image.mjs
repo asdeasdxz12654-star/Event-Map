@@ -16,6 +16,7 @@
 import { pathToFileURL } from 'node:url'
 import { judgeCandidate, isUsableImageUrl, isSharedPlatform } from './poster-filter.mjs'
 import { serpapiSearch, isQuotaExhausted, hasSearchAccess } from './serpapi.mjs'
+import { todayKST } from './date-kst.mjs'
 
 export { isQuotaExhausted }
 
@@ -123,7 +124,9 @@ export async function fetchEventPosterUrl(title, officialUrls = [], eventYear = 
   // 아직 한참 남은(내년 이후) 행사는 공식 포스터가 나오기 전이라, 검색해봐야 옛 회차
   // 포스터나 엉뚱한 이미지가 걸린다. 실제로 "지스타 2027"에 CAD 소프트웨어 패키지
   // 사진이 붙었다. 해가 바뀌어 그 행사가 올해가 되면 그때 다시 채우면 된다.
-  if (eventYear && eventYear > new Date().getFullYear()) {
+  // "올해"는 KST 기준이다 — 크롤이 06:00 KST(=전날 21:00 UTC)에 도니, 연말연시에
+  // UTC로 재면 1월 1일 행사가 하루 동안 "내년"으로 잡혀 포스터를 안 찾는다.
+  if (eventYear && eventYear > Number(todayKST().slice(0, 4))) {
     console.log(`  -> 포스터: ${eventYear}년 행사라 아직 검색하지 않음`)
     return null
   }

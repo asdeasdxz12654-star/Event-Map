@@ -103,9 +103,13 @@ export async function fetchSubcultureCalendarCandidates() {
   console.log(`[행사일정] 전체 ${events.length}건 중 올해 남은 국내 행사 ${upcoming.length}건`)
 
   return upcoming.map(e => ({
+    // event_drafts.source_name은 NOT NULL이다. 이걸 빠뜨려서 이 소스의 후보는
+    // 전부 insert에서 실패하고 있었다(로그에는 '저장 실패'만 찍혀서 눈에 안 띄었다).
+    source_name: '서브컬처 행사일정',
     // 같은 항목을 매번 다시 넣지 않도록 캘린더 id를 source_url에 담는다.
     source_url: `subculture-calendar://${e.id}`,
     source_title: e.title,
+    published_at: null,
     raw: e,
   }))
 }

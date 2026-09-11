@@ -34,6 +34,7 @@ import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
 import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
 import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-calendar.mjs'
+import { todayKST } from './date-kst.mjs'
 import { sleep, htmlToText } from './util.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
@@ -367,7 +368,7 @@ async function main() {
 
   // 네이버 게임 라운지 공지 — 하루 1회만 조회 (수동 실행 중복 방지)
   // 오늘 날짜를 source_url로 쓴 sentinel이 event_drafts에 없을 때만 API를 호출한다.
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD (UTC 기준, 실용상 무방)
+  const today = todayKST() // 다른 날짜 판정과 같은 기준(KST)을 쓴다
   const loungeDailyKey = `naver-lounge://daily/${today}`
   if (await alreadyCollected(loungeDailyKey)) {
     console.log('[라운지] 오늘 이미 조회됨, 스킵')

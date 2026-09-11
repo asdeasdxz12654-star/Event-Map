@@ -37,7 +37,7 @@ async function main() {
       .select('id, title, start_date, website, ticket_url, admin_edited_at')
       .is('poster_url', null)
       .gte('start_date', todayKST())
-      .order('start_date'))
+      .order('start_date').order('id'))
   } catch (err) { console.error('조회 실패:', err.message); process.exit(1) }
   const targets = events.slice(0, LIMIT)
   console.log(`포스터 없는 예정 행사 ${events.length}건 중 ${targets.length}건 처리${DRY_RUN ? ' (dry-run)' : ''}\n`)
@@ -74,10 +74,14 @@ async function main() {
     // 인쇄용 원본처럼 큰 포스터는 줄여서 우리 저장소에 두고 그 주소를 쓴다.
     const finalUrl = await storePoster(supabase, event.id, posterUrl) ?? posterUrl
 
+    // 다른 포스터 저장 경로(attachEventPoster)와 같은 조건을 건다 — 조회하고 저장하는
+    // 사이에 채워졌으면 덮어쓰지 않고, 관리자가 손댄 행은 아예 건드리지 않는다.
     const { error: updateError } = await supabase
       .from('events')
       .update({ poster_url: finalUrl })
       .eq('id', event.id)
+      .is('poster_url', null)
+      .is('admin_edited_at', null)
 
     if (updateError) {
       console.error(`  -> 저장 실패: ${updateError.message}`)
