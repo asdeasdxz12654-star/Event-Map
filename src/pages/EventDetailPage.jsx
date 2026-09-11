@@ -8,7 +8,7 @@ import CategoryBadge from '../components/CategoryBadge'
 import CrowdBadge from '../components/CrowdBadge'
 import TrustScore from '../components/TrustScore'
 import NaverMap from '../components/NaverMap'
-import { useEvents } from '../hooks/useEvents'
+import { useEvent } from '../hooks/useEvent'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { addEventToCalendar, calendarButtonLabel } from '../utils/ics'
@@ -27,14 +27,27 @@ import PosterImage from '../components/PosterImage'
 export default function EventDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { events, loading, error } = useEvents()
-  const event = events.find(e => e.id === id)
+  // 목록(useEvents)이 아니라 id로 이 행사만 받아온다 — 목록은 "올해 + 90일"만 담아서
+  // 그 범위 밖 행사는 링크로 들어와도 못 찾는 상태였다 (useEvent.js 주석 참고).
+  const { event, loading, error } = useEvent(id)
   useDocumentTitle(event?.title)
   const { isBookmarked, toggleBookmark } = useBookmarks()
   const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
   const [imgError, setImgError] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
+
+  // 다른 행사로 이동해도 이 컴포넌트는 언마운트되지 않는다(같은 라우트, id만 바뀜).
+  // 그래서 상태를 직접 비워주지 않으면 앞 행사에서 포스터가 깨졌을 때 그 imgError가
+  // 남아 다음 행사도 "공식 포스터 미정"으로 보이고, 열어둔 수정 폼이 엉뚱한 행사의
+  // 폼으로 이어진다. (렌더 도중에 되돌리는 React 공식 패턴 — 이펙트로 하면 잘못된
+  //  화면이 한 번 그려진 뒤에 고쳐진다.)
+  const [renderedId, setRenderedId] = useState(id)
+  if (renderedId !== id) {
+    setRenderedId(id)
+    setImgError(false)
+    setShowEditForm(false)
+  }
 
   const handleDelete = async () => {
     if (!await confirm(`"${event?.title}" 행사를 삭제하시겠습니까?`)) return

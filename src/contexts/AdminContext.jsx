@@ -33,6 +33,11 @@ export function AdminProvider({ children }) {
       const mins = Math.ceil(Number(res.headers.get('Retry-After') ?? 600) / 60)
       return { ok: false, message: `로그인 시도가 너무 많습니다. ${mins}분 뒤에 다시 시도해주세요.` }
     }
+    // 501 = Worker에 ADMIN_PASSWORD_HASH/SESSION_SECRET 시크릿이 등록되지 않은 배포.
+    // 코드가 틀렸다고 안내하면 맞는 코드를 몇 번이고 다시 넣어보게 된다.
+    if (res.status === 501) {
+      return { ok: false, message: '서버에 관리자 로그인이 설정되어 있지 않습니다. (Worker 시크릿 확인 필요)' }
+    }
     if (!res.ok) return { ok: false, message: '관리자 코드가 올바르지 않습니다' }
     const { token } = await res.json().catch(() => ({}))
     if (!token) return { ok: false, message: '관리자 코드가 올바르지 않습니다' }

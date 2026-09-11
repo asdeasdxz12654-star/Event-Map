@@ -17,8 +17,11 @@ export function resolveCrowdLevel(crowdLevel, ticketStatus) {
 
 export default function CrowdBadge({ crowdLevel, ticketStatus, className = '' }) {
   const level = resolveCrowdLevel(crowdLevel, ticketStatus)
-  if (!level) return null
-  const { label, emoji, className: levelClassName } = config[level]
+  // config에 없는 값(DB에 새 등급이 들어온 경우 등)이면 그냥 안 그린다 —
+  // 예전엔 없는 키를 구조분해하다 예외가 나서 카드·상세 화면이 통째로 오류 화면이 됐다.
+  const entry = level ? config[level] : null
+  if (!entry) return null
+  const { label, emoji, className: levelClassName } = entry
   return (
     <span
       className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${levelClassName} ${className}`}

@@ -104,5 +104,7 @@ export function downloadEventIcs(event) {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  // 곧바로 revoke하면 브라우저가 아직 blob을 읽기 전이라 다운로드가 취소되는 경우가 있다
+  // (사파리·파이어폭스에서 보고되는 증상). 한 박자 뒤에 정리한다.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }

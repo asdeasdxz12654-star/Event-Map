@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 // 브라우저 네이티브 alert()/confirm()는 메인 스레드를 막고, 스타일도 앱과
 // 전혀 안 맞아서 다른 최신 사이트들과 나란히 두면 확 티가 난다. 토스트 +
@@ -25,16 +25,28 @@ export function UIFeedbackProvider({ children }) {
   // confirm(message) -> Promise<boolean> — window.confirm과 같은 사용법이되 논블로킹.
   const confirmDialog = useCallback((message, { confirmLabel = '삭제', danger = true } = {}) => {
     return new Promise(resolve => {
+      // 앞의 확인창이 아직 열려 있는데 새 확인창이 뜨면, 먼저 걸려 있던 Promise를
+      // 정리하지 않는 한 그걸 await하던 쪽이 영영 깨어나지 못한다(삭제 버튼이 계속
+      // '처리 중'에 묶이는 식). 취소한 것으로 보고 닫아준다.
+      resolveRef.current?.(false)
       resolveRef.current = resolve
       setConfirmState({ message, confirmLabel, danger })
     })
   }, [])
 
-  const closeConfirm = (result) => {
+  const closeConfirm = useCallback((result) => {
     setConfirmState(null)
     resolveRef.current?.(result)
     resolveRef.current = null
-  }
+  }, [])
+
+  // Esc로 닫기. 설정 모달은 되는데 확인창만 안 돼서 동작이 제각각이었다.
+  useEffect(() => {
+    if (!confirmState) return
+    const onKey = e => { if (e.key === 'Escape') closeConfirm(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [confirmState, closeConfirm])
 
   return (
     <Ctx.Provider value={{ toast, confirm: confirmDialog }}>
@@ -64,6 +76,9 @@ export function UIFeedbackProvider({ children }) {
           onClick={() => closeConfirm(false)}
         >
           <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="확인"
             className="bg-panel border border-ink/10 rounded-2xl p-5 w-80 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >

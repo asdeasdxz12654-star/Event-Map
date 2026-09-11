@@ -80,13 +80,20 @@ export default function HomePage() {
 
   const activeMonths = useMemo(() => getActiveMonths(baseBeforeMonth), [baseBeforeMonth]) // ['2026-09', ...]
 
+  // 고른 달은 저장돼 있는데(useHomeFilters) 상태·카테고리·검색을 바꾸면 그 달에 행사가
+  // 아예 없어질 수 있다. 그때 저장된 값을 그대로 쓰면 아래 월 버튼은 아무것도 눌린 상태가
+  // 아닌데 목록만 "해당하는 행사가 없습니다"가 되어, 왜 비었는지 알 방법이 없다.
+  // 지금 조건에서 존재하지 않는 달은 "전체"로 본다.
+  const effectiveMonth = activeMonth && activeMonths.includes(activeMonth) ? activeMonth : null
+
   const filtered = useMemo(() => {
-    const base = filterByMonth(baseBeforeMonth, activeMonth)
+    const base = filterByMonth(baseBeforeMonth, effectiveMonth)
     return sort === 'newest' ? sortByNewest(base) : base
-  }, [baseBeforeMonth, activeMonth, sort])
+  }, [baseBeforeMonth, effectiveMonth, sort])
 
   // 한 해 안이면 "9월", 내년 행사까지 섞여 보이면 "26.9월"처럼 연도를 붙여 구분한다.
   const spansMultipleYears = new Set(activeMonths.map(ym => ym.slice(0, 4))).size > 1
+
   const monthLabel = ym => {
     const [year, month] = ym.split('-')
     return spansMultipleYears ? `${year.slice(2)}.${Number(month)}월` : `${Number(month)}월`
@@ -246,9 +253,9 @@ export default function HomePage() {
         <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 lg:mb-5 scrollbar-hide">
           <button
             onClick={() => setActiveMonth(null)}
-            aria-pressed={activeMonth === null}
+            aria-pressed={effectiveMonth === null}
             className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
-              activeMonth === null
+              effectiveMonth === null
                 ? 'bg-indigo-600 text-white'
                 : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
             }`}
@@ -258,10 +265,10 @@ export default function HomePage() {
           {activeMonths.map(ym => (
             <button
               key={ym}
-              onClick={() => setActiveMonth(activeMonth === ym ? null : ym)}
-              aria-pressed={activeMonth === ym}
+              onClick={() => setActiveMonth(effectiveMonth === ym ? null : ym)}
+              aria-pressed={effectiveMonth === ym}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
-                activeMonth === ym
+                effectiveMonth === ym
                   ? 'bg-indigo-600 text-white'
                   : 'bg-ink/5 text-zinc-400 hover:bg-ink/10 hover:text-ink'
               }`}

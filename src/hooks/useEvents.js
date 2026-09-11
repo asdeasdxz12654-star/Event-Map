@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 // DB 행(snake_case) -> 컴포넌트가 쓰는 이벤트 객체(camelCase)로 변환
-function mapEvent(row) {
+// (useEvent.js가 행사 한 건을 직접 받아올 때도 같은 변환을 써야 해서 export한다)
+export function mapEvent(row) {
   return {
     id: row.id,
     title: row.title,

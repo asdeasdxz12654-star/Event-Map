@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
 
 const CATEGORIES = ['게임전시', '코스프레', '게임음악', '일러스트']
@@ -91,9 +91,36 @@ function Field({ label, children }) {
 
 export default function AdminEventForm({ event, onClose, onSaved }) {
   const isEdit = !!event
-  const [form, setForm] = useState(() => toForm(event))
+  const initialRef = useRef(null)
+  if (initialRef.current === null) initialRef.current = toForm(event)
+  const [form, setForm] = useState(initialRef.current)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // 이 폼은 입력칸이 스무 개가 넘는다. 예전엔 바깥을 잘못 눌렀을 때 아무것도 묻지 않고
+  // 닫혀서 채워 넣은 내용이 통째로 사라졌다. 손댄 게 있으면 한 번 확인한다.
+  const isDirty = () => JSON.stringify(form) !== JSON.stringify(initialRef.current)
+  const requestClose = () => {
+    // 여기서만 브라우저 기본 confirm을 쓴다 — 이 폼은 UIFeedbackProvider의 확인창보다
+    // 위(z-[60])에 떠 있어서 커스텀 모달을 겹쳐 띄우면 이 폼 뒤에 가려 안 보인다.
+    if (isDirty() && !window.confirm('입력한 내용이 저장되지 않습니다. 닫을까요?')) return
+    onClose()
+  }
+
+  // Esc로 닫기 + 열려 있는 동안 뒤 화면 스크롤 잠금 (설정 모달과 같은 동작).
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') requestClose() }
+    document.addEventListener('keydown', onKey)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
+    }
+    // requestClose는 매 렌더 새로 만들어지지만 form을 읽어야 해서 의존성에 넣지 않는다
+    // (넣으면 타이핑할 때마다 리스너가 붙었다 떨어진다).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
@@ -101,6 +128,12 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
     e.preventDefault()
     if (!form.title || !form.start_date || !form.end_date) {
       setError('제목, 시작일, 종료일은 필수입니다')
+      return
+    }
+    // 종료일이 시작일보다 앞서면 상태 판정(예정/진행중/종료)과 월 필터가 통째로
+    // 어긋난다 — 저장 전에 막는다.
+    if (form.end_date < form.start_date) {
+      setError('종료일은 시작일과 같거나 그 이후여야 합니다')
       return
     }
     setSaving(true)
@@ -124,15 +157,18 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-6"
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? '행사 수정' : '행사 추가'}
         className="bg-panel border border-ink/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 my-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-ink font-semibold">{isEdit ? '행사 수정' : '행사 추가'}</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
+          <button type="button" onClick={requestClose} aria-label="닫기" className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
         </div>
 
         <form onSubmit={submit} className="space-y-3">

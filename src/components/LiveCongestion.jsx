@@ -25,6 +25,12 @@ export default function LiveCongestion({ placeName }) {
 
   const style = LEVEL_STYLE[data.level] ?? 'bg-zinc-700/50 text-zinc-300 border-zinc-600/30'
 
+  // 인원 추정치는 서울시 응답에 값이 없으면 null로 내려온다(Worker가 Number()로 바꾸다
+  // NaN이 되고, JSON에서는 null이 된다). 그대로 .toLocaleString()을 부르면 렌더 도중
+  // 예외가 나서 ErrorBoundary가 상세 화면 전체를 오류 화면으로 바꿔버린다 —
+  // 부가 정보 한 줄 때문에 페이지를 통째로 잃지 않도록, 값이 있을 때만 보여준다.
+  const hasPopulation = Number.isFinite(data.populationMin) && Number.isFinite(data.populationMax)
+
   return (
     <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 mb-4">
       <div className="flex items-center gap-1.5 mb-2">
@@ -37,9 +43,11 @@ export default function LiveCongestion({ placeName }) {
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${style}`}>
           {data.level}
         </span>
-        <span className="text-xs text-zinc-400">
-          약 {data.populationMin.toLocaleString()}~{data.populationMax.toLocaleString()}명
-        </span>
+        {hasPopulation && (
+          <span className="text-xs text-zinc-400">
+            약 {data.populationMin.toLocaleString()}~{data.populationMax.toLocaleString()}명
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-zinc-400 mb-2">{data.message}</p>

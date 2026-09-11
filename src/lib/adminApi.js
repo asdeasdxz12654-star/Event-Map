@@ -5,6 +5,8 @@ const BASE = import.meta.env.VITE_ADMIN_API_URL || 'https://event-map-api-proxy.
 const ERROR_MESSAGES = {
   not_found: '대상을 찾을 수 없습니다. 다른 곳에서 이미 삭제됐을 수 있습니다.',
   internal_error: '서버 오류로 저장하지 못했습니다. 입력값을 확인하고 다시 시도해주세요.',
+  invalid_json: '요청 형식이 올바르지 않습니다. 새로고침 후 다시 시도해주세요.',
+  not_configured: '서버에 관리자 설정이 되어 있지 않습니다. (Worker 시크릿 확인 필요)',
 }
 
 function hdrs() {
