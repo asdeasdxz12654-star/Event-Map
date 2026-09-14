@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import StatusBadge from './StatusBadge'
-import CategoryBadge from './CategoryBadge'
-import CrowdBadge from './CrowdBadge'
+import Icon, { StarFilled } from './icons'
+import { FOCUS_RING } from './ui/focusRing'
 import { getEventStatus, getDaysUntil, categoryMeta, parseLocalDate, STATUS } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
@@ -13,10 +12,18 @@ import { adminApi } from '../lib/adminApi'
 import { ticketSiteName } from '../lib/ticketSite'
 import PosterImage from './PosterImage'
 
-const NEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000
-
-// compact: 카드가 좁을 때(모바일 2열) 날짜를 축약해서 잘리지 않게 한다.
-// 1열로 보고 있으면 폭이 넉넉하니 축약하지 않는다.
+// 목록 카드.
+//
+// 예전 카드에는 정보 블록이 여덟 개 있었다 — 포스터·제목·뱃지 네 개(카테고리·상태·
+// D-day·혼잡도)·날짜·장소·입장료·예매 줄. 모바일 2열에서 카드 폭이 164px뿐인데
+// 여덟 덩어리를 넣으니 뱃지가 줄바꿈되고 글씨가 10px까지 내려갔다.
+//
+// 목록에서 실제로 쓰이는 건 "이게 무슨 행사고, 언제, 어디서 하나" 셋이다. 나머지는
+// 상세 화면이 맡는다. 그래서 본문은 제목 · 날짜 · 장소 세 줄로 줄이고, 남은 정보 중
+// 훑을 때 필요한 것(임박·진행중·예매·매진)만 포스터 위에 얹었다.
+//
+// 포스터 비율도 4:3에서 3:4로 바꿨다. 공식 포스터는 대부분 세로형이라, 가로 틀에
+// 넣으면 좌우가 전부 흐린 여백이 되고 정작 그림은 카드 폭의 1/3만 차지했다.
 export default function EventCard({ event, compact = false }) {
   const status = getEventStatus(event)
   const { isBookmarked, toggleBookmark } = useBookmarks()
@@ -26,7 +33,6 @@ export default function EventCard({ event, compact = false }) {
   const [imgError, setImgError] = useState(false)
   const showPoster = !!event.posterUrl && !imgError
 
-  // 카드가 더 이상 링크 안에 있지 않아서 기본 동작을 막을 필요가 없다.
   const handleDelete = async () => {
     if (!await confirm(`"${event.title}" 행사를 삭제하시겠습니까?`)) return
     try {
@@ -40,169 +46,143 @@ export default function EventCard({ event, compact = false }) {
   const end = parseLocalDate(event.endDate)
   const isSameDay = event.startDate === event.endDate
 
+  // 요일이 실제 계획에 쓰이는 정보라 두 형식 모두에 남긴다. 2열에서도 잘리지 않도록
+  // "11.14 금 – 11.17 월"처럼 짧게 쓴다 (예전 "11월 14일 ~ 11월 1…"은 끝이 잘렸다).
   const dateStr = isSameDay
+    ? format(start, 'M.d (eee)', { locale: ko })
+    : `${format(start, 'M.d', { locale: ko })} – ${format(end, 'M.d (eee)', { locale: ko })}`
+  const longDateStr = isSameDay
     ? format(start, 'M월 d일 (eee)', { locale: ko })
     : `${format(start, 'M월 d일', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
 
-  // 모바일은 카드가 2열이라 폭이 절반뿐 — 위 형식은 "9월 21일 ~ 9월 2…"처럼 날짜가
-  // 잘려 나간다. 좁은 화면에서만 쓰는 축약 형식을 따로 만든다.
-  const compactDateStr = isSameDay
-    ? format(start, 'M.d (eee)', { locale: ko })
-    : `${format(start, 'M.d')} ~ ${format(end, 'M.d')}`
-
   // D-Day (예정 행사만)
-  const daysUntil = status === 'upcoming' ? getDaysUntil(event) : null
+  const daysUntil = status === STATUS.UPCOMING ? getDaysUntil(event) : null
   const dDayLabel = daysUntil === null ? null
     : daysUntil === 0 ? 'D-Day'
     : daysUntil > 0   ? `D-${daysUntil}`
     : null
+  // 임박한 것만 강조색을 쓴다. 두 달 뒤 행사까지 색이 붙으면 임박했다는 뜻이 사라진다.
+  const dDayUrgent = daysUntil !== null && daysUntil <= 7
 
-  // 7일 이내 추가된 행사
-  const isNew = event.createdAt
-    && (Date.now() - new Date(event.createdAt).getTime()) < NEW_THRESHOLD_MS
-
-  const ticketNotOpenYet = !!event.ticketOpenDate
-    && status === 'upcoming'
-    && event.ticketOpenDate > format(new Date(), 'yyyy-MM-dd')
+  const soldout = event.ticketStatus === 'soldout'
   const siteName = ticketSiteName(event.ticketUrl)
+  const ticketNotOpenYet = !!event.ticketOpenDate
+    && status === STATUS.UPCOMING
+    && event.ticketOpenDate > format(new Date(), 'yyyy-MM-dd')
+
+  // 포스터 아래에 한 줄로 얹는 예매 안내. 없으면 줄 자체가 없다.
+  const ticketLine = soldout ? null
+    : ticketNotOpenYet
+      ? `${format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M.d', { locale: ko })}${event.ticketOpenTime ? ` ${event.ticketOpenTime}` : ''} 오픈`
+      : status !== STATUS.ENDED && event.ticketUrl
+        ? `예매 중${siteName ? ` · ${siteName}` : ''}`
+        : null
 
   return (
-    // 예전엔 카드 전체가 <Link>였고 그 안에 북마크·삭제 <button>이 들어 있었다.
-    // 링크 안에 버튼을 넣는 건 유효하지 않은 HTML이고 키보드·스크린리더 동작도 어그러진다.
-    // 카드는 일반 div로 두고, 카드 전체를 덮는 투명한 링크를 따로 깔았다(z-[1]).
-    // 버튼은 그보다 위(z-10)라 그대로 눌린다.
-    <div className="relative flex flex-col bg-ink/5 hover:bg-ink/10 border border-ink/10 hover:border-indigo-500/40 rounded-2xl p-3 sm:p-4 transition-all duration-200 group">
+    // 카드 전체를 덮는 투명한 링크를 깔고(z-[1]) 버튼은 그 위에 둔다(z-10).
+    // 예전처럼 <Link> 안에 <button>을 넣으면 유효하지 않은 HTML이고 키보드·스크린리더
+    // 동작도 어그러진다.
+    <div className="relative flex flex-col group">
       <Link
         to={`/events/${event.id}`}
         aria-label={`${event.title} 상세 보기`}
-        className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+        className={`absolute inset-0 z-[1] rounded-2xl ${FOCUS_RING}`}
       />
 
-      <button
-        onClick={() => toggleBookmark(event.id)}
-        aria-label={bookmarked ? '북마크 해제' : '북마크에 추가'}
-        aria-pressed={bookmarked}
-        className={`absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full backdrop-blur transition-colors ${
-          bookmarked ? 'bg-indigo-500/80 text-white' : 'bg-black/40 text-zinc-300 hover:text-white'
-        }`}
-      >
-        {bookmarked ? '⭐' : '☆'}
-      </button>
-
-      {isAdmin && (
-        <button
-          onClick={handleDelete}
-          aria-label="행사 삭제"
-          className="absolute top-3 left-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold backdrop-blur transition-colors"
-        >
-          ×
-        </button>
-      )}
-
-      {/* 포스터 */}
-      <div className="relative mb-3">
+      <div className="relative mb-2.5">
         {showPoster ? (
-          // 세로형 포스터가 잘리지 않도록 전체를 보여준다 (PosterImage 주석 참고).
-          // 비율을 16:7에서 4:3으로 키운 것도 같은 이유다 — 16:7 안에 세로형을 통째로
-          // 넣으면 포스터가 카드 폭의 1/3만 차지해서 무슨 그림인지 알아볼 수 없다.
           <PosterImage
             src={event.posterUrl}
             alt={`${event.title} 포스터`}
             onError={() => setImgError(true)}
-            className="w-full aspect-[4/3] rounded-xl"
+            className="w-full aspect-[3/4] rounded-xl border border-line"
           />
         ) : (
-          // 포스터가 없을 때. 예전엔 카테고리 이모지만 띄워서 "이미지를 못 불러온 건지,
-          // 아직 포스터가 안 나온 건지" 구분이 안 됐다. 상태를 글자로 밝힌다.
-          <div className="w-full aspect-[4/3] rounded-xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl sm:text-3xl leading-none">{categoryMeta(event.category).emoji}</span>
-            <span className="text-[10px] sm:text-xs text-zinc-300">공식 포스터 미정</span>
+          // 포스터가 없을 때. "이미지를 못 불러온 건지, 아직 포스터가 안 나온 건지"를
+          // 구분할 수 있게 상태를 글자로 밝힌다.
+          // 이모지를 남긴 유일한 자리다 — 여기서는 색과 크기가 오히려 장점이고,
+          // 대신 놓을 일러스트가 없다.
+          <div className="w-full aspect-[3/4] rounded-xl border border-line bg-gradient-to-br from-indigo-900/60 to-violet-900/40 flex flex-col items-center justify-center gap-1.5">
+            <span className="text-3xl leading-none" aria-hidden="true">{categoryMeta(event.category).emoji}</span>
+            <span className="text-[11px] text-zinc-300">공식 포스터 미정</span>
           </div>
         )}
-        {event.ticketStatus === 'soldout' && (
-          <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center">
-            <span className="px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-full tracking-wide">
-              매진
+
+        {/* 포스터 아래쪽을 어둡게 깔아 흰 글자가 어떤 포스터 위에서도 읽히게 한다 */}
+        {(ticketLine || soldout) && (
+          <div className="absolute inset-x-0 bottom-0 h-1/3 rounded-b-xl bg-gradient-to-t from-black/85 to-transparent pointer-events-none" aria-hidden="true" />
+        )}
+
+        {/* 왼쪽 위 — 지금 열리는 중이거나, 곧 열리는 행사에만 붙는다 */}
+        <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
+          {status === STATUS.ONGOING && (
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/65 backdrop-blur text-live text-[11px] font-semibold border border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-live" aria-hidden="true" />
+              진행중
             </span>
-          </div>
-        )}
-        {/* NEW 뱃지 — 10px 글씨라 대비를 따로 맞춰야 한다(흰 글씨 + emerald-500은 2.5:1뿐).
-            테마마다 조합이 뒤집혀야 해서(다크: 밝은 초록 바탕+짙은 글씨, 라이트: 짙은
-            초록 바탕+흰 글씨) 색을 index.css의 badge-new 토큰으로 뺐다. */}
-        {isNew && (
-          <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-badge-new text-badge-new-fg text-[10px] font-bold rounded-md tracking-wide">
-            NEW
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-start justify-between gap-2 mb-2 pr-8">
-        <h3 className="font-semibold text-ink group-hover:text-indigo-300 transition-colors text-sm leading-snug line-clamp-2">
-          {event.title}
-        </h3>
-      </div>
-
-      {/* 카테고리 + 상태 + D-Day */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <CategoryBadge category={event.category} />
-        <StatusBadge status={status} />
-        {dDayLabel && (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-            dDayLabel === 'D-Day'
-              ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-              : daysUntil <= 7
-              ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-              : 'bg-zinc-700/50 text-zinc-400 border border-zinc-600/30'
-          }`}>
-            {dDayLabel}
-          </span>
-        )}
-        {/* 혼잡도는 행사가 열리고 있을 때만 붙인다. 예정 행사 카드에 "혼잡"이 달려 있으면
-            지금 사람이 몰려 있다는 뜻으로 읽히는데, 아직 시작도 안 한 행사다. */}
-        {status === STATUS.ONGOING && (
-          <CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />
-        )}
-      </div>
-
-      <div className="space-y-1 text-xs text-zinc-400 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0">📅</span>
-          {compact ? (
-            <>
-              <span className="truncate sm:hidden">{compactDateStr}</span>
-              <span className="truncate hidden sm:block">{dateStr}</span>
-            </>
-          ) : (
-            <span className="truncate">{dateStr}</span>
+          )}
+          {dDayLabel && (
+            <span className={`px-2 py-1 rounded-lg text-[11px] font-semibold tabular-nums backdrop-blur border ${
+              dDayUrgent
+                ? 'bg-indigo-600/90 text-white border-transparent'
+                : 'bg-black/65 text-white border-white/10'
+            }`}>
+              {dDayLabel}
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0">📍</span>
-          <span className="truncate">{event.venue}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0">💰</span>
-          <span className="truncate">{event.admissionFee || '공식 미정'}</span>
-        </div>
+
+        <button
+          onClick={() => toggleBookmark(event.id)}
+          aria-label={bookmarked ? '북마크 해제' : '북마크에 추가'}
+          aria-pressed={bookmarked}
+          className={`absolute top-1.5 right-1.5 z-10 w-9 h-9 flex items-center justify-center rounded-full backdrop-blur transition-colors ${FOCUS_RING} ${
+            bookmarked ? 'bg-indigo-500/90 text-white' : 'bg-black/45 text-white/85 hover:text-white'
+          }`}
+        >
+          {bookmarked ? <StarFilled className="w-[17px] h-[17px]" /> : <Icon name="star" className="w-[17px] h-[17px]" />}
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={handleDelete}
+            aria-label="행사 삭제"
+            className={`absolute bottom-1.5 right-1.5 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-danger/80 hover:bg-danger text-white backdrop-blur transition-colors ${FOCUS_RING}`}
+          >
+            <Icon name="trash" className="w-4 h-4" />
+          </button>
+        )}
+
+        {soldout ? (
+          <>
+            <div className="absolute inset-0 rounded-xl bg-black/55" aria-hidden="true" />
+            <span className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-danger text-white text-[11px] font-bold tracking-wide">
+              매진
+            </span>
+          </>
+        ) : ticketLine && (
+          <span className="absolute bottom-2 left-2 right-11 flex items-center gap-1.5 text-[11px] text-white/90 tabular-nums">
+            <Icon name="ticket" className="w-3 h-3" />
+            <span className="truncate">{ticketLine}</span>
+          </span>
+        )}
       </div>
 
-      {ticketNotOpenYet && (
-        <div className="mt-2.5 pt-2.5 border-t border-ink/10 text-xs text-indigo-400">
-          {/* 오픈 "시각"이 실제로 줄을 서는 기준이라 목록에서도 같이 보여준다.
-              아직 공식 발표가 없으면 비워두지 않고 미정이라고 밝힌다 — 비어 있으면
-              "종일 아무 때나 열리나?"로 읽힌다. */}
-          🎟 예매 오픈: {format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M월 d일', { locale: ko })}
-          {event.ticketOpenTime ? ` ${event.ticketOpenTime}` : ' (시간 미정)'}
-          {siteName && ` · ${siteName}`}
+      <h3 className="font-semibold text-ink group-hover:text-indigo-300 transition-colors text-[13px] sm:text-sm leading-snug line-clamp-2 mb-1.5">
+        {event.title}
+      </h3>
+
+      <div className="space-y-1 text-xs text-zinc-400 min-w-0">
+        <div className="flex items-center gap-1.5 tabular-nums">
+          {/* 카테고리는 여기 색점 하나로 남는다 — 예전엔 본문에 색 알약이 따로 있었다 */}
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${categoryMeta(event.category).dotClass}`} aria-hidden="true" />
+          <span className="truncate">{compact ? dateStr : longDateStr}</span>
         </div>
-      )}
-      {/* 매진이면 "예매 중"이 아니다 — 포스터엔 매진 오버레이가 걸려 있는데 바로 아래에
-          "예매 중"이 같이 뜨는 모순이 있었다. */}
-      {!ticketNotOpenYet && status !== STATUS.ENDED && event.ticketUrl && event.ticketStatus !== 'soldout' && (
-        <div className="mt-2.5 pt-2.5 border-t border-ink/10 text-xs text-indigo-400 truncate">
-          🎟 예매 중{siteName && ` · ${siteName}`}
+        <div className="flex items-center gap-1.5">
+          <Icon name="pin" className="w-3.5 h-3.5 text-zinc-500" />
+          <span className="truncate">{event.venue}</span>
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -14,6 +14,11 @@ const useHomeFiltersStore = createLocalStorageHook('gameEventHub.homeFilters', {
 // 탭 안에서는 유지되므로 상세페이지를 보고 뒤로 와도 검색어는 그대로 남는다.
 const useSearchStore = createLocalStorageHook('gameEventHub.homeSearch', '', 'session')
 
+// "전체 해제"를 눌렀을 때 돌아갈 자리. 상태(예정/진행중/종료)는 필터가 아니라
+// 지금 보고 있는 묶음이므로 건드리지 않는다 — 해제했더니 보던 탭까지 바뀌면
+// 무엇이 풀린 건지 알 수 없다.
+const CLEARED = { category: null, month: null, hideSoldout: false }
+
 export function useHomeFilters() {
   const [filters, setFilters] = useHomeFiltersStore()
   const [search, setSearch] = useSearchStore()
@@ -33,5 +38,9 @@ export function useHomeFilters() {
     setSort:        sort     => setFilters({ ...filters, sort }),
     setMonth:       month    => setFilters({ ...filters, month }),
     setSearch,
+    resetAll: () => {
+      setFilters({ ...filters, ...CLEARED })
+      setSearch('')
+    },
   }
 }

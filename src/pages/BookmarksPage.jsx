@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
 import EventCard from '../components/EventCard'
+import EventCardSkeleton from '../components/EventCardSkeleton'
+import Icon from '../components/icons'
+import { FOCUS_RING } from '../components/ui/focusRing'
 import { useEvents } from '../hooks/useEvents'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -18,23 +21,31 @@ export default function BookmarksPage() {
       <div className="flex items-baseline gap-2 mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-ink">북마크</h1>
         {!loading && bookmarked.length > 0 && (
-          <span className="text-sm text-zinc-400">{bookmarked.length}개</span>
+          <span className="text-sm text-zinc-400 tabular-nums">{bookmarked.length}개</span>
         )}
       </div>
 
+      {/* 기다리는 모습은 홈과 같아야 한다 — 홈에서 북마크로 넘어올 때 화면이 튀지 않게 */}
       {loading && (
-        <div className="text-center py-16 text-zinc-400 animate-pulse">불러오는 중...</div>
+        <div className={eventGridClass(columns)}>
+          {Array.from({ length: columns === 1 ? 2 : 4 }).map((_, i) => <EventCardSkeleton key={i} />)}
+        </div>
       )}
 
       {error && (
-        <div className="text-center py-16 text-red-400">불러오기 실패</div>
+        <div className="text-center py-16 text-danger">
+          <Icon name="warn" className="w-9 h-9 mx-auto mb-3" />
+          <p>행사 정보를 불러오지 못했습니다</p>
+        </div>
       )}
 
       {!loading && !error && bookmarked.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
-          <div className="text-4xl mb-3">☆</div>
+          <Icon name="star" className="w-9 h-9 mx-auto mb-3 text-zinc-500" />
           <p className="mb-4">북마크한 행사가 없습니다</p>
-          <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm">행사 둘러보기 →</Link>
+          <Link to="/" className={`text-indigo-400 hover:text-indigo-300 text-sm rounded ${FOCUS_RING}`}>
+            행사 둘러보기 →
+          </Link>
         </div>
       )}
 
