@@ -41,6 +41,14 @@ const DAEJEON_CONTENT_FAIR_2026_POSTER = 'https://encrypted-tbn0.gstatic.com/ima
 const KINTEX_LAT = 37.669119
 const KINTEX_LNG = 126.7460896
 
+// KINTEX 제2전시장(킨텍스로 217-59). 제1전시장과 613m 떨어진 별개 건물이라 위 값을 쓰면
+// 지도 핀이 엉뚱한 건물에 꽂힌다.
+// 출처 검증: OpenStreetMap의 "한국국제전시장 1전시장" 값(37.6691579, 126.7455958)이 위
+// KINTEX_LAT/LNG(네이버 지역검색으로 얻은 값)과 45m 이내로 일치한다 — 같은 데이터셋의
+// "한국국제전시장 2전시장" 값도 같은 정확도로 본다.
+const KINTEX2_LAT = 37.6647381
+const KINTEX2_LNG = 126.7418699
+
 function toDateStr(date) {
   return date.toISOString().slice(0, 10) // YYYY-MM-DD
 }
@@ -254,13 +262,13 @@ const ONE_OFF_EVENTS = [
     data: {
       is_event: true, title: '호요랜드 2026', category: '게임전시',
       start_date: '2026-10-02', end_date: '2026-10-05',
-      // 다른 KINTEX 행사들이 쓰는 KINTEX_LAT/LNG은 제1전시장(킨텍스로 217-60) 값이다.
-      // 제2전시장은 건물이 달라(217-59) 좌표를 직접 박지 않고 네이버 지역검색에 맡긴다.
-      // 대신 주소는 채워둔다 — 처음엔 이것도 비웠더니 장소명만으로는 좌표 조회가 실패해서
-      // 지도가 안 떴다(등록 후 확인함). lookupVenueCoords는 주소가 있으면 훨씬 잘 찾는다.
+      // 다른 KINTEX 행사들이 쓰는 KINTEX_LAT/LNG은 제1전시장(217-60) 값이라 여기 쓰면 안 된다.
+      // 처음엔 주소·좌표를 비우고 네이버 지역검색에 맡겼는데, 장소명만으로는 조회가 실패해서
+      // 지도가 아예 안 떴다. 좌표 조회는 등록 시점 한 번뿐이라 되돌릴 기회도 없었다(그 부분은
+      // upsertOneEvent에서 재조회하도록 따로 고쳤다). 이 행사는 확인한 값을 직접 박아 둔다.
       venue: 'KINTEX 제2전시장',
       venue_address: '경기도 고양시 일산서구 킨텍스로 217-59',
-      venue_lat: null, venue_lng: null,
+      venue_lat: KINTEX2_LAT, venue_lng: KINTEX2_LNG,
       organizer: '호요버스 (HoYoverse)',
       description: '호요버스 대표 게임 IP를 한자리에 모은 단독 오프라인 축제로 올해 3회째. 붕괴3rd·원신·미해결사건부·붕괴: 스타레일·젠레스 존 제로 5종이 참여하며, 타이틀별 테마 부스와 2차 창작 전시 구역이 함께 운영된다. 제2전시장 7·8홀과 후면 야외광장을 함께 쓴다.',
       ticket_url: 'https://www.ticketlink.co.kr/product/65564',
@@ -731,6 +739,31 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   }
   if (extracted.crowd_level) {
     patch.crowd_level = extracted.crowd_level
+  }
+  // 좌표가 비어 있는 행은 여기서 다시 조회한다.
+  //
+  // 자동 조회(lookupVenueCoords)는 draft를 처음 승인할 때 딱 한 번만 돈다. 그때 실패하면
+  // 그 행사는 영영 좌표 없이 남고 상세 화면에 지도가 안 뜬다 — 되돌릴 기회가 없었다.
+  // 실제로 호요랜드 2026이 그랬다: 등록 시점엔 venue_address가 비어 있어서 장소명만으로
+  // 조회했다가 실패했고, 나중에 주소를 채워 넣어도 재시도가 없어 지도가 계속 안 떴다.
+  // 주소가 늦게 확인되는 일은 흔하므로(공식 발표가 장소명만 주는 경우), 좌표가 없을 때만
+  // 다시 찾아본다. 이미 좌표가 있는 행은 건드리지 않으니 자동 조회 결과를 덮어쓰지 않는다.
+  if (!patch.venue_lat) {
+    const { data: current } = await supabase
+      .from('events')
+      .select('venue_lat')
+      .eq('id', promotedEventId)
+      .maybeSingle()
+    if (current && current.venue_lat == null) {
+      const coords = await lookupVenueCoords(extracted.venue, extracted.venue_address)
+      if (coords) {
+        patch.venue_lat = coords.lat
+        patch.venue_lng = coords.lng
+        console.log(`[known-events] ${slug}/${year} 좌표 재조회 성공: ${coords.lat}, ${coords.lng}`)
+      } else {
+        console.warn(`[known-events] ${slug}/${year} 좌표 재조회 실패 — "${extracted.venue}" / "${extracted.venue_address ?? '주소 없음'}"`)
+      }
+    }
   }
   if (extracted.booth_info_note) {
     patch.booth_info_note = extracted.booth_info_note
