@@ -327,7 +327,7 @@ const EVENT_COLUMNS = [
 // 화면에서 <a href>·<img src>로 그대로 나가는 컬럼들. 여기에 http(s)가 아닌 값이 들어가면
 // 그 값이 곧 링크가 된다(javascript:, data: 등). DB에 들어가기 전에 막는 게 제일 싸다 —
 // 저장되고 나면 프론트·미리보기 함수·ICS 내보내기까지 전부가 그 값을 쓰게 된다.
-const URL_COLUMNS = ['poster_url', 'ticket_url', 'website', 'floor_plan_url']
+const URL_COLUMNS = ['poster_url', 'ticket_url', 'website', 'floor_plan_url', 'image_url']
 
 function isHttpUrl(value) {
   if (typeof value !== 'string' || value === '') return false
@@ -355,8 +355,15 @@ const ID_RE = /^\/admin\/events\/([^/]+)$/
 // 행사에 딸린 하위 목록(참가 부스, 출연진)은 구조가 같아서 라우트 패턴을 공유한다 —
 // urlSegment(URL에 쓰는 이름) -> 실제 테이블명 + 허용 컬럼만 다르다.
 const SUB_RESOURCES = {
-  booths: { table: 'event_booths', columns: ['name', 'booth_no', 'goods', 'sort_order'] },
+  booths: { table: 'event_booths', columns: ['name', 'booth_no', 'goods', 'image_url', 'sort_order'] },
   performers: { table: 'event_performers', columns: ['artist_name', 'songs', 'sort_order'] },
+  // 부스 안의 개별 항목(웰컴 키트·체험·굿즈 등). booth_id를 body로 받는 대신 event_id는
+  // 다른 하위 리소스와 똑같이 URL에서 서버가 넣는다 — 클라이언트가 남의 행사 id를
+  // 지정할 수 없고, 라우트 코드도 그대로 재사용된다.
+  booth_items: {
+    table: 'event_booth_items',
+    columns: ['booth_id', 'kind', 'name', 'price', 'price_note', 'note', 'image_url', 'sort_order'],
+  },
 }
 const subResourcePattern = Object.keys(SUB_RESOURCES).join('|')
 const SUB_OF_EVENT_RE = new RegExp(`^/admin/events/([^/]+)/(${subResourcePattern})$`)
@@ -413,7 +420,10 @@ async function handleAdmin(request, env, pathname) {
     const eventId = decodeURIComponent(subOfEventMatch[1])
     const { table, columns } = SUB_RESOURCES[subOfEventMatch[2]]
     const body = await readJsonBody(request)
-    const data = await supabase(env, 'POST', table, { ...pick(body, columns), event_id: eventId })
+    const data = await supabase(env, 'POST', table, {
+      ...assertUrlColumns(pick(body, columns)),
+      event_id: eventId,
+    })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
   }
 
@@ -422,7 +432,7 @@ async function handleAdmin(request, env, pathname) {
     const { table, columns } = SUB_RESOURCES[subIdMatch[1]]
     const id = decodeURIComponent(subIdMatch[2])
     const body = await readJsonBody(request)
-    await updateRow(env, table, id, pick(body, columns))
+    await updateRow(env, table, id, assertUrlColumns(pick(body, columns)))
     return json({ ok: true }, env)
   }
 

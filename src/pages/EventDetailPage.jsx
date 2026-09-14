@@ -16,9 +16,14 @@ import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
-import BoothManager from '../components/BoothManager'
+import BoothList from '../components/BoothList'
+import GoodsList from '../components/GoodsList'
 import PerformerManager from '../components/PerformerManager'
 import SectionCard from '../components/SectionCard'
+import Tabs from '../components/Tabs'
+import { useEventBooths } from '../hooks/useEventBooths'
+import { useEventBoothItems } from '../hooks/useEventBoothItems'
+import { useEventPerformers } from '../hooks/useEventPerformers'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
@@ -32,6 +37,12 @@ export default function EventDetailPage() {
   const { event, loading, error } = useEvent(id)
   useDocumentTitle(event?.title)
   const { isBookmarked, toggleBookmark } = useBookmarks()
+  // 하위 목록은 여기서 한 번만 받아 아래로 내려준다 — 어떤 탭을 띄울지는 "내용이 있는가"로
+  // 정해지므로 페이지가 개수를 먼저 알아야 하고, 컴포넌트마다 따로 조회하면 같은 테이블에
+  // 같은 이름의 실시간 채널이 두 번 열린다.
+  const { booths } = useEventBooths(id)
+  const { items: boothItems } = useEventBoothItems(id)
+  const { performers } = useEventPerformers(id)
   const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
   const [imgError, setImgError] = useState(false)
@@ -126,6 +137,146 @@ export default function EventDetailPage() {
     ? `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}?c=${event.venueLng},${event.venueLat},15,0,0,0,dh`
     : `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}`
 
+  // ── 탭 구성 ────────────────────────────────────────────────────────────
+  // 탭은 데이터가 정한다. 부스도 굿즈도 없는 행사(대부분이 그렇다)에서는 탭이 "개요"
+  // 하나만 남고, Tabs가 그때는 탭바를 그리지 않아 지금까지의 한 장짜리 화면과 같아진다.
+  //
+  // 다만 탭이 안 생긴다고 그 정보가 사라지면 안 된다 — 이 화면은 "등록된 게 없다"와
+  // "화면이 원래 다르다"를 구분할 수 있게 빈 섹션도 자리를 지킨다는 원칙으로 만들어져
+  // 있다(BoothList·PerformerManager의 DisclosureNote). 그래서 탭이 없을 때는 해당
+  // 섹션을 개요 안으로 내린다. 정보는 항상 어딘가에 있고, 양이 많을 때만 탭으로 갈라진다.
+  const goodsItems = boothItems.filter(item => item.kind === 'goods')
+  const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl
+  const hasStageTab = performers.length > 0
+
+  const floorPlan = event.floorPlanUrl && (
+    <SectionCard title="🗺 부스 배치도">
+      <img
+        src={event.floorPlanUrl}
+        alt={`${event.title} 부스 배치도`}
+        className="w-full rounded-xl object-contain bg-ink/5"
+      />
+    </SectionCard>
+  )
+  const boothSection = (
+    <>
+      {floorPlan}
+      <BoothList eventId={event.id} booths={booths} items={boothItems} note={event.boothInfoNote} />
+    </>
+  )
+  const stageSection = (
+    <PerformerManager
+      eventId={event.id}
+      category={event.category}
+      note={event.stageInfoNote}
+      performers={performers}
+    />
+  )
+
+  const tabs = [
+    {
+      id: 'overview',
+      label: '개요',
+      render: () => (
+        <>
+          {/* 기본 정보 카드 */}
+          <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 space-y-3 mb-4">
+            <InfoRow icon="📅" label="기간" value={dateStr} />
+            {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
+            <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
+            {/* 예매 오픈은 입장료보다 위에 둔다 — "언제부터 살 수 있나"가 "얼마인가"보다
+                먼저 찾는 정보다. 끝난 행사에는 의미가 없으니 그때만 감춘다. */}
+            {status !== STATUS.ENDED && (
+              <InfoRow icon="🎟" label="예매 오픈" value={ticketOpenText} />
+            )}
+            <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
+            {/* 혼잡도는 행사가 열리고 있을 때만. 예정 행사에 "혼잡" 딱지가 붙어 있으면
+                지금 사람이 몰려 있다는 뜻으로 읽힌다. */}
+            {event.crowdLevel && !showingLiveCongestion && status === STATUS.ONGOING && (
+              <InfoRow
+                icon="👥"
+                label="예상 혼잡도"
+                value={<CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />}
+                hint="실시간 데이터가 아닌, 과거 참가 규모·매진 여부 기반 추정치입니다"
+              />
+            )}
+            <InfoRow icon="🏢" label="주최" value={event.organizer} />
+            {event.ticketOpenNote && (
+              <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
+            )}
+          </div>
+
+          {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
+          <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
+
+          {/* 신뢰도 카드 */}
+          <SectionCard title="행사 신뢰도">
+            <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
+          </SectionCard>
+
+          {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 */}
+          {!hasStageTab && stageSection}
+          {!hasBoothTab && boothSection}
+
+          {/* 위치 & 경로 */}
+          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
+            {hasCoords && (
+              <NaverMap
+                lat={event.venueLat}
+                lng={event.venueLng}
+                venueName={venueName || mapPlaceName}
+                linkUrl={naverMapUrl}
+              />
+            )}
+            <div className="p-4">
+              <h2 className="text-sm font-semibold text-ink mb-1">위치 & 경로</h2>
+              {(venueName || venueAddress) && (
+                <p className="text-xs text-zinc-400 mb-3 whitespace-pre-line">
+                  {[venueName, venueAddress].filter(Boolean).join('\n')}
+                </p>
+              )}
+              <DirectionsButtons
+                lat={event.venueLat}
+                lng={event.venueLng}
+                placeName={mapPlaceName}
+                fallbackQuery={mapQuery}
+              />
+            </div>
+          </div>
+
+          {/* 태그 */}
+          {event.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {event.tags.map(tag => (
+                <span key={tag} className="text-xs px-2.5 py-1 bg-ink/5 text-zinc-400 rounded-full border border-ink/10">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      ),
+    },
+    hasBoothTab && {
+      id: 'booths',
+      label: '부스 · 체험',
+      count: booths.length,
+      render: () => boothSection,
+    },
+    goodsItems.length > 0 && {
+      id: 'goods',
+      label: '굿즈',
+      count: goodsItems.length,
+      render: () => <GoodsList booths={booths} items={boothItems} />,
+    },
+    hasStageTab && {
+      id: 'stage',
+      label: event.category === '게임음악' ? '출연진' : '무대 일정',
+      count: performers.length,
+      render: () => stageSection,
+    },
+  ].filter(Boolean)
+
   return (
     <div className={`max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10 lg:pb-10 ${showTicketBar ? 'pb-24' : 'pb-6'}`}>
       {/* 뒤로가기 */}
@@ -198,94 +349,7 @@ export default function EventDetailPage() {
           <h1 className="text-2xl font-bold text-ink mb-1">{event.title}</h1>
           <p className="text-zinc-400 text-sm mb-6">{event.description}</p>
 
-          {/* 기본 정보 카드 */}
-          <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 space-y-3 mb-4">
-            <InfoRow icon="📅" label="기간" value={dateStr} />
-            {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
-            <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
-            {/* 예매 오픈은 입장료보다 위에 둔다 — "언제부터 살 수 있나"가 "얼마인가"보다
-                먼저 찾는 정보다. 끝난 행사에는 의미가 없으니 그때만 감춘다. */}
-            {status !== STATUS.ENDED && (
-              <InfoRow icon="🎟" label="예매 오픈" value={ticketOpenText} />
-            )}
-            <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
-            {/* 혼잡도는 행사가 열리고 있을 때만. 예정 행사에 "혼잡" 딱지가 붙어 있으면
-                지금 사람이 몰려 있다는 뜻으로 읽힌다. */}
-            {event.crowdLevel && !showingLiveCongestion && status === STATUS.ONGOING && (
-              <InfoRow
-                icon="👥"
-                label="예상 혼잡도"
-                value={<CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />}
-                hint="실시간 데이터가 아닌, 과거 참가 규모·매진 여부 기반 추정치입니다"
-              />
-            )}
-            <InfoRow icon="🏢" label="주최" value={event.organizer} />
-            {event.ticketOpenNote && (
-              <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
-            )}
-          </div>
-
-          {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
-          <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
-
-          {/* 신뢰도 카드 */}
-          <SectionCard title="행사 신뢰도">
-            <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
-          </SectionCard>
-
-          {/* 출연진 · 세트리스트 / 무대 일정 (전 카테고리 — 콘서트는 세트리스트, 그 외는 무대 프로그램) */}
-          <PerformerManager eventId={event.id} category={event.category} note={event.stageInfoNote} />
-
-          {/* 부스 배치도 */}
-          {event.floorPlanUrl && (
-            <SectionCard title="🗺 부스 배치도">
-              <img
-                src={event.floorPlanUrl}
-                alt={`${event.title} 부스 배치도`}
-                className="w-full rounded-xl object-contain bg-ink/5"
-              />
-            </SectionCard>
-          )}
-
-          {/* 참가 업체 · 부스 */}
-          <BoothManager eventId={event.id} note={event.boothInfoNote} />
-
-          {/* 위치 & 경로 */}
-          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
-            {hasCoords && (
-              <NaverMap
-                lat={event.venueLat}
-                lng={event.venueLng}
-                venueName={venueName || mapPlaceName}
-                linkUrl={naverMapUrl}
-              />
-            )}
-            <div className="p-4">
-              <h2 className="text-sm font-semibold text-ink mb-1">위치 & 경로</h2>
-              {(venueName || venueAddress) && (
-                <p className="text-xs text-zinc-400 mb-3 whitespace-pre-line">
-                  {[venueName, venueAddress].filter(Boolean).join('\n')}
-                </p>
-              )}
-              <DirectionsButtons
-                lat={event.venueLat}
-                lng={event.venueLng}
-                placeName={mapPlaceName}
-                fallbackQuery={mapQuery}
-              />
-            </div>
-          </div>
-
-          {/* 태그 */}
-          {event.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {event.tags.map(tag => (
-                <span key={tag} className="text-xs px-2.5 py-1 bg-ink/5 text-zinc-400 rounded-full border border-ink/10">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
+          <Tabs tabs={tabs} idPrefix={`ev-${event.id}`} />
 
           {/* CTA 버튼 — PC에서는 오른쪽 사이드바에 고정 표시되므로 모바일에서만 노출 */}
           <div className="lg:hidden">
@@ -303,6 +367,7 @@ export default function EventDetailPage() {
       {showTicketBar && <TicketStickyBar event={event} />}
     </div>
   )
+
 }
 
 // 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.

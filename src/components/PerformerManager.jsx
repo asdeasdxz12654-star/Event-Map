@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useEventPerformers } from '../hooks/useEventPerformers'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
@@ -108,8 +107,10 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
 // 콘서트뿐 아니라 모든 카테고리에서 노출 — 콘서트는 "출연진·세트리스트",
 // 그 외는 "무대 일정·프로그램"으로 문구만 바뀐다. note는 목록이 비어있을 때
 // 대신 보여줄 공개 상태 메모(events.stage_info_note) — booth_info_note와 같은 방식.
-export default function PerformerManager({ eventId, category, note }) {
-  const { performers, loading } = useEventPerformers(eventId)
+// performers는 상세 페이지가 받아서 내려준다 — 탭을 만들 때 "출연진이 있는지"를
+// 페이지가 먼저 알아야 하는데, 여기서 따로 조회하면 같은 테이블을 두 번 구독하게 된다
+// (useEventChildList의 실시간 채널 이름이 테이블+행사 id라 이름까지 겹친다).
+export default function PerformerManager({ eventId, category, note, performers }) {
   const { isAdmin } = useAdmin()
   const { toast } = useUIFeedback()
   const [showAddForm, setShowAddForm] = useState(false)
@@ -141,8 +142,6 @@ export default function PerformerManager({ eventId, category, note }) {
   // 행사마다 이 칸이 있다 없다 해서, 보는 쪽에서는 "이 행사는 무대 프로그램이 없나?
   // 아니면 화면이 원래 이런가?"를 구분할 수 없었다. 이제는 항상 자리를 지키고,
   // 비어 있으면 비어 있다고 적는다(DisclosureNote).
-  if (loading) return null
-
   const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   return (

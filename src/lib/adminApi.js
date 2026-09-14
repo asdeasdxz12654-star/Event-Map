@@ -53,6 +53,12 @@ export const adminApi = {
   updateBooth: (id, data) => req('PATCH', `/admin/booths/${encodeURIComponent(id)}`, data),
   deleteBooth: (id) => req('DELETE', `/admin/booths/${encodeURIComponent(id)}`),
 
+  // 부스 항목은 booth_id를 body로 보내지만 event_id는 URL에서 서버가 넣는다 —
+  // 다른 하위 목록과 같은 라우트 패턴이라 Worker 코드를 새로 만들 필요가 없다.
+  createBoothItem: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/booth_items`, data),
+  updateBoothItem: (id, data) => req('PATCH', `/admin/booth_items/${encodeURIComponent(id)}`, data),
+  deleteBoothItem: (id) => req('DELETE', `/admin/booth_items/${encodeURIComponent(id)}`),
+
   createPerformer: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/performers`, data),
   updatePerformer: (id, data) => req('PATCH', `/admin/performers/${encodeURIComponent(id)}`, data),
   deletePerformer: (id) => req('DELETE', `/admin/performers/${encodeURIComponent(id)}`),
