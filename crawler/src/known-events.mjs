@@ -247,6 +247,31 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
+    // 호요버스 공식 안내 페이지(sites.google.com/mihoyo.com/hoyoland2026)와 티켓링크 예매
+    // 페이지, 게임메카·인벤 보도로 날짜·장소·예매 일정을 대조해 확인. 2026-09-14 조사.
+    // 운영 시간은 공식 안내와 나무위키 값이 서로 달라(10:00~ / 11:00~) 적지 않았다.
+    slug: 'hoyoland-2026', year: 2026,
+    data: {
+      is_event: true, title: '호요랜드 2026', category: '게임전시',
+      start_date: '2026-10-02', end_date: '2026-10-05',
+      // 다른 KINTEX 행사들이 쓰는 KINTEX_LAT/LNG은 제1전시장 값이다. 제2전시장은 건물이
+      // 달라서 좌표를 비워두고 네이버 지역검색이 장소명으로 채우게 둔다.
+      venue: 'KINTEX 제2전시장', venue_address: null, venue_lat: null, venue_lng: null,
+      organizer: '호요버스 (HoYoverse)',
+      description: '호요버스 대표 게임 IP를 한자리에 모은 단독 오프라인 축제로 올해 3회째. 붕괴3rd·원신·미해결사건부·붕괴: 스타레일·젠레스 존 제로 5종이 참여하며, 타이틀별 테마 부스와 2차 창작 전시 구역이 함께 운영된다. 제2전시장 7·8홀과 후면 야외광장을 함께 쓴다.',
+      ticket_url: 'https://www.ticketlink.co.kr/product/65564',
+      ticket_open_date: '2026-09-14',
+      ticket_open_time: '19:00',
+      ticket_open_note: '예매 기간 9/14(월) 19:00 ~ 10/5(월) 17:00 (KST), 매진 시 조기 종료. 입장은 예매 시 고른 조(A~F)별로 나뉜다.',
+      admission_fee: '29,000원 (티켓링크 예매 수수료 1,000원 별도)',
+      // 호요버스 단독 행사 + 킨텍스 2개 홀·후면광장 규모라 조별 입장으로 운영된다.
+      crowd_level: 'high',
+      website: 'https://sites.google.com/mihoyo.com/hoyoland2026/hoyoland2026',
+      tags: ['게임전시', '호요랜드', '호요버스', '원신', '붕괴: 스타레일', '젠레스 존 제로', 'KINTEX', '고양'],
+      confidence: 'high',
+    },
+  },
+  {
     slug: 'dfesta-35', year: 2026, posterUrl: DFESTA_35_POSTER,
     data: {
       is_event: true, title: '제35회 디. 페스타', category: '코스프레',
