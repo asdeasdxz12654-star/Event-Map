@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
-import { boothHue, splitBoothName } from '../lib/boothKinds'
 import BoothCard from './BoothCard'
+import BoothChips from './BoothChips'
 import DisclosureNote from './DisclosureNote'
 
 const input = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
@@ -86,33 +86,12 @@ export default function BoothList({ eventId, booths, items, note }) {
       ) : (
         <>
           {useChips && (
-            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
-              {visibleBooths.map(booth => {
-                const on = booth.id === selected?.id
-                const hue = boothHue(booth.name)
-                return (
-                  <button
-                    key={booth.id}
-                    onClick={() => setSelectedId(booth.id)}
-                    aria-pressed={on}
-                    className={`shrink-0 flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full border text-xs transition-colors ${
-                      on ? 'text-ink font-semibold' : 'border-ink/10 text-zinc-400 hover:text-ink'
-                    }`}
-                    style={on ? {
-                      borderColor: `hsl(${hue} 45% 45%)`,
-                      backgroundColor: `hsl(${hue} 45% 45% / 0.14)`,
-                    } : undefined}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="w-3.5 h-3.5 rounded shrink-0"
-                      style={{ background: `hsl(${hue} 45% 45%)` }}
-                    />
-                    {splitBoothName(booth.name).main}
-                  </button>
-                )
-              })}
-            </div>
+            <BoothChips
+              booths={visibleBooths}
+              selectedId={selected?.id}
+              onSelect={setSelectedId}
+              label="부스 선택"
+            />
           )}
 
           {shown.map(booth => (
