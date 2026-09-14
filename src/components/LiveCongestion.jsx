@@ -32,7 +32,7 @@ export default function LiveCongestion({ placeName }) {
   const hasPopulation = Number.isFinite(data.populationMin) && Number.isFinite(data.populationMax)
 
   return (
-    <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 mb-4">
+    <div className="bg-surface-1 border border-line rounded-2xl p-4 mb-4">
       <div className="flex items-center gap-1.5 mb-2">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
         <h2 className="text-sm font-semibold text-ink">실시간 인구 혼잡도</h2>
@@ -55,7 +55,7 @@ export default function LiveCongestion({ placeName }) {
       {data.forecast?.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {data.forecast.map(f => (
-            <div key={f.time} className="shrink-0 text-center bg-ink/5 rounded-lg px-2 py-1">
+            <div key={f.time} className="shrink-0 text-center bg-surface-2 rounded-lg px-2 py-1">
               <div className="text-[10px] text-zinc-400">{formatTime(f.time)}</div>
               <div className="text-[11px] text-zinc-300 whitespace-nowrap">{f.level}</div>
             </div>

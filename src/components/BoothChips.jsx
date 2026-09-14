@@ -21,7 +21,7 @@ export default function BoothChips({ booths, selectedId, onSelect, label }) {
             onClick={() => onSelect(booth.id)}
             aria-pressed={on}
             className={`shrink-0 flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full border text-xs transition-colors ${
-              on ? 'text-ink font-semibold' : 'border-ink/10 text-zinc-400 hover:text-ink'
+              on ? 'text-ink font-semibold' : 'border-line text-zinc-400 hover:text-ink'
             }`}
             style={on ? {
               borderColor: `hsl(${hue} 45% 45%)`,

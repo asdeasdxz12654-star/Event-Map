@@ -13,7 +13,7 @@ const EMPTY_FORM = { artist_name: '', songs: '' }
 function copyFor(category) {
   const isConcert = category === '게임음악'
   return {
-    heading: isConcert ? '🎤 출연진 · 세트리스트' : '🎤 무대 일정 · 프로그램',
+    heading: isConcert ? '출연진 · 세트리스트' : '무대 일정 · 프로그램',
     addLabel: isConcert ? '+ 출연진 추가' : '+ 무대 프로그램 추가',
     namePlaceholder: isConcert ? '가수/아티스트명' : '프로그램명 (예: 코스프레 경연대회)',
     detailPlaceholder: isConcert
@@ -59,7 +59,7 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
     }
   }
 
-  const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
+  const cls = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   if (editing) {
     return (
@@ -142,7 +142,7 @@ export default function PerformerManager({ eventId, category, note, performers }
   // 행사마다 이 칸이 있다 없다 해서, 보는 쪽에서는 "이 행사는 무대 프로그램이 없나?
   // 아니면 화면이 원래 이런가?"를 구분할 수 없었다. 이제는 항상 자리를 지키고,
   // 비어 있으면 비어 있다고 적는다(DisclosureNote).
-  const cls = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
+  const cls = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   return (
     <SectionCard
@@ -162,7 +162,7 @@ export default function PerformerManager({ eventId, category, note, performers }
       ))}
 
       {isAdmin && showAddForm && (
-        <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-ink/10 space-y-1.5">
+        <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-line space-y-1.5">
           <input value={form.artist_name} onChange={set('artist_name')} placeholder={`${copy.namePlaceholder} *`} className={cls + ' w-full'} required />
           <textarea
             value={form.songs}

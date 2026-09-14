@@ -6,7 +6,7 @@ import { BOOTH_KINDS, groupByKind, splitBoothName } from '../lib/boothKinds'
 import BoothThumb from './BoothThumb'
 import BoothItemRow from './BoothItemRow'
 
-const input = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
+const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_ITEM = { kind: 'paid', name: '', price: '', price_note: '', note: '', image_url: '' }
 
 // 부스 하나. 항목(event_booth_items)이 있으면 종류별로 묶어서 보여주고,
@@ -81,15 +81,15 @@ export default function BoothCard({ eventId, booth, items, hideKinds = [] }) {
   }
 
   return (
-    <div className="border border-ink/10 rounded-2xl overflow-hidden bg-ink/[0.03]">
-      <div className="flex items-center gap-3 p-3 border-b border-ink/10">
+    <div className="border border-line rounded-2xl overflow-hidden bg-ink/[0.03]">
+      <div className="flex items-center gap-3 p-3 border-b border-line">
         <BoothThumb name={booth.name} src={booth.imageUrl} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink leading-snug truncate">{main}</p>
           {sub && <p className="text-xs text-zinc-400 leading-snug truncate">{sub}</p>}
         </div>
         {booth.boothNo && (
-          <span className="shrink-0 text-xs text-zinc-400 bg-ink/5 px-1.5 py-0.5 rounded">{booth.boothNo}</span>
+          <span className="shrink-0 text-xs text-zinc-400 bg-surface-2 px-1.5 py-0.5 rounded">{booth.boothNo}</span>
         )}
         {isAdmin && (
           <div className="flex gap-1.5 shrink-0">
@@ -100,7 +100,7 @@ export default function BoothCard({ eventId, booth, items, hideKinds = [] }) {
       </div>
 
       {isAdmin && editingBooth && (
-        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-ink/10">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-line">
           <input value={boothForm.name} onChange={setBooth('name')} placeholder="부스명 *" className={`${input} w-36`} />
           <input value={boothForm.booth_no} onChange={setBooth('booth_no')} placeholder="부스 번호" className={`${input} w-20`} />
           <input value={boothForm.image_url} onChange={setBooth('image_url')} placeholder="대표 이미지 URL" className={`${input} flex-1 min-w-[140px]`} />
@@ -129,7 +129,7 @@ export default function BoothCard({ eventId, booth, items, hideKinds = [] }) {
       )}
 
       {isAdmin && (
-        <div className="px-3 py-2 border-t border-ink/10">
+        <div className="px-3 py-2 border-t border-line">
           {showAdd ? (
             <form onSubmit={addItem} className="flex flex-wrap items-center gap-1.5">
               <select value={form.kind} onChange={set('kind')} className={input}>

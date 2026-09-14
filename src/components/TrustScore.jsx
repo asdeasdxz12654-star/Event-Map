@@ -1,3 +1,5 @@
+import Icon from './icons'
+
 export default function TrustScore({ score, pastEvents }) {
   return (
     <div className="flex flex-col gap-1">
@@ -14,14 +16,18 @@ export default function TrustScore({ score, pastEvents }) {
       </div>
       {pastEvents?.length > 0 && (
         <ul className="text-xs text-zinc-400 space-y-0.5">
-          {pastEvents.map((e, i) => (
-            <li key={i} className="flex items-start gap-1">
-              <span className={e.includes('취소') || e.includes('연기') ? 'text-red-400' : 'text-green-400'}>
-                {e.includes('취소') || e.includes('연기') ? '⚠' : '✓'}
-              </span>
-              {e}
-            </li>
-          ))}
+          {pastEvents.map((e, i) => {
+            const troubled = e.includes('취소') || e.includes('연기')
+            return (
+              <li key={i} className="flex items-start gap-1.5">
+                <Icon
+                  name={troubled ? 'warn' : 'check'}
+                  className={`w-3.5 h-3.5 mt-0.5 ${troubled ? 'text-danger' : 'text-live'}`}
+                />
+                {e}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

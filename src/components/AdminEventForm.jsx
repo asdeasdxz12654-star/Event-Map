@@ -13,10 +13,10 @@ const EMPTY = {
 
 const CROWD_LEVELS = [
   { value: '', label: '(추정 근거 없음 — 표시 안 함)' },
-  { value: 'low', label: '🟢 한산' },
-  { value: 'medium', label: '🟡 보통' },
-  { value: 'high', label: '🟠 혼잡' },
-  { value: 'very_high', label: '🔴 매우 혼잡' },
+  { value: 'low', label: '한산' },
+  { value: 'medium', label: '보통' },
+  { value: 'high', label: '혼잡' },
+  { value: 'very_high', label: '매우 혼잡' },
 ]
 
 function toForm(event) {
@@ -78,7 +78,7 @@ function toPayload(form) {
   }
 }
 
-const cls = 'w-full bg-ink/5 border border-ink/10 focus:border-indigo-500 rounded-xl px-3 py-2 text-ink placeholder:text-zinc-600 focus:outline-none text-sm'
+const cls = 'w-full bg-surface-2 border border-line focus:border-indigo-500 rounded-xl px-3 py-2 text-ink placeholder:text-zinc-600 focus:outline-none text-sm'
 
 function Field({ label, children }) {
   return (
@@ -163,7 +163,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
         role="dialog"
         aria-modal="true"
         aria-label={isEdit ? '행사 수정' : '행사 추가'}
-        className="bg-panel border border-ink/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 my-auto"
+        className="bg-panel border border-line rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 my-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">

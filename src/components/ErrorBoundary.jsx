@@ -1,5 +1,6 @@
 import { Component, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
+import Icon from './icons'
 
 // 렌더링 중 예외가 나면 React는 트리 전체를 언마운트한다 — 지금까지는 그 결과가
 // "완전한 백지 화면"이었다(데이터 한 건이 예상과 다른 모양이어도 사이트 전체가 죽는다).
@@ -44,7 +45,7 @@ export default class ErrorBoundary extends Component {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <ResetOnRouteChange onReset={this.reset} />
-        <div className="text-5xl mb-4">😵</div>
+        <Icon name="warn" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
         <h1 className="text-xl font-bold text-ink mb-2">화면을 표시하지 못했습니다</h1>
         <p className="text-zinc-400 text-sm mb-8">
           일시적인 오류일 수 있습니다. 새로고침해도 같은 화면이 나오면 잠시 후 다시 시도해 주세요.

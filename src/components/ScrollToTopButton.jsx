@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from './icons'
 
 const SHOW_AFTER_PX = 480
 
@@ -22,9 +23,9 @@ export default function ScrollToTopButton() {
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="맨 위로 이동"
-      className="fixed bottom-20 lg:bottom-6 right-4 z-30 w-10 h-10 flex items-center justify-center rounded-full bg-ink/10 hover:bg-ink/20 backdrop-blur border border-ink/10 text-ink shadow-lg transition-colors"
+      className="fixed bottom-20 lg:bottom-6 right-4 z-30 w-11 h-11 flex items-center justify-center rounded-full bg-surface-1/90 hover:bg-surface-2 backdrop-blur border border-line-strong text-ink shadow-lg transition-colors"
     >
-      ↑
+      <Icon name="chevronDown" className="w-5 h-5 rotate-180" />
     </button>
   )
 }

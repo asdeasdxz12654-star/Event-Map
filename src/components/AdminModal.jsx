@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import Icon from './icons'
 import { useAdmin } from '../contexts/AdminContext'
 
 export default function AdminModal({ onClose }) {
@@ -30,7 +31,7 @@ export default function AdminModal({ onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-panel border border-ink/10 rounded-2xl p-6 w-80 shadow-2xl"
+        className="bg-panel border border-line rounded-2xl p-6 w-80 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -40,7 +41,7 @@ export default function AdminModal({ onClose }) {
 
         {isAdmin ? (
           <div>
-            <p className="text-emerald-400 text-sm mb-4">✓ 관리자 모드 활성화됨</p>
+            <p className="flex items-center gap-1.5 text-live text-sm mb-4"><Icon name="check" className="w-4 h-4" />관리자 모드 활성화됨</p>
             <p className="text-zinc-400 text-xs mb-4">행사 추가·수정·삭제 기능이 활성화되었습니다.</p>
             <button
               onClick={() => { logout(); onClose() }}
@@ -59,7 +60,7 @@ export default function AdminModal({ onClose }) {
               placeholder="관리자 코드 입력"
               autoComplete="new-password"
               autoFocus
-              className="w-full bg-ink/5 border border-ink/10 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-ink placeholder:text-zinc-600 focus:outline-none text-sm mb-3 tracking-widest"
+              className="w-full bg-surface-2 border border-line focus:border-indigo-500 rounded-xl px-4 py-2.5 text-ink placeholder:text-zinc-600 focus:outline-none text-sm mb-3 tracking-widest"
             />
             {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
             <button

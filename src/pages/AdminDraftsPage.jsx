@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
+import Icon from '../components/icons'
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
@@ -29,7 +30,7 @@ export default function AdminDraftsPage() {
   if (!user) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <div className="text-5xl mb-4">🛠️</div>
+        <Icon name="gear" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
         <h1 className="text-xl font-bold text-ink mb-2">행사 검수</h1>
         <p className="text-zinc-400 text-sm mb-8">관리자만 접근 가능합니다. Google 계정으로 로그인해 주세요.</p>
         <button
@@ -46,7 +47,7 @@ export default function AdminDraftsPage() {
   if (!ADMIN_EMAIL || user.email !== ADMIN_EMAIL) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <div className="text-5xl mb-4">🚫</div>
+        <Icon name="ban" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
         <h1 className="text-xl font-bold text-ink mb-2">접근 권한이 없습니다</h1>
         <p className="text-zinc-400 text-sm">이 페이지는 관리자 계정으로만 이용할 수 있습니다.</p>
       </div>
@@ -127,7 +128,7 @@ function DraftCard({ draft, onChanged }) {
   }
 
   return (
-    <div className="bg-ink/5 border border-ink/10 rounded-xl p-4">
+    <div className="bg-surface-1 border border-line rounded-xl p-4">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
         <div>
           <h2 className="font-semibold text-ink">{e.title ?? '(제목 없음)'}</h2>

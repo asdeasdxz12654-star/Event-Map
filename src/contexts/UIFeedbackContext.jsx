@@ -79,7 +79,7 @@ export function UIFeedbackProvider({ children }) {
             role="alertdialog"
             aria-modal="true"
             aria-label="확인"
-            className="bg-panel border border-ink/10 rounded-2xl p-5 w-80 shadow-2xl"
+            className="bg-panel border border-line rounded-2xl p-5 w-80 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <p className="text-ink text-sm mb-5 whitespace-pre-line">{confirmState.message}</p>

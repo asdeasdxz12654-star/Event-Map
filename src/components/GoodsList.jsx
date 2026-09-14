@@ -49,11 +49,11 @@ export default function GoodsList({ booths, items }) {
       )}
 
       {shown.map(({ booth, list }) => (
-        <div key={booth.id} className="border border-ink/10 rounded-2xl overflow-hidden bg-ink/[0.03]">
+        <div key={booth.id} className="border border-line rounded-2xl overflow-hidden bg-ink/[0.03]">
           {/* 칩으로 고를 때는 칩이 이미 무엇을 보고 있는지 말해주므로 머리글을 생략하지
               않는다 — 스크롤을 내리면 칩이 화면 밖으로 나가기 때문이다. */}
           {(useChips || byBooth.length > 1) && (
-            <div className="flex items-center gap-2.5 p-3 border-b border-ink/10">
+            <div className="flex items-center gap-2.5 p-3 border-b border-line">
               <BoothThumb name={booth.name} src={booth.imageUrl} size="sm" />
               <p className="text-sm font-semibold text-ink">{splitBoothName(booth.name).main}</p>
             </div>

@@ -19,9 +19,9 @@ function EventRow({ event, showDate = false }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="flex items-center gap-3 bg-ink/5 hover:bg-ink/10 border border-ink/10 rounded-xl p-3 transition-colors"
+      className="flex items-center gap-3 bg-surface-1 hover:bg-surface-2 border border-line rounded-xl p-3 transition-colors"
     >
-      <span className="text-2xl shrink-0">{categoryMeta(event.category).emoji}</span>
+      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${categoryMeta(event.category).dotClass}`} aria-hidden="true" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink truncate">{event.title}</p>
         <p className="text-xs text-zinc-400 truncate">
@@ -100,7 +100,7 @@ export default function CalendarPage() {
             <button
               onClick={prevMonth}
               aria-label="이전 달"
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-ink/5 hover:bg-ink/10 text-zinc-300 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-1 hover:bg-surface-2 text-zinc-300 transition-colors"
             >
               ‹
             </button>
@@ -112,7 +112,7 @@ export default function CalendarPage() {
               {!isSameMonth(viewDate, new Date()) && (
                 <button
                   onClick={goToday}
-                  className="px-2 py-0.5 rounded-lg bg-ink/5 hover:bg-ink/10 text-xs text-zinc-300 transition-colors"
+                  className="px-2 py-0.5 rounded-lg bg-surface-1 hover:bg-surface-2 text-xs text-zinc-300 transition-colors"
                 >
                   오늘
                 </button>
@@ -121,7 +121,7 @@ export default function CalendarPage() {
             <button
               onClick={nextMonth}
               aria-label="다음 달"
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-ink/5 hover:bg-ink/10 text-zinc-300 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-1 hover:bg-surface-2 text-zinc-300 transition-colors"
             >
               ›
             </button>
@@ -135,9 +135,9 @@ export default function CalendarPage() {
           )}
 
           {/* 달력 그리드 */}
-          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
+          <div className="bg-surface-1 border border-line rounded-2xl overflow-hidden mb-4">
             {/* 요일 헤더 */}
-            <div className="grid grid-cols-7 border-b border-ink/10">
+            <div className="grid grid-cols-7 border-b border-line">
               {DOW.map((d, i) => (
                 <div key={d} className={`py-2 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-zinc-400'}`}>
                   {d}
@@ -229,7 +229,7 @@ export default function CalendarPage() {
                 {format(viewDate, 'M월', { locale: ko })} 행사 {monthEvents.length}건
               </h2>
               {monthEvents.length === 0 ? (
-                <p className="text-sm text-zinc-400 py-8 text-center bg-ink/5 border border-ink/10 rounded-2xl">
+                <p className="text-sm text-zinc-400 py-8 text-center bg-surface-1 border border-line rounded-2xl">
                   이 달에 등록된 행사가 없습니다
                 </p>
               ) : (

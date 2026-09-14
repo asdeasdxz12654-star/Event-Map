@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import Icon from './icons'
+import { FOCUS_RING } from './ui/focusRing'
 
 // 대중교통 길찾기 버튼(네이버·구글).
 //
@@ -90,14 +92,17 @@ export default function DirectionsButtons({ lat, lng, placeName, fallbackQuery }
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <p className="text-xs text-zinc-400">대중교통 길찾기</p>
         {origin ? (
-          <span className="text-xs text-emerald-400">📍 내 위치에서 출발</span>
+          <span className="flex items-center gap-1 text-xs text-emerald-400">
+            <Icon name="pin" className="w-3 h-3" />내 위치에서 출발
+          </span>
         ) : canAsk ? (
           <button
             onClick={askLocation}
             disabled={asking}
-            className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+            className={`flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50 rounded ${FOCUS_RING}`}
           >
-            {asking ? '위치 확인 중...' : '📍 내 위치에서 출발'}
+            <Icon name="pin" className="w-3 h-3" />
+            {asking ? '위치 확인 중...' : '내 위치에서 출발'}
           </button>
         ) : null}
       </div>
@@ -106,17 +111,19 @@ export default function DirectionsButtons({ lat, lng, placeName, fallbackQuery }
           href={naverUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl text-center transition-colors"
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-green-700/80 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors ${FOCUS_RING}`}
         >
-          🚇 네이버
+          <Icon name="pin" className="w-4 h-4" />
+          네이버
         </a>
         <a
           href={googleUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl text-center transition-colors"
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-xl transition-colors ${FOCUS_RING}`}
         >
-          🗺 구글 맵
+          <Icon name="external" className="w-4 h-4" />
+          구글 맵
         </a>
       </div>
     </div>

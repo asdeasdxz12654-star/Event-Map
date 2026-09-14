@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Icon from './icons'
 
 const CLIENT_ID = import.meta.env.VITE_NAVER_MAPS_CLIENT_ID ?? 'x7c8jim104'
 
@@ -70,7 +71,7 @@ export default function NaverMap({ lat, lng, venueName, linkUrl }) {
         className="flex items-center justify-center w-full h-[220px] bg-zinc-800/60 hover:bg-zinc-700/60 transition-colors group"
       >
         <div className="text-center">
-          <div className="text-3xl mb-2">🗺</div>
+          <Icon name="pin" className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
           <span className="text-xs text-zinc-400 group-hover:text-ink transition-colors">
             네이버 지도에서 보기 →
           </span>

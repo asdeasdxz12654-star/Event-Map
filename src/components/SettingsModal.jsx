@@ -8,6 +8,7 @@ import { useListColumns } from '../hooks/useListColumns'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useTheme } from '../hooks/useTheme'
 import AdminModal from './AdminModal'
+import Icon from './icons'
 
 // 설정 화면.
 //
@@ -18,7 +19,7 @@ import AdminModal from './AdminModal'
 function Row({ icon, title, description, children }) {
   return (
     <div className="flex items-start gap-3 py-3.5">
-      <span className="text-lg leading-none mt-0.5 w-6 text-center shrink-0" aria-hidden="true">{icon}</span>
+      <Icon name={icon} className="w-5 h-5 mt-0.5 text-zinc-400" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-ink font-medium">{title}</p>
         {description && <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{description}</p>}
@@ -31,7 +32,7 @@ function Row({ icon, title, description, children }) {
 const actionClass =
   'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50'
 const quietClass =
-  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-ink/5 hover:bg-ink/10 text-zinc-300 border border-ink/10'
+  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-ink/5 hover:bg-ink/10 text-zinc-300 border border-line'
 
 function NotificationRow() {
   const { supported, permission, subscribed, loading, error, subscribe } = usePushNotifications()
@@ -47,7 +48,7 @@ function NotificationRow() {
       : '예매 오픈일과 행사 하루 전에 알림을 받습니다'
 
   return (
-    <Row icon="🔔" title="행사 알림" description={description}>
+    <Row icon="bell" title="행사 알림" description={description}>
       {supported === true && permission !== 'denied' && (
         subscribed
           ? <span className="text-xs text-emerald-400 font-medium">받는 중</span>
@@ -64,7 +65,7 @@ function InstallRow({ onShowIosGuide }) {
   const ios = isIos()
 
   if (installed) {
-    return <Row icon="📲" title="앱으로 설치" description="이미 홈 화면에서 실행 중입니다">
+    return <Row icon="download" title="앱으로 설치" description="이미 홈 화면에서 실행 중입니다">
       <span className="text-xs text-emerald-400 font-medium">설치됨</span>
     </Row>
   }
@@ -73,7 +74,7 @@ function InstallRow({ onShowIosGuide }) {
   if (!canInstall && !ios) return null
 
   return (
-    <Row icon="📲" title="앱으로 설치" description="홈 화면에 추가하면 주소창 없이 앱처럼 열립니다">
+    <Row icon="download" title="앱으로 설치" description="홈 화면에 추가하면 주소창 없이 앱처럼 열립니다">
       <button onClick={canInstall ? install : onShowIosGuide} className={actionClass}>
         {canInstall ? '설치' : '방법 보기'}
       </button>
@@ -84,13 +85,13 @@ function InstallRow({ onShowIosGuide }) {
 // 두 갈래 중 하나를 고르는 작은 토글. 테마·목록 보기가 같은 모양을 쓴다.
 function SegmentedControl({ value, onChange, options, label }) {
   return (
-    <div role="group" aria-label={label} className="flex rounded-lg overflow-hidden border border-ink/10">
+    <div role="group" aria-label={label} className="flex rounded-lg overflow-hidden border border-line">
       {options.map(({ value: optionValue, label: optionLabel }, i) => (
         <button
           key={optionValue}
           onClick={() => onChange(optionValue)}
           aria-pressed={value === optionValue}
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${i > 0 ? 'border-l border-ink/10' : ''} ${
+          className={`px-3 py-1.5 text-xs font-medium transition-colors ${i > 0 ? 'border-l border-line' : ''} ${
             value === optionValue ? 'bg-indigo-600 text-white' : 'bg-ink/5 text-zinc-400 hover:text-ink'
           }`}
         >
@@ -105,7 +106,7 @@ function ThemeRow() {
   const [theme, setTheme] = useTheme()
   return (
     <Row
-      icon={theme === 'light' ? '☀' : '🌙'}
+      icon={theme === 'light' ? 'sun' : 'moon'}
       title="화면 색"
       description={theme === 'light'
         ? '밝은 배경으로 봅니다 · 이 기기에만 저장됩니다'
@@ -124,7 +125,7 @@ function ThemeRow() {
 function ListColumnsRow() {
   const [columns, setColumns] = useListColumns()
   return (
-    <Row icon="▤" title="목록 보기" description="좁은 화면에서 행사 카드를 몇 개씩 보여줄지 정합니다">
+    <Row icon="list" title="목록 보기" description="좁은 화면에서 행사 카드를 몇 개씩 보여줄지 정합니다">
       <SegmentedControl
         label="목록 보기"
         value={columns}
@@ -147,7 +148,7 @@ function BookmarkRow() {
 
   return (
     <Row
-      icon="⭐"
+      icon="star"
       title="북마크"
       description={bookmarkIds.length > 0
         ? `${bookmarkIds.length}개 저장됨 · 이 기기에만 저장됩니다`
@@ -164,7 +165,7 @@ function AdminRow({ onOpenAdmin }) {
   const { isAdmin, logout } = useAdmin()
   return (
     <Row
-      icon="🔑"
+      icon="key"
       title="관리자"
       description={isAdmin ? '행사 추가·수정·삭제가 켜져 있습니다' : '행사 정보를 직접 고치려면 로그인하세요'}
     >
@@ -207,10 +208,10 @@ export default function SettingsModal({ onClose }) {
           role="dialog"
           aria-modal="true"
           aria-label="설정"
-          className="bg-panel border border-ink/10 rounded-t-2xl sm:rounded-2xl w-full sm:w-96 max-h-[85vh] overflow-y-auto shadow-2xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
+          className="bg-panel border border-line rounded-t-2xl sm:rounded-2xl w-full sm:w-96 max-h-[85vh] overflow-y-auto shadow-2xl pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-panel flex items-center justify-between px-5 pt-5 pb-3 border-b border-ink/10">
+          <div className="sticky top-0 bg-panel flex items-center justify-between px-5 pt-5 pb-3 border-b border-line">
             <h2 className="text-ink font-semibold">설정</h2>
             <button onClick={onClose} aria-label="닫기" className="text-zinc-400 hover:text-ink text-2xl leading-none">×</button>
           </div>
@@ -242,7 +243,7 @@ export default function SettingsModal({ onClose }) {
             role="dialog"
             aria-modal="true"
             aria-label="홈 화면에 추가하는 방법"
-            className="bg-panel border border-ink/10 rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
+            className="bg-panel border border-line rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">

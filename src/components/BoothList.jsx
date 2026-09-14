@@ -6,7 +6,7 @@ import BoothCard from './BoothCard'
 import BoothChips from './BoothChips'
 import DisclosureNote from './DisclosureNote'
 
-const input = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
+const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_BOOTH = { name: '', booth_no: '', image_url: '' }
 
 // 부스가 이 개수를 넘으면 카드를 전부 쌓지 않고 칩으로 하나씩 고르게 한다.
@@ -69,7 +69,7 @@ export default function BoothList({ eventId, booths, items, note }) {
       )}
 
       {isAdmin && showAdd && (
-        <form onSubmit={addBooth} className="flex flex-wrap items-center gap-1.5 p-3 border border-ink/10 rounded-xl">
+        <form onSubmit={addBooth} className="flex flex-wrap items-center gap-1.5 p-3 border border-line rounded-xl">
           <input value={form.name} onChange={set('name')} placeholder="부스명 *" className={`${input} w-36`} required />
           <input value={form.booth_no} onChange={set('booth_no')} placeholder="부스 번호" className={`${input} w-20`} />
           <input value={form.image_url} onChange={set('image_url')} placeholder="대표 이미지 URL" className={`${input} flex-1 min-w-[140px]`} />

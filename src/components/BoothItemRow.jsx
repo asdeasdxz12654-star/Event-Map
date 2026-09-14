@@ -4,7 +4,7 @@ import { adminApi } from '../lib/adminApi'
 import { BOOTH_KINDS, formatPrice } from '../lib/boothKinds'
 import BoothThumb from './BoothThumb'
 
-const input = 'bg-ink/5 border border-ink/10 rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
+const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
 // 부스 항목 한 줄. 읽기 상태에서는 썸네일 · 이름 · 설명 · 가격만 보이고,
 // 가격은 오른쪽 끝에 tabular-nums로 붙어 세로줄이 맞는다 — 같은 부스 안에서
@@ -83,7 +83,7 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
       {price ? (
         <span className="shrink-0 text-xs font-medium text-ink tabular-nums">{price}</span>
       ) : item.kind === 'free' ? (
-        <span className="shrink-0 text-[10px] tracking-wide text-zinc-400 border border-ink/15 rounded px-1.5 py-0.5">무료</span>
+        <span className="shrink-0 text-[10px] tracking-wide text-zinc-400 border border-line-strong rounded px-1.5 py-0.5">무료</span>
       ) : null}
       {isAdmin && (
         <div className="flex gap-1.5 shrink-0">

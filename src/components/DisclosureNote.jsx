@@ -1,5 +1,7 @@
+import Icon from './icons'
+
 // 참가업체/무대 프로그램처럼 "공식에서 공개를 안 하거나, 아직 안 한" 정보의
-// 빈 상태 안내. 두 섹션(BoothManager·PerformerManager)이 같은 규칙을 쓰는데
+// 빈 상태 안내. 두 섹션(BoothList·PerformerManager)이 같은 규칙을 쓰는데
 // 각자 복사해두면 문구나 판정 기준이 갈라지기 쉬워서 한 곳에 모았다.
 
 // events.booth_info_note / stage_info_note에 이 값이 들어 있으면 "공식적으로
@@ -12,10 +14,16 @@ export default function DisclosureNote({ note, subject, emptyText }) {
   }
   if (note === UNDISCLOSED) {
     return (
-      <p className="text-xs text-zinc-400">
-        <span className="text-zinc-400">🚫 미공개</span> — 공식 행사에서 {subject} 정보를 공개하지 않습니다.
+      <p className="flex items-start gap-1.5 text-xs text-zinc-400">
+        <Icon name="ban" className="w-3.5 h-3.5 mt-0.5 text-zinc-500" />
+        <span><span className="text-zinc-300">미공개</span> — 공식 행사에서 {subject} 정보를 공개하지 않습니다.</span>
       </p>
     )
   }
-  return <p className="text-xs text-zinc-400">ℹ️ {note}</p>
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-zinc-400">
+      <Icon name="info" className="w-3.5 h-3.5 mt-0.5 text-zinc-500" />
+      <span>{note}</span>
+    </p>
+  )
 }

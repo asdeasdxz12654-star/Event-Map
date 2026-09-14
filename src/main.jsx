@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { isSupabaseConfigured } from './supabase'
+import Icon from './components/icons'
 
 // Firebase Performance SDK(web-vitals 내장)가 SPA 페이지 전환 시
 // undefined PerformanceEntry의 startTime을 읽으려다 던지는 내부 에러를 억제한다.
@@ -25,7 +26,7 @@ window.addEventListener('beforeinstallprompt', e => {
 function ConfigMissing() {
   return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
-      <div className="text-5xl mb-4">⚙️</div>
+      <Icon name="gear" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
       <h1 className="text-xl font-bold text-ink mb-2">설정이 완료되지 않았습니다</h1>
       <p className="text-zinc-400 text-sm">
         VITE_SUPABASE_URL · VITE_SUPABASE_ANON_KEY 환경변수가 없어서 행사 정보를 불러올 수 없습니다.
