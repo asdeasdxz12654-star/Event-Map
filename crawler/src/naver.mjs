@@ -18,7 +18,9 @@ const NAVER_CAFE_URL = 'https://naverapihub.apigw.ntruss.com/search/v1/cafeartic
 // 응답에 같이 오는 cafeurl로 실제 확인한 공식 카페 글만 신뢰하고 나머지(팬카페 등)는 버린다.
 // 명조/이환은 공식 채널이 네이버카페가 아니라 "네이버 라운지"인데, 라운지는 게임사가 자기
 // 게임 클라이언트에 심는 SDK 기반 기능이라 외부에서 검색/조회하는 공개 API가 없다 (확인함).
-// 젠레스 존 제로는 네이버 라운지(game.naver.com/lounge/ZZZ) 사용 확인 — 외부 API 없어서 접근 불가, 목록에서 뺌.
+// 젠레스 존 제로는 네이버 라운지(game.naver.com/lounge/ZZZ)를 쓴다. 여기(카페 검색)에는 없고
+// naver-lounge.mjs가 담당한다 — 라운지에도 공개 JSON API가 있다는 걸 나중에 확인해서 붙였다.
+// (2026-09-14 기준 그 소스의 ZZZ 항목은 계정 해시 만료로 0건이다 — naver-lounge.mjs 주석 참고.)
 //
 // 원신/붕괴 스타레일 두 카페는 공지 담당 매니저 계정으로 실제 공식 카페임을 확인함:
 // 원신: https://cafe.naver.com/f-e/cafes/29893655/members/moLCYG3NoF2zo4i4wq7c1RsnSkqIzMomnIlUgK9GOVY
@@ -37,11 +39,14 @@ function cafeQuery(query, officialCafeUrl, activeWindow = null) {
 
 // 매년 시기가 정해진 행사라, 정보가 실제로 올라오는 기간에만 검색해서 평소엔 무의미한
 // 후보(Groq 호출)를 줄인다. activeWindow는 fetchNaverCafeCandidates()의 isActiveNow()가 검사.
-// - 호요랜드: 매년 10월경 개최, 8/20~9/30 사이에 굿즈·무대 시간표 등 상세 정보가 먼저 공개됨
+// - 호요랜드: 매년 10월경 개최, 8/20부터 굿즈·무대 시간표 등 상세 정보가 공개됨
 //   (두 게임 공용 행사라 원신·붕괴 스타레일 카페 모두에서 검색).
+//   창을 10/10까지 둔다 — 예전엔 9/30에 닫았는데, 2026년 행사가 10/2~10/5고 그 시점까지도
+//   일자별 무대 타임테이블과 일부 타이틀(붕괴3rd·미해결사건부)의 부스 구성이 미공개였다.
+//   즉 남은 정보가 풀리는 바로 그 기간에 검색이 꺼져 있었다. 행사 종료 며칠 뒤까지 열어둔다.
 // - 원신 "주년 기념": 원신 주년 행사가 9월에 시작돼서 9월만 검색.
 // - 붕괴 스타레일 "주년 축제": 붕괴 스타레일 주년 행사가 4월에 시작돼서 4월만 검색.
-const HOYOLAND_WINDOW = { fromMonthDay: '08-20', toMonthDay: '09-30' }
+const HOYOLAND_WINDOW = { fromMonthDay: '08-20', toMonthDay: '10-10' }
 
 const SEASONAL_CAFE_QUERIES = [
   cafeQuery('호요랜드', GENSHIN_CAFE, HOYOLAND_WINDOW),

@@ -254,9 +254,13 @@ const ONE_OFF_EVENTS = [
     data: {
       is_event: true, title: '호요랜드 2026', category: '게임전시',
       start_date: '2026-10-02', end_date: '2026-10-05',
-      // 다른 KINTEX 행사들이 쓰는 KINTEX_LAT/LNG은 제1전시장 값이다. 제2전시장은 건물이
-      // 달라서 좌표를 비워두고 네이버 지역검색이 장소명으로 채우게 둔다.
-      venue: 'KINTEX 제2전시장', venue_address: null, venue_lat: null, venue_lng: null,
+      // 다른 KINTEX 행사들이 쓰는 KINTEX_LAT/LNG은 제1전시장(킨텍스로 217-60) 값이다.
+      // 제2전시장은 건물이 달라(217-59) 좌표를 직접 박지 않고 네이버 지역검색에 맡긴다.
+      // 대신 주소는 채워둔다 — 처음엔 이것도 비웠더니 장소명만으로는 좌표 조회가 실패해서
+      // 지도가 안 떴다(등록 후 확인함). lookupVenueCoords는 주소가 있으면 훨씬 잘 찾는다.
+      venue: 'KINTEX 제2전시장',
+      venue_address: '경기도 고양시 일산서구 킨텍스로 217-59',
+      venue_lat: null, venue_lng: null,
       organizer: '호요버스 (HoYoverse)',
       description: '호요버스 대표 게임 IP를 한자리에 모은 단독 오프라인 축제로 올해 3회째. 붕괴3rd·원신·미해결사건부·붕괴: 스타레일·젠레스 존 제로 5종이 참여하며, 타이틀별 테마 부스와 2차 창작 전시 구역이 함께 운영된다. 제2전시장 7·8홀과 후면 야외광장을 함께 쓴다.',
       ticket_url: 'https://www.ticketlink.co.kr/product/65564',

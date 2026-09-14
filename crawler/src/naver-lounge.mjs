@@ -9,6 +9,10 @@ const USER_FEEDS_API = 'https://comm-api.game.naver.com/nng_main/v1/user'
 
 const LOUNGES = [
   {
+    // ⚠️ 2026-09-14 확인: 이 해시로는 피드가 0건이다(다른 세 라운지는 482~4,825건 정상).
+    //    공지를 올리는 실제 계정은 'zenlesszone0'인데, 이 API는 로그인 ID가 아니라 네이버
+    //    내부 해시만 받고 그 해시는 외부에서 계산할 수 없다(md5 아님 — 확인함).
+    //    그래서 라운지 화면에서 해시를 직접 떠와야 고쳐진다. 그때까지는 아래 0건 경고가 뜬다.
     name: '젠레스 존 제로',
     userId: '9186dc92e8c6dda1f94af1c7d82a07ec',
     loungeId: 'ZZZ',
@@ -90,6 +94,20 @@ export async function fetchNaverLoungeCandidates() {
       succeeded++
     } catch (err) {
       console.error(`[라운지] "${name}" 조회 실패:`, err.message)
+      continue
+    }
+
+    // 총 글이 0건이면 "새 글이 없다"가 아니라 userId 해시가 더 이상 유효하지 않다는 뜻이다.
+    // 이 API는 존재하지 않는/바뀐 계정에도 200 + 빈 배열을 돌려주기 때문에, 위의 succeeded++가
+    // 그대로 통과해서 "정상인데 글이 없는 라운지"처럼 보인다. 실제로 젠레스 존 제로가 이 상태로
+    // 방치돼 호요랜드2026 상세공지(2026-09-12)를 통째로 놓쳤다 — 조용히 실패하지 않게 경고한다.
+    // 운영 중인 라운지는 totalCount가 항상 수백~수천 건이라 오탐 걱정이 없다.
+    if ((data?.content?.totalCount ?? 0) === 0) {
+      console.error(
+        `[라운지] "${name}"(${loungeId}) 피드 0건 — userId 해시가 만료됐을 수 있습니다.\n` +
+        `         고치는 법: game.naver.com/lounge/${loungeId} 에서 공지 글을 열어 주소 끝의 feedId를 확인한 뒤\n` +
+        `         https://comm-api.game.naver.com/nng_main/v1/community/feed/{feedId} 를 열면 실제 작성 계정(userId)이 보인다.`
+      )
       continue
     }
 
