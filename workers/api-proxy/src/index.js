@@ -496,11 +496,15 @@ async function allowedSeoulPlaces(env) {
   try {
     const rows = await supabase(env, 'GET', 'events?select=seoul_place_name&seoul_place_name=not.is.null')
     const names = new Set((rows ?? []).map(row => row.seoul_place_name).filter(Boolean))
-    if (names.size > 0) seoulPlaces = { names, fetchedAt: now }
-    return seoulPlaces.names
+    // 조회에 성공했으면 결과가 비어 있어도 그게 답이다 — seoul_place_name을 쓰는 행사가
+    // 하나도 없으면 어떤 place도 정당하지 않으므로 전부 거절해야 한다.
+    // (처음엔 "0건이면 목록 없음"으로 뒀는데, 실제로 이 컬럼을 쓰는 행사가 하나도 없어서
+    //  배포하자마자 모든 요청이 검사를 그냥 통과했다 — 잠그려던 구멍이 그대로 열려 있었다.)
+    seoulPlaces = { names, fetchedAt: now }
+    return names
   } catch (err) {
-    // 목록 조회 실패로 기능을 죽이지는 않는다 — 마지막으로 성공한 목록을 계속 쓰고,
-    // 그것도 없으면(첫 배포 직후 등) 아래 레이트리밋만으로 버틴다.
+    // 여기는 "모른다"라서 다르다. 조회 자체가 실패한 것이므로 기능을 죽이지 않고
+    // 마지막으로 성공한 목록을 계속 쓰고, 그것도 없으면 아래 레이트리밋만으로 버틴다.
     console.error('[seoul] 허용 장소 목록 조회 실패', err)
     return seoulPlaces.names
   }
