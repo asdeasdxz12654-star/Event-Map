@@ -40,7 +40,12 @@ export default function Tabs({ tabs, idPrefix = 'tab' }) {
         role="tablist"
         aria-label="행사 정보"
         onKeyDown={onKeyDown}
-        className="flex gap-1 overflow-x-auto border-b border-ink/10 mb-4 -mx-1 px-1"
+        // 탭바를 상단 내비 바로 아래에 붙여 둔다. 부스 50개짜리 행사(호요랜드)에서
+        // 굿즈 탭으로 가려면 예전엔 맨 위까지 되돌아가야 했다 — 칩으로 접어 두는
+        // 처리를 해놔도 탭 자체가 화면에서 사라지면 그 이점이 상쇄된다.
+        // (top 값은 Navbar의 높이 h-14 lg:h-16과 같아야 한다.)
+        className="sticky top-14 lg:top-16 z-30 flex gap-1 overflow-x-auto scrollbar-hide
+          border-b border-line mb-4 -mx-4 px-4 lg:-mx-1 lg:px-1 bg-surface/95 backdrop-blur"
       >
         {list.map(tab => {
           const selected = tab.id === active.id
@@ -54,7 +59,7 @@ export default function Tabs({ tabs, idPrefix = 'tab' }) {
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveId(tab.id)}
-              className={`shrink-0 px-3 py-2.5 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              className={`shrink-0 px-3 py-3 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-indigo-400 focus:outline-none ${
                 selected
                   ? 'border-indigo-500 text-ink font-semibold'
                   : 'border-transparent text-zinc-400 hover:text-ink'

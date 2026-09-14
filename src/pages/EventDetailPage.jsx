@@ -1,18 +1,17 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
+import { format, differenceInCalendarDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { getEventStatus, categoryMeta, parseLocalDate, STATUS } from '../data/events'
+import { getEventStatus, getDaysUntil, parseLocalDate, STATUS } from '../data/events'
 import StatusBadge from '../components/StatusBadge'
 import CategoryBadge from '../components/CategoryBadge'
 import CrowdBadge from '../components/CrowdBadge'
 import TrustScore from '../components/TrustScore'
 import NaverMap from '../components/NaverMap'
+import Icon from '../components/icons'
+import { FOCUS_RING } from '../components/ui/focusRing'
 import { useEvent } from '../hooks/useEvent'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { useBookmarks } from '../hooks/useBookmarks'
-import { addEventToCalendar, calendarButtonLabel } from '../utils/ics'
-import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
@@ -21,13 +20,17 @@ import GoodsList from '../components/GoodsList'
 import PerformerManager from '../components/PerformerManager'
 import SectionCard from '../components/SectionCard'
 import Tabs from '../components/Tabs'
+import EventPoster from '../components/EventPoster'
+import EventActions from '../components/EventActions'
+import EventCta from '../components/EventCta'
+import FactTiles from '../components/FactTiles'
+import DetailSkeleton from '../components/DetailSkeleton'
 import { useEventBooths } from '../hooks/useEventBooths'
 import { useEventBoothItems } from '../hooks/useEventBoothItems'
 import { useEventPerformers } from '../hooks/useEventPerformers'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
-import PosterImage from '../components/PosterImage'
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -36,27 +39,21 @@ export default function EventDetailPage() {
   // 그 범위 밖 행사는 링크로 들어와도 못 찾는 상태였다 (useEvent.js 주석 참고).
   const { event, loading, error } = useEvent(id)
   useDocumentTitle(event?.title)
-  const { isBookmarked, toggleBookmark } = useBookmarks()
   // 하위 목록은 여기서 한 번만 받아 아래로 내려준다 — 어떤 탭을 띄울지는 "내용이 있는가"로
   // 정해지므로 페이지가 개수를 먼저 알아야 하고, 컴포넌트마다 따로 조회하면 같은 테이블에
   // 같은 이름의 실시간 채널이 두 번 열린다.
   const { booths } = useEventBooths(id)
   const { items: boothItems } = useEventBoothItems(id)
   const { performers } = useEventPerformers(id)
-  const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
-  const [imgError, setImgError] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
 
   // 다른 행사로 이동해도 이 컴포넌트는 언마운트되지 않는다(같은 라우트, id만 바뀜).
-  // 그래서 상태를 직접 비워주지 않으면 앞 행사에서 포스터가 깨졌을 때 그 imgError가
-  // 남아 다음 행사도 "공식 포스터 미정"으로 보이고, 열어둔 수정 폼이 엉뚱한 행사의
-  // 폼으로 이어진다. (렌더 도중에 되돌리는 React 공식 패턴 — 이펙트로 하면 잘못된
-  //  화면이 한 번 그려진 뒤에 고쳐진다.)
+  // 열어둔 수정 폼을 비워주지 않으면 엉뚱한 행사의 폼으로 이어진다.
+  // (렌더 도중에 되돌리는 React 공식 패턴 — 이펙트로 하면 잘못된 화면이 한 번 그려진다.)
   const [renderedId, setRenderedId] = useState(id)
   if (renderedId !== id) {
     setRenderedId(id)
-    setImgError(false)
     setShowEditForm(false)
   }
 
@@ -70,21 +67,14 @@ export default function EventDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center text-zinc-400">
-        <div className="text-4xl mb-3 animate-pulse">⏳</div>
-        <p>행사 정보를 불러오는 중...</p>
-      </div>
-    )
-  }
+  if (loading) return <DetailSkeleton />
 
   if (error || !event) {
     return (
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center">
-        <div className="text-5xl mb-4">🔍</div>
+        <Icon name="search" className="w-10 h-10 mx-auto mb-4 text-zinc-500" />
         <p className="text-zinc-400 mb-4">행사 정보를 찾을 수 없습니다</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm">← 목록으로</Link>
+        <Link to="/" className={`text-indigo-400 hover:text-indigo-300 text-sm rounded ${FOCUS_RING}`}>← 목록으로</Link>
       </div>
     )
   }
@@ -93,35 +83,34 @@ export default function EventDetailPage() {
   // 실시간 서울시 혼잡도는 행사가 "진행중"일 때만 의미가 있다 — 시작 전/종료 후에
   // 보여주면 행사와 무관한 그 장소의 평소 인파를 행사 혼잡도로 오해할 수 있다.
   const showingLiveCongestion = status === STATUS.ONGOING && !!event.seoulPlaceName
-  const bookmarked = isBookmarked(event.id)
   const start = parseLocalDate(event.startDate)
   const end = parseLocalDate(event.endDate)
   const isSameDay = event.startDate === event.endDate
+  const dayCount = differenceInCalendarDays(end, start) + 1
 
-  const dateStr = isSameDay
-    ? format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })
-    : `${format(start, 'yyyy년 M월 d일 (eee)', { locale: ko })}\n~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
+  const dateValue = isSameDay
+    ? format(start, 'M.d (eee)', { locale: ko })
+    : `${format(start, 'M.d (eee)', { locale: ko })} – ${format(end, 'M.d (eee)', { locale: ko })}`
+  const dateHint = isSameDay
+    ? format(start, 'yyyy년', { locale: ko })
+    : `${format(start, 'yyyy년', { locale: ko })} · ${dayCount}일간`
+
+  const daysUntil = status === STATUS.UPCOMING ? getDaysUntil(event) : null
+  const dDayLabel = daysUntil === null ? null : daysUntil === 0 ? 'D-Day' : daysUntil > 0 ? `D-${daysUntil}` : null
 
   const hasCoords = event.venueLat != null && event.venueLng != null
+  const siteName = ticketSiteName(event.ticketUrl)
 
-  // 예매 오픈 안내. 예전엔 ticket_open_date가 있을 때만 줄을 띄웠는데, 그러면 날짜를
-  // 모르는 행사는 "예매 정보가 원래 없는 행사"인지 "아직 안 정해진 것"인지 구분이 안 됐다.
-  // 아는 만큼 적고, 모르면 모른다고 적는다.
-  const ticketOpenText = event.ticketOpenDate
-    ? [
-        format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'yyyy년 M월 d일', { locale: ko }),
-        event.ticketOpenTime ?? '시간 미정',
-        ticketSiteName(event.ticketUrl),
-      ].filter(Boolean).join(' · ')
-    : event.ticketUrl
-      ? [event.ticketStatus === 'soldout' ? '매진' : '예매 진행 중', ticketSiteName(event.ticketUrl)]
-          .filter(Boolean).join(' · ')
-      : '공식 발표 전 (미정)'
-
-  // 모바일 하단 고정 예매 바는 "실제로 누를 수 있을 때"만 띄운다 — 매진 행사에서는
-  // 누를 수 없는 회색 "매진" 블록이 화면 아래를 계속 차지하기만 했다.
-  // 바가 뜨는 동안에는 본문 CTA의 예매 버튼을 빼서 같은 버튼이 두 번 보이지 않게 한다.
-  const showTicketBar = !!event.ticketUrl && event.ticketStatus !== 'soldout'
+  // 예매 안내. 아는 만큼 적고, 모르면 모른다고 적는다 — 예전엔 날짜가 없으면 줄 자체가
+  // 사라져서 "원래 예매가 없는 행사"인지 "아직 안 정해진 것"인지 구분되지 않았다.
+  const ticketValue = event.ticketStatus === 'soldout' ? '매진'
+    : event.ticketOpenDate
+      ? `${format(new Date(event.ticketOpenDate.replaceAll('-', '/')), 'M.d', { locale: ko })} 오픈`
+      : event.ticketUrl ? '예매 진행 중' : '미정'
+  const ticketHint = event.ticketStatus === 'soldout' ? (siteName || null)
+    : event.ticketOpenDate
+      ? [event.ticketOpenTime ?? '시간 미정', siteName].filter(Boolean).join(' · ')
+      : event.ticketUrl ? (siteName || null) : '공식 발표 전'
 
   const venueAddress = event.venueAddress ?? ''
   const venueName = event.venue ?? ''
@@ -137,20 +126,39 @@ export default function EventDetailPage() {
     ? `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}?c=${event.venueLng},${event.venueLat},15,0,0,0,dh`
     : `https://map.naver.com/v5/search/${encodeURIComponent(mapQuery)}`
 
+  // 핵심 정보 네 칸. 넷으로 고정해야 2열(모바일)·4열(PC) 어느 쪽이든 빈자리가 없다.
+  // 마지막 칸만 상황에 따라 바뀐다 — 열리고 있는 행사에서는 혼잡도가, 그 외에는
+  // 주최사가 더 알고 싶은 정보다.
+  const lastTile = status === STATUS.ONGOING && event.crowdLevel
+    ? {
+        icon: 'users',
+        label: '예상 혼잡도',
+        value: <CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />,
+        hint: '실시간 아님 · 추정',
+      }
+    : { icon: 'info', label: '주최', value: event.organizer || '미정' }
+
+  const tiles = [
+    { icon: 'calendar', label: '기간', value: dateValue, hint: dateHint },
+    { icon: 'won', label: '입장료', value: event.admissionFee || '공식 미정' },
+    { icon: 'ticket', label: '예매', value: ticketValue, hint: ticketHint },
+    lastTile,
+  ]
+
   // ── 탭 구성 ────────────────────────────────────────────────────────────
   // 탭은 데이터가 정한다. 부스도 굿즈도 없는 행사(대부분이 그렇다)에서는 탭이 "개요"
-  // 하나만 남고, Tabs가 그때는 탭바를 그리지 않아 지금까지의 한 장짜리 화면과 같아진다.
+  // 하나만 남고, Tabs가 그때는 탭바를 그리지 않아 한 장짜리 화면이 된다.
   //
   // 다만 탭이 안 생긴다고 그 정보가 사라지면 안 된다 — 이 화면은 "등록된 게 없다"와
   // "화면이 원래 다르다"를 구분할 수 있게 빈 섹션도 자리를 지킨다는 원칙으로 만들어져
   // 있다(BoothList·PerformerManager의 DisclosureNote). 그래서 탭이 없을 때는 해당
-  // 섹션을 개요 안으로 내린다. 정보는 항상 어딘가에 있고, 양이 많을 때만 탭으로 갈라진다.
+  // 섹션을 개요 안으로 내린다.
   const goodsItems = boothItems.filter(item => item.kind === 'goods')
   const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl
   const hasStageTab = performers.length > 0
 
   const floorPlan = event.floorPlanUrl && (
-    <SectionCard title="🗺 부스 배치도">
+    <SectionCard title="부스 배치도">
       <img
         src={event.floorPlanUrl}
         alt={`${event.title} 부스 배치도`}
@@ -179,47 +187,10 @@ export default function EventDetailPage() {
       label: '개요',
       render: () => (
         <>
-          {/* 기본 정보 카드 */}
-          <div className="bg-ink/5 border border-ink/10 rounded-2xl p-4 space-y-3 mb-4">
-            <InfoRow icon="📅" label="기간" value={dateStr} />
-            {/* 주소가 없는 행사가 흔한데 템플릿 문자열로 이으면 "null"이 그대로 찍힌다 */}
-            <InfoRow icon="📍" label="장소" value={[venueName, venueAddress].filter(Boolean).join('\n')} />
-            {/* 예매 오픈은 입장료보다 위에 둔다 — "언제부터 살 수 있나"가 "얼마인가"보다
-                먼저 찾는 정보다. 끝난 행사에는 의미가 없으니 그때만 감춘다. */}
-            {status !== STATUS.ENDED && (
-              <InfoRow icon="🎟" label="예매 오픈" value={ticketOpenText} />
-            )}
-            <InfoRow icon="💰" label="입장료" value={event.admissionFee || '공식 미정'} />
-            {/* 혼잡도는 행사가 열리고 있을 때만. 예정 행사에 "혼잡" 딱지가 붙어 있으면
-                지금 사람이 몰려 있다는 뜻으로 읽힌다. */}
-            {event.crowdLevel && !showingLiveCongestion && status === STATUS.ONGOING && (
-              <InfoRow
-                icon="👥"
-                label="예상 혼잡도"
-                value={<CrowdBadge crowdLevel={event.crowdLevel} ticketStatus={event.ticketStatus} />}
-                hint="실시간 데이터가 아닌, 과거 참가 규모·매진 여부 기반 추정치입니다"
-              />
-            )}
-            <InfoRow icon="🏢" label="주최" value={event.organizer} />
-            {event.ticketOpenNote && (
-              <InfoRow icon="🗓" label="사전예매" value={event.ticketOpenNote} />
-            )}
-          </div>
-
-          {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
-          <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
-
-          {/* 신뢰도 카드 */}
-          <SectionCard title="행사 신뢰도">
-            <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
-          </SectionCard>
-
-          {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 */}
-          {!hasStageTab && stageSection}
-          {!hasBoothTab && boothSection}
-
-          {/* 위치 & 경로 */}
-          <div className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden mb-4">
+          {/* 위치 & 경로 — 개요의 맨 위다.
+              예전엔 신뢰도·부스·무대를 전부 지나야 나오는 맨 아래였는데, 행사 당일에
+              가장 자주 여는 정보가 가장 깊은 곳에 있었던 셈이다. */}
+          <div className="bg-surface-1 border border-line rounded-2xl overflow-hidden mb-4">
             {hasCoords && (
               <NaverMap
                 lat={event.venueLat}
@@ -229,12 +200,8 @@ export default function EventDetailPage() {
               />
             )}
             <div className="p-4">
-              <h2 className="text-sm font-semibold text-ink mb-1">위치 & 경로</h2>
-              {(venueName || venueAddress) && (
-                <p className="text-xs text-zinc-400 mb-3 whitespace-pre-line">
-                  {[venueName, venueAddress].filter(Boolean).join('\n')}
-                </p>
-              )}
+              <h2 className="text-sm font-semibold text-ink mb-0.5">{venueName || '장소 미정'}</h2>
+              {venueAddress && <p className="text-xs text-zinc-400 mb-3">{venueAddress}</p>}
               <DirectionsButtons
                 lat={event.venueLat}
                 lng={event.venueLng}
@@ -244,15 +211,44 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          {/* 태그 */}
-          {event.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {event.tags.map(tag => (
-                <span key={tag} className="text-xs px-2.5 py-1 bg-ink/5 text-zinc-400 rounded-full border border-ink/10">
-                  #{tag}
-                </span>
-              ))}
-            </div>
+          {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
+          <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
+
+          <SectionCard title="행사 신뢰도">
+            <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
+          </SectionCard>
+
+          {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 */}
+          {!hasStageTab && stageSection}
+          {!hasBoothTab && boothSection}
+
+          {/* 자주 찾지는 않지만 있어야 하는 것들. 팩트 타일에서 밀려난 값이 여기 모인다. */}
+          {(event.organizer || event.ticketOpenNote || event.tags?.length > 0) && (
+            <SectionCard title="주최 · 기타">
+              <dl className="flex flex-col gap-2 text-sm">
+                {event.organizer && (
+                  <div className="flex gap-3">
+                    <dt className="text-zinc-400 w-20 shrink-0">주최</dt>
+                    <dd className="text-zinc-200 min-w-0">{event.organizer}</dd>
+                  </div>
+                )}
+                {event.ticketOpenNote && (
+                  <div className="flex gap-3">
+                    <dt className="text-zinc-400 w-20 shrink-0">사전예매</dt>
+                    <dd className="text-zinc-200 min-w-0">{event.ticketOpenNote}</dd>
+                  </div>
+                )}
+              </dl>
+              {event.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {event.tags.map(tag => (
+                    <span key={tag} className="text-xs px-2.5 py-1 bg-surface-2 text-zinc-400 rounded-full">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
           )}
         </>
       ),
@@ -277,97 +273,107 @@ export default function EventDetailPage() {
     },
   ].filter(Boolean)
 
+  const backLink = (
+    <Link to="/" className={`flex items-center gap-1.5 text-sm text-zinc-400 hover:text-ink transition-colors rounded ${FOCUS_RING}`}>
+      <Icon name="back" className="w-4 h-4" />
+      목록으로
+    </Link>
+  )
+
   return (
-    <div className={`max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10 lg:pb-10 ${showTicketBar ? 'pb-24' : 'pb-6'}`}>
-      {/* 뒤로가기 */}
-      <Link to="/" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-ink mb-6 transition-colors">
-        ← 목록으로
-      </Link>
-
-      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:items-start">
-        <div className="lg:max-w-2xl">
-          {/* 포스터 */}
-          {event.posterUrl && !imgError ? (
-            // 포스터 전체를 보여준다. 예전엔 object-cover + max-h라 세로형 포스터가
-            // 가운데 띠만 남았다 — AGF 2026 포스터에서 제목과 하단 날짜·장소가 통째로
-            // 잘려 나갔다(포스터는 그 정보가 그림 안에 인쇄돼 있다).
-            <PosterImage
-              src={event.posterUrl}
-              alt={`${event.title} 포스터`}
-              onError={() => setImgError(true)}
-              className="w-full h-[360px] sm:h-[440px] lg:h-[480px] rounded-2xl mb-6"
-            />
-          ) : (
-            <div className="w-full aspect-[16/7] rounded-2xl bg-gradient-to-br from-indigo-900/60 to-violet-900/40 mb-6 flex flex-col items-center justify-center gap-2">
-              <span className="text-5xl leading-none">{categoryMeta(event.category).emoji}</span>
-              <span className="text-sm text-zinc-300">공식 포스터 미정</span>
-            </div>
-          )}
-
-          {/* 타이틀 영역 */}
-          <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-            <div className="flex flex-wrap items-start gap-2">
-              <StatusBadge status={status} />
-              <CategoryBadge category={event.category} />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => toggleBookmark(event.id)}
-                aria-pressed={bookmarked}
-                className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border text-lg transition-colors ${
-                  bookmarked
-                    ? 'bg-indigo-600/80 border-indigo-500/50 text-white'
-                    : 'bg-ink/5 border-ink/10 text-zinc-400 hover:text-ink'
-                }`}
+    <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-4 lg:py-10 pb-24 lg:pb-10">
+      <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-x-8 lg:items-start">
+        {/* 왼쪽 기둥 — 스크롤해도 따라온다. 좁은 화면에서는 그냥 맨 위 포스터다. */}
+        <div className="lg:sticky lg:top-20 flex flex-col gap-3 mb-4 lg:mb-0">
+          <div className="relative">
+            <EventPoster event={event} />
+            {/* 좁은 화면에서는 뒤로가기·조작을 포스터 위에 얹는다 — 별도 줄로 빼면
+                첫 화면에서 40px을 더 쓰게 되고, 그만큼 제목이 아래로 밀린다. */}
+            <div className="lg:hidden absolute top-2 inset-x-2 z-10 flex items-start justify-between gap-2 pointer-events-none">
+              <Link
+                to="/"
+                aria-label="목록으로"
+                className={`pointer-events-auto w-10 h-10 flex items-center justify-center rounded-full bg-black/45 backdrop-blur border border-white/15 text-white hover:bg-black/60 transition-colors ${FOCUS_RING}`}
               >
-                {bookmarked ? '⭐' : '☆'}
-              </button>
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => setShowEditForm(true)}
-                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border bg-indigo-600/20 border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/40 text-sm transition-colors"
-                    title="행사 수정"
-                  >
-                    ✏
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border bg-red-600/20 border-red-500/30 text-red-400 hover:bg-red-600/40 text-sm transition-colors"
-                    title="행사 삭제"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
+                <Icon name="back" className="w-[18px] h-[18px]" />
+              </Link>
+              <div className="pointer-events-auto">
+                <EventActions event={event} onEdit={() => setShowEditForm(true)} onDelete={handleDelete} overlay />
+              </div>
             </div>
           </div>
+
+          {/* PC에서는 CTA가 포스터 아래 기둥에 붙어 따라 내려온다. 좁은 화면용 CTA는
+              아래 본문 흐름 안에 따로 있다(같은 버튼이 두 번 보이지 않게 서로 가린다). */}
+          <div className="hidden lg:block">
+            <EventCta event={event} withBar={false} />
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="hidden lg:flex items-center justify-between gap-3 mb-4">
+            {backLink}
+            <EventActions event={event} onEdit={() => setShowEditForm(true)} onDelete={handleDelete} />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            <CategoryBadge category={event.category} />
+            {status !== STATUS.UPCOMING && <StatusBadge status={status} />}
+            {dDayLabel && (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums whitespace-nowrap ${
+                daysUntil <= 7 ? 'bg-indigo-600 text-white' : 'bg-surface-2 text-zinc-300'
+              }`}>
+                {dDayLabel}
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-2xl lg:text-3xl font-bold text-ink tracking-tight leading-tight mb-1.5">{event.title}</h1>
+          {venueName && (
+            <p className="flex items-center gap-1.5 text-sm text-zinc-400 mb-4">
+              <Icon name="pin" className="w-4 h-4 text-zinc-500" />
+              <span className="min-w-0">{venueName}</span>
+            </p>
+          )}
+
+          <FactTiles tiles={tiles} />
+
+          <div className="lg:hidden mb-5">
+            <EventCta event={event} />
+          </div>
+
+          {event.description && <Description text={event.description} />}
 
           {showEditForm && (
             <AdminEventForm event={event} onClose={() => setShowEditForm(false)} />
           )}
-          <h1 className="text-2xl font-bold text-ink mb-1">{event.title}</h1>
-          <p className="text-zinc-400 text-sm mb-6">{event.description}</p>
 
           <Tabs tabs={tabs} idPrefix={`ev-${event.id}`} />
-
-          {/* CTA 버튼 — PC에서는 오른쪽 사이드바에 고정 표시되므로 모바일에서만 노출 */}
-          <div className="lg:hidden">
-            <CtaButtons event={event} showTicket={!showTicketBar} />
-          </div>
-        </div>
-
-        {/* PC 전용 사이드바: 예매/캘린더 CTA를 스크롤해도 계속 보이게 고정 */}
-        <div className="hidden lg:block lg:sticky lg:top-20">
-          <CtaButtons event={event} />
         </div>
       </div>
-
-      {/* 모바일 하단 고정 예매 바 — 페이지가 길어져도 예매하기가 항상 화면에 보이게 */}
-      {showTicketBar && <TicketStickyBar event={event} />}
     </div>
   )
+}
 
+// 행사 설명. 긴 설명이 핵심 정보를 밀어내지 않도록 두 줄만 보여주고 접는다.
+function Description({ text }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mb-5">
+      <p className={`text-sm text-zinc-400 leading-relaxed ${open ? '' : 'line-clamp-2'}`}>{text}</p>
+      {/* 두 줄이 안 되는 짧은 설명에도 버튼이 뜨지만, 눌러도 화면이 바뀌지 않을 뿐
+          잘못된 정보를 주지는 않는다. 실제 줄 수를 재려면 레이아웃을 한 번 그린 뒤
+          측정해야 해서, 그 복잡도를 감수할 만큼의 이득이 아니다. */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        className={`mt-1 text-xs text-indigo-400 hover:text-indigo-300 rounded ${FOCUS_RING}`}
+      >
+        {open ? '접기' : '더보기'}
+      </button>
+    </div>
+  )
 }
 
 // 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.
@@ -380,115 +386,4 @@ function stripHallInfo(name) {
     .replace(/\s+B\d+\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function InfoRow({ icon, label, value, hint }) {
-  // 값이 비어 있으면(주최·장소 미등록 등) 라벨만 남은 빈 줄이 생기므로 아예 감춘다.
-  if (value == null || value === '') return null
-  return (
-    <div className="flex gap-3 text-sm">
-      <span className="shrink-0 w-5">{icon}</span>
-      <span className="text-zinc-400 shrink-0 w-20 whitespace-nowrap">{label}</span>
-      <span className="text-zinc-200 whitespace-pre-line">
-        {value}
-        {hint && <span className="block text-xs text-zinc-400 mt-0.5">{hint}</span>}
-      </span>
-    </div>
-  )
-}
-
-function ShareButton({ event }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleShare = useCallback(async () => {
-    const url = window.location.href
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: event.title, text: `${event.title} | 게임이벤트허브`, url })
-      } catch {
-        // 사용자가 취소한 경우 무시
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      } catch {
-        // clipboard API 미지원 환경
-      }
-    }
-  }, [event.title])
-
-  return (
-    <button
-      onClick={handleShare}
-      className="w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors"
-    >
-      {copied ? '✓ 링크 복사됨!' : '🔗 공유하기'}
-    </button>
-  )
-}
-
-// 예매 버튼 — 사이드바/모바일 인라인 CTA와 하단 고정 바(TicketStickyBar)가 공유한다.
-function TicketButton({ event, className }) {
-  if (!event.ticketUrl) return null
-  if (event.ticketStatus === 'soldout') {
-    return (
-      <div className={`bg-zinc-800 text-zinc-400 font-semibold text-center select-none ${className}`}>
-        🎟 매진
-      </div>
-    )
-  }
-  return (
-    <a
-      href={event.ticketUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-center transition-colors shadow-lg shadow-indigo-900/50 ${className}`}
-    >
-      🎟 {event.ticketStatus === 'available' ? '예매하기' : '예매 페이지'}
-      {ticketSiteName(event.ticketUrl) && ` (${ticketSiteName(event.ticketUrl)})`}
-    </a>
-  )
-}
-
-// 모바일 전용 하단 고정 CTA — 카드가 많이 쌓이는 행사(부스·출연진·지도까지)는 스크롤이
-// 길어져서, "예매하기"가 화면 맨 아래에 파묻히지 않게 항상 보이는 바를 따로 둔다.
-// 띄울지 말지(예매 링크 없음·매진)는 호출부의 showTicketBar가 판단한다.
-function TicketStickyBar({ event }) {
-  return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur border-t border-ink/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-      <TicketButton event={event} className="block w-full py-3 rounded-xl text-sm" />
-    </div>
-  )
-}
-
-// 공식 사이트 버튼. 주소를 아는 행사는 바로 열고, 아직 모르는 행사는 행사명으로
-// 검색 결과를 연다 — 예전엔 website가 없으면 버튼 자체가 사라져서, 행사마다 버튼이
-// 있다 없다 했고 "공식 정보를 어디서 보나"가 막다른 길이었다.
-// (website는 크롤러가 채우지만 못 찾는 행사가 있다 — crawler/src/fix-official-sites.mjs)
-function OfficialSiteButton({ event, className }) {
-  const known = !!event.website
-  const href = known
-    ? event.website
-    : `https://search.naver.com/search.naver?query=${encodeURIComponent(`${event.title} 공식`)}`
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
-      {known ? '공식 사이트 →' : '🔍 공식 정보 검색'}
-    </a>
-  )
-}
-
-function CtaButtons({ event, showTicket = true }) {
-  const quiet = 'w-full py-3 bg-ink/10 hover:bg-ink/15 text-ink text-sm rounded-2xl text-center transition-colors'
-  return (
-    <div className="flex flex-col gap-2">
-      {showTicket && <TicketButton event={event} className="w-full py-3.5 rounded-2xl" />}
-      <OfficialSiteButton event={event} className={quiet} />
-      <button onClick={() => addEventToCalendar(event)} className={quiet}>
-        {calendarButtonLabel()}
-      </button>
-      <ShareButton event={event} />
-    </div>
-  )
 }

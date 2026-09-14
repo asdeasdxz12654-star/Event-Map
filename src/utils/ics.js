@@ -47,7 +47,8 @@ export function isAndroid() {
 // 버튼에 쓸 이름. 안드로이드는 파일을 받는 게 아니라 구글 캘린더가 열리므로
 // "(.ics)"를 붙이면 거짓말이 된다.
 export function calendarButtonLabel() {
-  return isAndroid() ? '📅 캘린더에 추가' : '📅 캘린더에 추가 (.ics)'
+  // 아이콘이 옆에 붙으므로 이모지를 뺐고, 보조 버튼 세 개가 한 줄에 들어가도록 줄였다.
+  return isAndroid() ? '캘린더' : '캘린더 (.ics)'
 }
 
 function googleCalendarUrl(event) {
