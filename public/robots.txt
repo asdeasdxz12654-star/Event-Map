@@ -1,0 +1,59 @@
+# 게임이벤트허브 robots.txt
+#
+# ⚠️ 루트에서 서빙될 때만 효력이 있다.
+#    Cloudflare Pages(https://event-map.pages.dev/robots.txt) -> 정상 적용.
+#    GitHub Pages(https://<user>.github.io/Event-Map/)        -> 이 파일이
+#      /Event-Map/robots.txt로 올라가는데, 크롤러는 오리진 루트(/robots.txt)만 읽으므로
+#      무시된다. 그쪽까지 막으려면 <user>.github.io 루트 저장소에 robots.txt를 따로 둬야 한다.
+#
+# ⚠️ robots.txt는 "차단"이 아니라 "요청"이다 — 지키는 크롤러만 지킨다. 무시하는 쪽까지
+#    실제로 막으려면 Cloudflare 대시보드 > Security > Bots 에서
+#    "AI Scrapers and Crawlers" 차단을 켠다(이 역시 Cloudflare 도메인에만 적용).
+
+# ---------------------------------------------------------------------------
+# 1) AI 학습·수집 크롤러: 전면 거부
+#    (검색 유입과 무관하고, 행사 데이터가 통째로 학습셋에 들어가는 것만 남는다)
+# ---------------------------------------------------------------------------
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Claude-Web
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+User-agent: FacebookBot
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: Diffbot
+User-agent: Omgilibot
+User-agent: ImagesiftBot
+User-agent: cohere-ai
+User-agent: cohere-training-data-crawler
+User-agent: AI2Bot
+User-agent: Timpibot
+User-agent: YouBot
+User-agent: PetalBot
+Disallow: /
+
+# ---------------------------------------------------------------------------
+# 2) AI 답변·검색용 크롤러: 거부
+#    학습용은 아니지만, 답변 안에 우리 데이터를 그대로 재현하는 쪽이다.
+#    ChatGPT/Perplexity 검색 결과에 사이트가 노출되길 원한다면 이 블록만 지우면 된다.
+# ---------------------------------------------------------------------------
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Disallow: /
+
+# ---------------------------------------------------------------------------
+# 3) 그 외 전부(구글·네이버·다음 검색봇, 카카오톡·트위터 링크 미리보기 봇 포함): 허용
+#    이들이 막히면 검색 유입과 공유 미리보기가 같이 죽는다.
+#    관리자 검수 화면만 색인에서 제외한다(로그인 없이는 어차피 아무것도 안 보인다).
+# ---------------------------------------------------------------------------
+User-agent: *
+Disallow: /admin/
+Allow: /

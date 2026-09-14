@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { httpUrl } from '../lib/url'
 
 // DB 행(snake_case) -> 컴포넌트가 쓰는 draft 객체(camelCase)로 변환
+// sourceUrl은 검수 화면에서 "원문 보기" 링크로 나가므로 http(s)만 통과시킨다
+// (크롤러가 넣는 값이라 형식이 보장되지는 않는다 — 이유는 src/lib/url.js 참고).
 function mapDraft(row) {
   return {
     id: row.id,
     sourceName: row.source_name,
-    sourceUrl: row.source_url,
+    sourceUrl: httpUrl(row.source_url),
     sourceTitle: row.source_title,
     publishedAt: row.published_at,
     status: row.status,

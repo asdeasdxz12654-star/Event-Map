@@ -15,6 +15,7 @@ import { fetchEventPosterUrl } from './serpapi-image.mjs'
 import { resolveOfficialUrls, isDedicatedSite } from './official-site-lookup.mjs'
 import { fetchPosterFromOfficialSite } from './official-site-poster.mjs'
 import { storePoster } from './poster-storage.mjs'
+import { httpUrl } from './util.mjs'
 
 // 포스터를 찾는 순서: 이미지 검색 -> 공식 사이트 배너.
 //
@@ -63,7 +64,13 @@ export async function attachEventPoster(supabase, eventId, { title, website, tic
   if (!posterUrl) return null
 
   // 인쇄용 원본처럼 큰 포스터는 줄여서 우리 저장소 사본으로 (poster-storage.mjs)
-  const finalUrl = await storePoster(supabase, eventId, posterUrl) ?? posterUrl
+  const finalUrl = httpUrl(await storePoster(supabase, eventId, posterUrl) ?? posterUrl)
+  // 이미지 검색 결과에서 온 주소라 형식이 보장되지 않는다. poster_url은 <img src>로
+  // 그대로 나가므로 http(s)가 아니면 저장하지 않는다(src/lib/url.js 참고).
+  if (!finalUrl) {
+    console.warn('  [이미지] 포스터 주소 형식이 올바르지 않아 저장하지 않음')
+    return null
+  }
   const { error } = await supabase
     .from('events')
     .update({ poster_url: finalUrl })

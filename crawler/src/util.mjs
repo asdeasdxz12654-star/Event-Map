@@ -9,6 +9,23 @@ export function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// http(s) 주소면 그대로, 아니면 null.
+//
+// LLM(Groq)이 기사에서 뽑아낸 ticket_url·website가 자동 승인을 타고 events까지 들어가
+// 상세 화면의 <a href>가 된다. 형식이 보장되지 않는 값이라 저장 전에 한 번 거른다.
+// 크롤러 자신이 그 주소를 fetch해서 포스터를 찾기도 하므로(poster-lookup.mjs),
+// 여기서 막으면 엉뚱한 스킴의 주소를 받아오려다 나는 사고도 같이 막힌다.
+// 프론트(src/lib/url.js)·Worker(assertUrlColumns)·DB 트리거에도 같은 검사가 있다.
+export function httpUrl(value) {
+  if (typeof value !== 'string' || value === '') return null
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'http:' || protocol === 'https:' ? value : null
+  } catch {
+    return null
+  }
+}
+
 // 공개 HTML 페이지를 받아 문자열로 돌려준다. 응답이 안 오는 사이트에 매달리지 않도록
 // 반드시 시간 제한을 둔다 — 크롤은 하루 한 번이라 한 번 멈추면 그날 수집이 통째로 빈다.
 export async function fetchHtml(url, { timeoutMs = 15_000 } = {}) {

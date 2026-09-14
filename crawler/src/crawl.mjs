@@ -35,7 +35,7 @@ import { upsertKnownEvents } from './known-events.mjs'
 import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
 import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-calendar.mjs'
 import { todayKST } from './date-kst.mjs'
-import { sleep, htmlToText } from './util.mjs'
+import { sleep, htmlToText, httpUrl } from './util.mjs'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -194,7 +194,21 @@ function shouldAutoApprove(extracted) {
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
   // tags: null → [] 정규화 — DB 트리거가 json_array_elements(tags)를 쓰므로
   // null이면 "cannot extract elements from a scalar" 에러 발생
-  const normalizedExtracted = extracted.tags == null ? { ...extracted, tags: [] } : extracted
+  const withTags = extracted.tags == null ? { ...extracted, tags: [] } : extracted
+
+  // ticket_url·website는 Groq가 기사 본문을 보고 "만들어낸" 문자열이다. 자동 승인되면
+  // 그대로 events에 들어가 상세 화면의 링크가 되므로, http(s)가 아닌 값은 여기서 버린다
+  // (버리는 게 맞다 — 형식이 틀린 주소는 어차피 눌러도 안 열린다).
+  const normalizedExtracted = {
+    ...withTags,
+    ticket_url: httpUrl(withTags.ticket_url),
+    website: httpUrl(withTags.website),
+  }
+  for (const key of ['ticket_url', 'website']) {
+    if (withTags[key] && !normalizedExtracted[key]) {
+      console.warn(`  -> ${key} 형식이 올바르지 않아 버림: ${String(withTags[key]).slice(0, 80)}`)
+    }
+  }
 
   const { data, error } = await supabase
     .from('event_drafts')
@@ -220,7 +234,8 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     } else {
       console.log(`  -> confidence:${extracted.confidence} + 날짜·장소 확정 -> 자동 승인됨`)
       await attachCoords(approved?.promoted_event_id, extracted.venue, extracted.venue_address)
-      await attachPosterImage(approved?.promoted_event_id, extracted.title, [extracted.website, extracted.ticket_url], extracted.start_date)
+      // 포스터 검색 힌트로 이 주소들을 실제로 받아오므로, 걸러낸 쪽(normalizedExtracted)을 넘긴다.
+      await attachPosterImage(approved?.promoted_event_id, extracted.title, [normalizedExtracted.website, normalizedExtracted.ticket_url], extracted.start_date)
     }
   }
 

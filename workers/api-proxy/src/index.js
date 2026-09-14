@@ -47,6 +47,12 @@ const LOGIN_GLOBAL_THROTTLE_MS = 2000
 // 실패 응답은 항상 이만큼 늦춘다 — 응답 속도 차이로 정답을 좁혀 들어가지 못하게.
 const LOGIN_FAILURE_DELAY_MS = 400
 
+// /seoul-congestion 보호 값. 이 라우트는 우리 인증키로 서울시 원본을 대신 호출하므로
+// 인증 없는 공개 프록시가 되지 않게 두 겹으로 막는다(자세한 설명은 handleSeoulCongestion).
+const SEOUL_PLACES_TTL_MS = 10 * 60 * 1000 // 허용 장소 목록 캐시 수명
+const SEOUL_RATE_LIMIT = 60                // IP당 허용 요청 수
+const SEOUL_RATE_WINDOW_MS = 10 * 60 * 1000
+
 function corsHeaders(env = {}) {
   return {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ?? '*',
@@ -318,6 +324,32 @@ const EVENT_COLUMNS = [
   'seoul_place_name', 'booth_info_note', 'stage_info_note',
 ]
 
+// 화면에서 <a href>·<img src>로 그대로 나가는 컬럼들. 여기에 http(s)가 아닌 값이 들어가면
+// 그 값이 곧 링크가 된다(javascript:, data: 등). DB에 들어가기 전에 막는 게 제일 싸다 —
+// 저장되고 나면 프론트·미리보기 함수·ICS 내보내기까지 전부가 그 값을 쓰게 된다.
+const URL_COLUMNS = ['poster_url', 'ticket_url', 'website', 'floor_plan_url']
+
+function isHttpUrl(value) {
+  if (typeof value !== 'string' || value === '') return false
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// 값이 비어 있으면(null·빈 문자열) "지우기"라 그대로 통과시킨다. 값이 있는데 http(s)가
+// 아니면 400으로 거절한다 — 조용히 버리면 관리자는 저장된 줄 알고 화면을 떠난다.
+function assertUrlColumns(data) {
+  for (const key of URL_COLUMNS) {
+    const value = data[key]
+    if (value == null || value === '') continue
+    if (!isHttpUrl(value)) throw new HttpError(400, 'invalid_url')
+  }
+  return data
+}
+
 const ID_RE = /^\/admin\/events\/([^/]+)$/
 
 // 행사에 딸린 하위 목록(참가 부스, 출연진)은 구조가 같아서 라우트 패턴을 공유한다 —
@@ -406,7 +438,7 @@ async function handleAdmin(request, env, pathname) {
   if (pathname === '/admin/events' && request.method === 'POST') {
     const body = await readJsonBody(request)
     const data = await supabase(env, 'POST', 'events', {
-      ...pick(body, EVENT_COLUMNS),
+      ...assertUrlColumns(pick(body, EVENT_COLUMNS)),
       id: crypto.randomUUID(),
     })
     return json(Array.isArray(data) ? data[0] : data, env, { status: 201 })
@@ -419,7 +451,7 @@ async function handleAdmin(request, env, pathname) {
     const id = decodeURIComponent(idMatch[1])
     const body = await readJsonBody(request)
     await updateRow(env, 'events', id, {
-      ...pick(body, EVENT_COLUMNS),
+      ...assertUrlColumns(pick(body, EVENT_COLUMNS)),
       admin_edited_at: new Date().toISOString(),
     })
     return json({ ok: true }, env)
@@ -437,6 +469,72 @@ async function handleAdmin(request, env, pathname) {
   return json({ error: 'not_found' }, env, { status: 404 })
 }
 
+// --- 서울시 실시간 도시데이터 ---------------------------------------------
+// 이 라우트는 우리 인증키(SEOUL_OPENDATA_KEY)로 서울시 원본을 대신 호출한다. CORS는
+// 브라우저만 막지 curl은 못 막으므로, 그냥 두면 누구나 쓸 수 있는 공개 프록시다.
+// 특히 place가 그대로 URL에 들어가는데 엣지 캐시의 키가 URL이라, 매번 다른 문자열을
+// 넣으면 캐시를 통째로 우회해 요청 수만큼 원본을 때릴 수 있었다(= 일일 호출 한도를
+// 스크립트 한 줄로 소진). 두 겹으로 막는다.
+//   1) 장소 화이트리스트 — events.seoul_place_name에 실제로 들어 있는 이름만 허용.
+//   2) IP당 요청 수 제한 — 허용된 장소만 골라 돌려도 원본 호출이 늘지 않게.
+let seoulPlaces = { names: null, fetchedAt: 0 }
+
+async function allowedSeoulPlaces(env) {
+  const now = Date.now()
+  if (seoulPlaces.names && now - seoulPlaces.fetchedAt < SEOUL_PLACES_TTL_MS) return seoulPlaces.names
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return seoulPlaces.names
+  try {
+    const rows = await supabase(env, 'GET', 'events?select=seoul_place_name&seoul_place_name=not.is.null')
+    const names = new Set((rows ?? []).map(row => row.seoul_place_name).filter(Boolean))
+    if (names.size > 0) seoulPlaces = { names, fetchedAt: now }
+    return seoulPlaces.names
+  } catch (err) {
+    // 목록 조회 실패로 기능을 죽이지는 않는다 — 마지막으로 성공한 목록을 계속 쓰고,
+    // 그것도 없으면(첫 배포 직후 등) 아래 레이트리밋만으로 버틴다.
+    console.error('[seoul] 허용 장소 목록 조회 실패', err)
+    return seoulPlaces.names
+  }
+}
+
+// 카운터를 KV가 아니라 아이솔레이트 메모리에 둔다 — 무료 플랜 KV는 하루 쓰기 1,000회라,
+// 요청마다 쓰는 공개 라우트에 붙이면 로그인 잠금용 카운터까지 같이 말라버린다.
+// 콜로마다 따로 세지만, 목적("한 명이 스크립트로 원본을 두들기는 것" 차단)에는 충분하다.
+const seoulHits = new Map()
+
+// 초과했으면 남은 초, 아니면 0.
+function seoulRateExceeded(request) {
+  const ip = clientIp(request)
+  const now = Date.now()
+  const entry = seoulHits.get(ip)
+  if (!entry || entry.resetAt <= now) {
+    seoulHits.set(ip, { count: 1, resetAt: now + SEOUL_RATE_WINDOW_MS })
+    if (seoulHits.size > 5000) {
+      for (const [key, value] of seoulHits) if (value.resetAt <= now) seoulHits.delete(key)
+    }
+    return 0
+  }
+  entry.count += 1
+  return entry.count > SEOUL_RATE_LIMIT ? Math.ceil((entry.resetAt - now) / 1000) : 0
+}
+
+// https로 먼저 부른다 — http면 인증키가 URL 경로에 평문으로 실려 나가고 중간 구간·원본
+// 접근 로그에 그대로 남는다. 다만 서울시 쪽 8088 포트의 TLS 지원이 확실치 않아, 연결
+// 자체가 실패하면 http로 한 번 더 간다(기능을 죽이지 않되 가능하면 평문을 피한다).
+// 로그에 아래 경고가 찍히면 https가 안 되는 것이니 그때는 키 주기적 교체로 대응한다.
+async function fetchSeoulCityData(key, place) {
+  const path = `:8088/${key}/json/citydata/1/1/${encodeURIComponent(place)}`
+  // 서울시 쪽은 캐시 헤더를 안 주기 때문에 cacheEverything을 명시해야 이 서브리퀘스트가
+  // 엣지 캐시를 탄다. 이게 없으면 방문자 수만큼 그대로 원본을 때려서 일일 호출 한도를
+  // 금방 태운다 (Worker 자기 응답의 Cache-Control은 브라우저/다운스트림용일 뿐이다).
+  const cf = { cacheTtl: 120, cacheEverything: true }
+  try {
+    return await fetch(`https://openapi.seoul.go.kr${path}`, { cf })
+  } catch (err) {
+    console.warn('[seoul] https 호출 실패 — http로 폴백(인증키가 평문으로 나감)', err)
+    return fetch(`http://openapi.seoul.go.kr${path}`, { cf })
+  }
+}
+
 // 서울시 실시간 도시데이터 API 응답에서 우리가 쓰는 필드만 골라 반환한다.
 // "서울시 주요 120장소"에 없는 장소명을 넘기면 ERROR-500이 오는데, 그것도
 // 그대로 seoul_api_error로 넘겨서 프론트가 "지원 안 되는 장소" 처리하게 한다.
@@ -447,11 +545,22 @@ async function handleSeoulCongestion(request, env) {
   const place = new URL(request.url).searchParams.get('place')
   if (!place) return json({ error: 'missing_place' }, env, { status: 400 })
 
-  const url = `http://openapi.seoul.go.kr:8088/${env.SEOUL_OPENDATA_KEY}/json/citydata/1/1/${encodeURIComponent(place)}`
-  // 서울시 쪽은 캐시 헤더를 안 주기 때문에 cacheEverything을 명시해야 이 서브리퀘스트가
-  // 엣지 캐시를 탄다. 이게 없으면 방문자 수만큼 그대로 원본을 때려서 일일 호출 한도를
-  // 금방 태운다 (Worker 자기 응답의 Cache-Control은 브라우저/다운스트림용일 뿐이다).
-  const res = await fetch(url, { cf: { cacheTtl: 120, cacheEverything: true } })
+  // 프론트(LiveCongestion)는 error가 오면 이 위젯을 그리지 않으므로, 아래 두 거절은
+  // 정상 사용자 화면에서는 아무 변화도 만들지 않는다.
+  const allowed = await allowedSeoulPlaces(env)
+  if (allowed && !allowed.has(place)) {
+    return json({ error: 'unsupported_place' }, env, { status: 400 })
+  }
+
+  const retryAfter = seoulRateExceeded(request)
+  if (retryAfter > 0) {
+    return json({ error: 'rate_limited' }, env, {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    })
+  }
+
+  const res = await fetchSeoulCityData(env.SEOUL_OPENDATA_KEY, place)
   const data = await res.json().catch(() => null)
 
   const resultCode = data?.['RESULT.CODE'] ?? data?.RESULT?.['RESULT.CODE']

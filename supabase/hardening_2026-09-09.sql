@@ -1,6 +1,10 @@
 -- 백엔드 점검(2026-09-09) 후속 마이그레이션.
 -- Supabase 대시보드 > SQL Editor 에서 위에서부터 그대로 실행하세요. 여러 번 실행해도 안전합니다.
 --
+-- ⚠️ 이미 실행했다면 3)의 promote_event_draft()를 다시 실행하지 말 것 —
+--    validate_urls_2026-09-14.sql이 같은 함수에 safe_url() 검증을 얹어 재정의했다.
+--    이 파일을 통째로 다시 돌리면 그 검증이 사라진 옛 정의로 되돌아간다.
+--
 -- 담긴 내용
 --   1) events.start_date 인덱스 (메인 조회가 gte/lte로 이 컬럼을 필터)
 --   2) event_drafts.promoted_event_id FK에 on delete set null

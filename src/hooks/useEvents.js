@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { httpUrl } from '../lib/url'
 
 // DB 행(snake_case) -> 컴포넌트가 쓰는 이벤트 객체(camelCase)로 변환
 // (useEvent.js가 행사 한 건을 직접 받아올 때도 같은 변환을 써야 해서 export한다)
+//
+// 링크·이미지로 나가는 주소는 여기서 httpUrl()로 한 번 거른다. 화면 곳곳에서 쓰이는 값이
+// 전부 이 함수를 지나가므로, 컴포넌트마다 검사를 흩뿌리지 않고 이 한 곳만 지키면 된다.
+// http(s)가 아니면 null — 호출부는 이미 "값이 없을 때"를 처리하고 있어서(포스터 없으면
+// 대체 화면, ticketUrl 없으면 버튼 숨김) 별도 분기가 필요 없다.
 export function mapEvent(row) {
   return {
     id: row.id,
@@ -16,18 +22,18 @@ export function mapEvent(row) {
     venueLng: row.venue_lng,
     organizer: row.organizer,
     description: row.description,
-    posterUrl: row.poster_url,
-    ticketUrl: row.ticket_url,
+    posterUrl: httpUrl(row.poster_url),
+    ticketUrl: httpUrl(row.ticket_url),
     ticketOpenDate: row.ticket_open_date,
     ticketOpenTime: row.ticket_open_time,
     ticketOpenNote: row.ticket_open_note,
     crowdLevel: row.crowd_level,
-    floorPlanUrl: row.floor_plan_url,
+    floorPlanUrl: httpUrl(row.floor_plan_url),
     seoulPlaceName: row.seoul_place_name,
     boothInfoNote: row.booth_info_note,
     stageInfoNote: row.stage_info_note,
     admissionFee: row.admission_fee,
-    website: row.website,
+    website: httpUrl(row.website),
     trustScore: row.trust_score,
     pastEvents: row.past_events ?? [],
     tags: row.tags ?? [],
