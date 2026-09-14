@@ -18,15 +18,14 @@ export const STATUS = {
 // 각자 같은 매핑을 따로 들고 있어서, 카테고리를 추가하거나 색을 바꾸면 네 군데를 모두
 // 고쳐야 했다(=빠뜨리기 쉬움). 여기 하나만 고치면 전부 반영되게 모아둔다.
 const CATEGORY_META = {
-  [CATEGORIES.GAME]:    { emoji: '🎮', badgeClass: 'bg-violet-500/20 text-violet-300', dotClass: 'bg-violet-400' },
-  [CATEGORIES.COSPLAY]: { emoji: '✨', badgeClass: 'bg-pink-500/20 text-pink-300',     dotClass: 'bg-pink-400' },
-  [CATEGORIES.CONCERT]: { emoji: '🎵', badgeClass: 'bg-amber-500/20 text-amber-300',   dotClass: 'bg-amber-400' },
-  [CATEGORIES.ILLUST]:  { emoji: '🎨', badgeClass: 'bg-sky-500/20 text-sky-300',       dotClass: 'bg-sky-400' },
+  [CATEGORIES.GAME]:    { emoji: '🎮', dotClass: 'bg-violet-400' },
+  [CATEGORIES.COSPLAY]: { emoji: '✨', dotClass: 'bg-pink-400' },
+  [CATEGORIES.CONCERT]: { emoji: '🎵', dotClass: 'bg-amber-400' },
+  [CATEGORIES.ILLUST]:  { emoji: '🎨', dotClass: 'bg-sky-400' },
 }
 
 const UNKNOWN_CATEGORY_META = {
   emoji: '🎪',
-  badgeClass: 'bg-zinc-700/50 text-zinc-300',
   dotClass: 'bg-zinc-400',
 }
 

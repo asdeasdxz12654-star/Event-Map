@@ -24,6 +24,26 @@
   /* NEW 뱃지 — 10px 글씨라 대비를 맞추려면 테마마다 바탕·글씨가 통째로 뒤집혀야 한다 */
   --color-badge-new: #34d399;
   --color-badge-new-fg: #022c22;
+
+  /* ── 표면 3단 ───────────────────────────────────────────────────────────
+     예전엔 카드도, 입력칸도, 칩도 전부 bg-ink/5 하나였다. 카드 안에 칩이 들어가면
+     둘이 같은 밝기라 경계가 사라진다. 바닥 → 카드 → 카드 위 요소 순으로 나눈다.
+       surface   : 페이지 바닥 (위에 그대로)
+       surface-1 : 카드 · 시트 · 팩트 타일
+       surface-2 : 카드 위에 올라가는 칩 · 입력칸 · 선택된 세그먼트
+     ────────────────────────────────────────────────────────────────────── */
+  --color-surface-1: #191930;
+  --color-surface-2: #23233f;
+
+  /* 경계선. border-ink/10을 직접 쓰는 대신 토큰으로 둬야 라이트에서 따로 조절된다 */
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+
+  /* 의미색 — 강조색(indigo)과 역할이 다르다. indigo는 "주 행동·현재 위치"에만,
+     아래 셋은 "상태"에만 쓴다. 둘을 섞으면 무엇이 버튼인지 알 수 없어진다. */
+  --color-live: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
 }
 
 :root {
@@ -45,6 +65,17 @@
   --color-badge-new: #047857;
   --color-badge-new-fg: #ffffff;
   color-scheme: light;
+
+  /* 표면 3단 — 라이트에선 바닥이 회색, 카드가 흰색으로 위아래가 뒤집힌다 */
+  --color-surface-1: #ffffff;
+  --color-surface-2: #eceef5;
+  --color-line: rgba(0, 0, 0, 0.10);
+  --color-line-strong: rgba(0, 0, 0, 0.18);
+
+  /* 의미색 — 밝은 바탕에서 읽히도록 진한 단계로 */
+  --color-live: #047857;
+  --color-warn: #b45309;
+  --color-danger: #dc2626;
 
   /* 중립 — 보조 글자(200~600)는 진하게, 면(700~950)은 연하게 */
   --color-zinc-200: #18181b;
@@ -132,3 +163,38 @@ input[type='search']::-webkit-search-results-decoration {
   -ms-overflow-style: none;
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* 모션 규격 — 색·배경은 120ms, 레이아웃·시트는 200ms. 그 외 애니메이션은 쓰지 않는다.
+   (transition-colors 등 테일윈드 기본 duration이 150ms라 굳이 맞추지 않고,
+    시트처럼 우리가 직접 그리는 것만 아래 값을 쓴다.) */
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-sheet-in { animation: sheet-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.animate-fade-in  { animation: fade-in 120ms linear; }
+
+/* 움직임을 줄이도록 설정한 기기에서는 전환을 전부 끈다. 시트가 아래에서 올라오는
+   동작이나 스켈레톤 깜빡임이 어지럼증을 유발할 수 있다. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 키보드 포커스는 어느 컨트롤에서든 보여야 한다. 컴포넌트마다 focus-visible 유틸을
+   붙이는 방식은 새 버튼을 추가할 때 빠뜨리기 쉬워서, 기본값을 여기서 준다.
+   :where()는 우선순위가 0이라 컴포넌트가 지정한 스타일을 덮지 않는다. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-indigo-500);
+  outline-offset: 2px;
+}
