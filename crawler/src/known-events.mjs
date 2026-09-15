@@ -573,6 +573,28 @@ const ONE_OFF_EVENTS = [
     },
   },
   {
+    slug: 'comicworld-339-ilsan', year: 2026,
+    data: {
+      is_event: true, title: '코믹월드 339 일산', category: '코스프레',
+      start_date: '2026-11-07', end_date: '2026-11-08',
+      // 일산 회차는 항상 KINTEX다. 다만 제1/제2전시장 중 어디인지는 아직 공개 전이라
+      // 홀을 적지 않는다 — comicw.net은 "일산"까지만 밝히고 있다(2026-09-15 확인).
+      venue: 'KINTEX', venue_address: '경기도 고양시 일산서구 킨텍스로 217-60',
+      venue_lat: KINTEX_LAT, venue_lng: KINTEX_LNG,
+      organizer: null,
+      description: '국내 최대 2차 창작 동인·코스프레 행사.',
+      ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
+      crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
+      booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      goods_info_note: '굿즈는 동아리마다 달라 공식에서 따로 공개하지 않습니다. 참가 동아리 목록은 comicw.net에서 확인하세요',
+      cosplay_info_note: '코스프레 무대공연 참가자는 현장 접수라 사전 명단이 없습니다',
+      floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
+      stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
+      website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
+      confidence: 'high',
+    },
+  },
+  {
     slug: 'wonderlivet-2026', year: 2026,
     data: {
       is_event: true, title: 'WONDERLIVET 2026', category: '게임음악',
