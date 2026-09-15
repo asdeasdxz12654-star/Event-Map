@@ -1,0 +1,62 @@
+name: Mirror event images
+
+# 부스·굿즈·코스어·배치도 이미지를 우리 저장소(Supabase Storage) 사본으로 바꾼다.
+#
+# 왜 자동으로 돌려야 하나
+#   관리자가 공식 공지에서 이미지 주소를 복사해 넣으면, 그 순간에는 잘 보인다. 문제는
+#   나중이다 — 공지는 행사가 끝나면 내려가고, 그때 지난 행사 페이지의 굿즈 사진이 전부
+#   깨진다. 사본을 만드는 시점이 늦을수록 "원본이 이미 사라져서 못 옮기는" 건수가 늘어난다.
+#   그래서 매일 돌면서 새로 들어온 주소를 그날 안에 옮긴다.
+#
+#   포스터 쪽(fill-posters.yml)과 달리 검색 API를 안 쓰므로 크레딧 걱정이 없다.
+#   대신 남의 서버에서 이미지를 받아오는 일이라 한 번에 처리할 건수를 제한한다.
+#
+# 수동 실행의 기본값은 "확인만" 이다 — 무엇이 옮겨질지 로그로 먼저 보고 돌릴 수 있다.
+# 자동 실행(schedule)은 실제로 옮긴다.
+on:
+  schedule:
+    # 매일 21:30 UTC = 06:30 KST. 일일 크롤(21:00 UTC) 직후 — 그날 들어온 이미지를 바로 옮긴다.
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+    inputs:
+      count:
+        description: '한 번에 처리할 건수'
+        type: choice
+        options:
+          - '50'
+          - '200'
+          - '500'
+        default: '50'
+      apply:
+        description: '실제로 옮길지 (끄면 확인만)'
+        type: boolean
+        default: false
+
+# 두 실행이 겹치면 같은 이미지를 동시에 받아 올리게 된다. 앞엣것을 끊지 않고 기다린다.
+concurrency:
+  group: mirror-images
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: 이미지 사본 만들기
+        # --apply는 스크립트가 무시하는 값이다. GitHub 식에서 빈 문자열은 거짓이라
+        # `apply && '' || '--dry-run'`이 항상 --dry-run이 되므로, 저장할 때 넘길
+        # "아무 일도 안 하는 인자"가 필요하다 (fill-posters.yml과 같은 방식).
+        run: node src/mirror-images.mjs --limit ${{ inputs.count || '200' }} ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

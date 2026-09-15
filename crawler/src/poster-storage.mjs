@@ -17,7 +17,9 @@
 // 준비물: supabase/storage.sql의 posters 버킷(공개 읽기, 5MB 제한, jpeg/png/webp 허용).
 import { createHash } from 'node:crypto'
 import sharp from 'sharp'
-import { UA } from './util.mjs'
+// 내려받기와 "우리 저장소인가" 판정은 부스·굿즈 이미지 복사와 똑같아야 해서
+// image-mirror.mjs로 옮기고 여기서는 가져다 쓴다.
+import { downloadImage, isOurStorage } from './image-mirror.mjs'
 
 const BUCKET = 'posters'
 // 이 크기를 넘는 포스터만 줄여서 다시 올린다.
@@ -28,16 +30,12 @@ const MAX_INLINE_BYTES = 150 * 1024
 // 카드·상세 어디서도 1000px이면 충분하다(상세 최대 높이가 480px, 2배 해상도 화면 고려).
 const TARGET_WIDTH = 1000
 const WEBP_QUALITY = 80
-// 원본이 이보다 크면 받다가 그만둔다 — 어쩌다 100MB짜리를 만나도 CI가 멈추지 않게.
-const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 
 // 우리 저장소(Supabase Storage) 사본인지. optimize-poster-images.mjs가 원본을 줄여
 // 여기로 옮겨두면 주소가 바뀌므로, 검증 쪽(verify-poster-images.mjs)에서도 이걸 보고
 // "이미 우리가 확인해서 올린 사본"으로 인정해야 한다 — 안 그러면 재검색 결과에 없다는
 // 이유로 멀쩡한 포스터를 비워버린다.
-export function isOurStorage(url) {
-  return typeof url === 'string' && url.includes('/storage/v1/object/public/')
-}
+export { isOurStorage }
 
 // 파일 이름에 원본 주소의 해시를 붙인다. 포스터가 바뀌면 파일 이름도 바뀌므로 CDN 캐시에
 // 옛 이미지가 남는 문제가 없다 (같은 원본이면 같은 이름이라 다시 올려도 덮어쓴다).
@@ -47,34 +45,6 @@ function storagePath(eventId, sourceUrl) {
   return `${safeId}-${hash}.webp`
 }
 
-async function download(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const type = res.headers.get('content-type') ?? ''
-  if (!type.startsWith('image/')) throw new Error(`이미지가 아님 (${type})`)
-  const declared = Number(res.headers.get('content-length') ?? 0)
-  if (declared > MAX_DOWNLOAD_BYTES) throw new Error(`너무 큼 (${(declared / 1048576).toFixed(1)}MB)`)
-
-  // 실제로 읽으면서 상한을 넘기면 그 자리에서 끊는다. 예전엔 arrayBuffer()로 전부 받은
-  // 뒤에 크기를 쟀는데, 그러면 Content-Length를 안 주는 서버(청크 전송)에서는 100MB를
-  // 다 받고 나서야 "너무 큼"이 됐다 — 막으려던 상황이 그대로 일어난다.
-  const chunks = []
-  let received = 0
-  for await (const chunk of res.body) {
-    received += chunk.byteLength
-    // for await 중간에 throw하면 스트림이 알아서 취소된다 (별도 cancel()은 이미
-    // 이터레이터가 락을 쥐고 있어서 오히려 예외가 난다).
-    if (received > MAX_DOWNLOAD_BYTES) {
-      throw new Error(`너무 큼 (${(MAX_DOWNLOAD_BYTES / 1048576).toFixed(0)}MB 초과)`)
-    }
-    chunks.push(chunk)
-  }
-  return Buffer.concat(chunks.map(c => Buffer.from(c)))
-}
 
 // 포스터를 우리 저장소 사본으로 바꾼다. 바꿀 필요가 없거나 실패하면 null —
 // 호출한 쪽은 원본 주소를 그대로 쓰면 된다.
@@ -84,7 +54,7 @@ export async function storePoster(supabase, eventId, sourceUrl, { dryRun = false
 
   let original
   try {
-    original = await download(sourceUrl)
+    original = await downloadImage(sourceUrl)
   } catch (err) {
     console.warn(`  -> 포스터 최적화 건너뜀 (원본을 못 받음: ${err.message})`)
     return null
