@@ -5,6 +5,10 @@ import Icon from './icons'
 import Chip from './ui/Chip'
 import Segmented from './ui/Segmented'
 import DisclosureNote from './DisclosureNote'
+import StageAdmin from './StageAdmin'
+import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
+import { adminApi } from '../lib/adminApi'
 import { FOCUS_RING } from './ui/focusRing'
 import { boothHue, splitBoothName } from '../lib/boothKinds'
 import { parseLocalDate } from '../data/events'
@@ -20,7 +24,9 @@ const hhmm = t => (t ? t.slice(0, 5) : null)
 //                                무대 칩이 생기고, 각 줄에 무대 배지가 붙는다.
 //
 // 정렬은 useEventStages.sortSlots가 잡는다(날짜 → 시각 → sort_order).
-export default function StageTimeline({ stages, slots, booths = [], cosplayers = [], note, onJump }) {
+export default function StageTimeline({ eventId, stages, slots, booths = [], cosplayers = [], note, onJump }) {
+  const { isAdmin } = useAdmin()
+  const { toast, confirm } = useUIFeedback()
   const days = useMemo(() => [...new Set(slots.map(s => s.day))].sort(), [slots])
 
   // 기본 날짜는 오늘(행사 기간 중이면), 아니면 첫날. 행사 당일에 열었을 때 어제 일정이
@@ -69,9 +75,20 @@ export default function StageTimeline({ stages, slots, booths = [], cosplayers =
 
   const all = useMemo(() => [...slots, ...cosplaySlots], [slots, cosplaySlots])
 
+  const removeSlot = async (slot) => {
+    if (!await confirm(`"${slot.title}" 프로그램을 삭제하시겠습니까?`)) return
+    try {
+      await adminApi.deleteStageSlot(slot.id)
+    } catch (err) {
+      toast(`삭제 실패: ${err.message}`)
+    }
+  }
+
+  // 아무것도 없을 때가 바로 채워 넣어야 할 때라, 빈 상태에서도 입력 자리는 남긴다.
   if (all.length === 0) {
     return (
       <div className="mb-4">
+        {isAdmin && <StageAdmin eventId={eventId} stages={stages} booths={booths} />}
         <DisclosureNote note={note} subject="무대 프로그램" emptyText="아직 등록된 무대 일정이 없습니다." />
       </div>
     )
@@ -110,6 +127,8 @@ export default function StageTimeline({ stages, slots, booths = [], cosplayers =
 
   return (
     <div className="flex flex-col gap-3 mb-4">
+      {isAdmin && <StageAdmin eventId={eventId} stages={stages} booths={booths} />}
+
       {showDays && (
         <Segmented
           ariaLabel="날짜"
@@ -159,6 +178,7 @@ export default function StageTimeline({ stages, slots, booths = [], cosplayers =
               live={isToday && hhmm(slot.startTime) <= nowHm && (!slot.endTime || hhmm(slot.endTime) > nowHm)}
               showStage={showStages || !!slot.isCosplay}
               onJump={onJump}
+              onRemove={isAdmin && !slot.isCosplay ? () => removeSlot(slot) : null}
             />
           </div>
         ))}
@@ -170,7 +190,14 @@ export default function StageTimeline({ stages, slots, booths = [], cosplayers =
         <div className="border-t border-line pt-3">
           <p className="text-[11px] text-zinc-500 mb-1.5">시간 미정 — 진행은 확정, 시각만 발표 전</p>
           {untimed.map(slot => (
-            <Slot key={slot.id} slot={slot} stage={stageLabel(slot)} showStage={showStages} onJump={onJump} />
+            <Slot
+              key={slot.id}
+              slot={slot}
+              stage={stageLabel(slot)}
+              showStage={showStages}
+              onJump={onJump}
+              onRemove={isAdmin && !slot.isCosplay ? () => removeSlot(slot) : null}
+            />
           ))}
         </div>
       )}
@@ -190,7 +217,7 @@ function NowLine({ time }) {
   )
 }
 
-function Slot({ slot, stage, past = false, live = false, showStage, onJump }) {
+function Slot({ slot, stage, past = false, live = false, showStage, onJump, onRemove }) {
   const booth = stage?.booth
   return (
     <div className={`grid grid-cols-[58px_1fr] gap-3 py-3 border-b border-line last:border-0 ${past ? 'opacity-50' : ''} ${
@@ -201,7 +228,18 @@ function Slot({ slot, stage, past = false, live = false, showStage, onJump }) {
         {slot.endTime && <span className="block text-zinc-500">{hhmm(slot.endTime)}</span>}
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink leading-snug">{slot.title}</p>
+        <p className="text-sm font-semibold text-ink leading-snug">
+          {slot.title}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className={`ml-2 align-middle text-[11px] font-normal text-danger/80 hover:text-danger rounded ${FOCUS_RING}`}
+            >
+              삭제
+            </button>
+          )}
+        </p>
         {slot.performer && <p className="text-xs text-zinc-400 mt-0.5">출연 — {slot.performer}</p>}
         {slot.note && <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{slot.note}</p>}
         {showStage && stage && (

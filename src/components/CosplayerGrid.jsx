@@ -5,6 +5,10 @@ import Icon from './icons'
 import Chip from './ui/Chip'
 import Segmented from './ui/Segmented'
 import DisclosureNote from './DisclosureNote'
+import CosplayerAdmin from './CosplayerAdmin'
+import { useAdmin } from '../contexts/AdminContext'
+import { useUIFeedback } from '../contexts/UIFeedbackContext'
+import { adminApi } from '../lib/adminApi'
 import { FOCUS_RING } from './ui/focusRing'
 import { boothHue, splitBoothName } from '../lib/boothKinds'
 import { parseLocalDate } from '../data/events'
@@ -19,7 +23,9 @@ const hhmm = t => (t ? t.slice(0, 5) : null)
 //
 // 사진은 공식 공지에 실린 것만 쓴다. 없으면 색 타일 + 이름으로 두고, 현장 사진을
 // 임의로 모아 넣지 않는다 — 초상권은 우리가 판단할 문제가 아니다.
-export default function CosplayerGrid({ cosplayers, booths, note, focusBoothId, onJump }) {
+export default function CosplayerGrid({ eventId, cosplayers, booths, note, focusBoothId, onJump }) {
+  const { isAdmin } = useAdmin()
+  const { toast, confirm } = useUIFeedback()
   const boothById = useMemo(() => new Map(booths.map(b => [b.id, b])), [booths])
   const [origin, setOrigin] = useState(focusBoothId ? 'booth' : null)
   const [boothId, setBoothId] = useState(focusBoothId ?? null)
@@ -35,9 +41,19 @@ export default function CosplayerGrid({ cosplayers, booths, note, focusBoothId, 
     [cosplayers]
   )
 
+  const remove = async (c) => {
+    if (!await confirm(`"${c.name}" 코스어를 삭제하시겠습니까?`)) return
+    try {
+      await adminApi.deleteCosplayer(c.id)
+    } catch (err) {
+      toast(`삭제 실패: ${err.message}`)
+    }
+  }
+
   if (cosplayers.length === 0) {
     return (
       <div className="mb-4">
+        {isAdmin && <CosplayerAdmin eventId={eventId} booths={booths} count={0} />}
         <DisclosureNote note={note} subject="코스어 라인업" emptyText="아직 등록된 코스어 정보가 없습니다." />
       </div>
     )
@@ -62,6 +78,8 @@ export default function CosplayerGrid({ cosplayers, booths, note, focusBoothId, 
 
   return (
     <div className="flex flex-col gap-3 mb-4">
+      {isAdmin && <CosplayerAdmin eventId={eventId} booths={booths} count={cosplayers.length} />}
+
       {showOrigin && (
         <Segmented
           className="sm:max-w-md"
@@ -103,7 +121,12 @@ export default function CosplayerGrid({ cosplayers, booths, note, focusBoothId, 
         <ul className="grid grid-cols-3 lg:grid-cols-5 gap-3">
           {filtered.map(c => (
             <li key={c.id}>
-              <Card cosplayer={c} booth={c.boothId ? boothById.get(c.boothId) : null} onJump={onJump} />
+              <Card
+                cosplayer={c}
+                booth={c.boothId ? boothById.get(c.boothId) : null}
+                onJump={onJump}
+                onRemove={isAdmin ? () => remove(c) : null}
+              />
             </li>
           ))}
         </ul>
@@ -144,7 +167,7 @@ export default function CosplayerGrid({ cosplayers, booths, note, focusBoothId, 
   )
 }
 
-function Card({ cosplayer: c, booth, onJump }) {
+function Card({ cosplayer: c, booth, onJump, onRemove }) {
   const [imgFailed, setImgFailed] = useState(false)
   const hue = boothHue(c.name)
   const showImage = !!c.photoUrl && !imgFailed
@@ -190,6 +213,16 @@ function Card({ cosplayer: c, booth, onJump }) {
           >
             <Icon name="external" className="w-3.5 h-3.5" />
           </a>
+        )}
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={`${c.name} 삭제`}
+            className={`ml-auto text-[11px] text-danger/80 hover:text-danger rounded ${FOCUS_RING}`}
+          >
+            삭제
+          </button>
         )}
         {booth && (
           <button

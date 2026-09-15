@@ -210,6 +210,7 @@ export default function EventDetailPage() {
     />
   ) : (
     <StageTimeline
+      eventId={event.id}
       stages={stages}
       slots={slots}
       booths={booths}
@@ -229,6 +230,7 @@ export default function EventDetailPage() {
   )
   const cosplaySection = (
     <CosplayerGrid
+      eventId={event.id}
       cosplayers={cosplayers}
       booths={booths}
       note={event.cosplayInfoNote}

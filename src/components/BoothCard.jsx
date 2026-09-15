@@ -9,7 +9,7 @@ import BoothThumb from './BoothThumb'
 import BoothItemRow from './BoothItemRow'
 
 const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
-const EMPTY_ITEM = { kind: 'paid', name: '', price: '', price_note: '', note: '', image_url: '', title: '' }
+const EMPTY_ITEM = { kind: 'paid', name: '', price: '', price_note: '', note: '', image_url: '', title: '', status: '' }
 
 // 부스 하나.
 //
@@ -57,6 +57,7 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
         kind: form.kind,
         name: form.name.trim(),
         title: form.title.trim() || null,
+        status: form.status || null,
         price: form.price.trim() === '' ? null : Number(form.price),
         price_note: form.price_note.trim() || null,
         note: form.note.trim() || null,
@@ -210,6 +211,12 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
               </select>
               <input value={form.name} onChange={set('name')} placeholder="항목명 *" className={`${input} w-32`} required />
               <input value={form.title} onChange={set('title')} placeholder="타이틀(게임명)" className={`${input} w-28`} />
+              <select value={form.status} onChange={set('status')} className={input}>
+                <option value="">상태 없음</option>
+                <option value="soldout">품절</option>
+                <option value="limited">수량 한정</option>
+                <option value="preorder">예약 판매</option>
+              </select>
               <input value={form.price} onChange={set('price')} placeholder="가격" inputMode="numeric" className={`${input} w-20`} />
               <input value={form.price_note} onChange={set('price_note')} placeholder="회당" className={`${input} w-16`} />
               <input value={form.note} onChange={set('note')} placeholder="설명" className={`${input} flex-1 min-w-[120px]`} />

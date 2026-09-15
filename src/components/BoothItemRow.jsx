@@ -20,6 +20,8 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
     price_note: item.priceNote ?? '',
     note: item.note ?? '',
     image_url: item.imageUrl ?? '',
+    title: item.title ?? '',
+    status: item.status ?? '',
   })
 
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -36,6 +38,10 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
         price_note: form.price_note.trim() || null,
         note: form.note.trim() || null,
         image_url: form.image_url.trim() || null,
+        // 타이틀(IP)과 현장 상태는 굿즈 탭이 쓰는 값이다. 추가 폼에만 있고 수정 폼에
+        // 없으면 이미 들어가 있는 수십 건에는 영영 채워 넣을 수 없다.
+        title: form.title.trim() || null,
+        status: form.status || null,
       })
       setEditing(false)
     } catch (err) {
@@ -63,6 +69,13 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
         <input value={form.name} onChange={set('name')} placeholder="항목명 *" className={`${input} w-32`} />
         <input value={form.price} onChange={set('price')} placeholder="가격" inputMode="numeric" className={`${input} w-20`} />
         <input value={form.price_note} onChange={set('price_note')} placeholder="회당" className={`${input} w-16`} />
+        <input value={form.title} onChange={set('title')} placeholder="타이틀(게임명)" className={`${input} w-28`} />
+        <select value={form.status} onChange={set('status')} className={input}>
+          <option value="">현장 상태 없음</option>
+          <option value="soldout">품절</option>
+          <option value="limited">수량 한정</option>
+          <option value="preorder">예약 판매</option>
+        </select>
         <input value={form.note} onChange={set('note')} placeholder="설명" className={`${input} flex-1 min-w-[120px]`} />
         <input value={form.image_url} onChange={set('image_url')} placeholder="이미지 URL" className={`${input} flex-1 min-w-[120px]`} />
         <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
