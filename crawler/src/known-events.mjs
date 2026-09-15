@@ -105,6 +105,8 @@ const KNOWN_EVENTS = [
         // 2025년 나흘간 20.2만명 방문(역대 2위 규모) — 국내 최대 게임전시라 항상 매우 혼잡.
         crowd_level: 'very_high',
         booth_info_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) BTC 부스배치도 페이지에 공개',
+        // 2026-09-15 확인: 전시장 안내·BTC 참가사 안내 메뉴가 아직 비활성(javascript:void(0))이다.
+        floor_plan_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) 전시장 안내 페이지에 공개',
         // 2025년 세부 일정(무대 포함)은 개최 21일 전(10/23)에 공개됨. 고정 프로그램:
         // 게임 코스프레 어워즈, 지스타 네트워크 파티 등.
         stage_info_note: '예년 기준 행사 약 3주 전 세부 일정(무대 프로그램 포함) 공개',
@@ -138,6 +140,7 @@ const KNOWN_EVENTS = [
         // 2026년 나흘간 약 13만명 방문(역대 최대) — 혼잡.
         crowd_level: 'high',
         booth_info_note: '예년 기준 행사 약 2주 전 참가사 명단·부스배치도 공식 공개',
+        floor_plan_note: '예년 기준 행사 약 2주 전 참가사 명단과 함께 공식 공개',
         stage_info_note: '무대 일정은 부스 배치도와 같은 시점(행사 약 2주 전)에 함께 공개',
         website: 'https://www.playx4.or.kr/',
         tags: ['게임전시', '플레이엑스포', 'PlayX4', '고양', 'KINTEX'],
@@ -169,6 +172,7 @@ const KNOWN_EVENTS = [
         // 2025년 사흘간 10만명 최초 돌파(역대 최대, 티켓 발권 기준 집계) — 혼잡.
         crowd_level: 'high',
         booth_info_note: '참가사별 부스 프로그램은 행사 한 달 전부터 순차 공개, 종합 배치도는 임박 시 공개',
+        floor_plan_note: '종합 배치도는 행사 임박 시 공개 (참가사별 부스 프로그램은 한 달 전부터 순차 공개)',
         // 2025년 레드/블루 스테이지 1차 타임테이블 10/17(행사 약 7주 전), 2차 10/24 공개.
         stage_info_note: '레드/블루 스테이지 타임테이블은 예년 기준 행사 약 6~7주 전부터 순차 공개',
         website: 'https://www.agfkorea.com/',
@@ -279,6 +283,7 @@ const ONE_OFF_EVENTS = [
       // 호요버스 단독 행사 + 킨텍스 2개 홀·후면광장 규모라 조별 입장으로 운영된다.
       crowd_level: 'high',
       booth_info_note: '게임 5종 테마관 + 파트너 부스(구글플레이·몬스터 에너지) + 공식 굿즈 판매존 + 2차 창작 전시존으로 구성. 붕괴3rd(환야의 숨바꼭질)·미해결사건부(미림 장터·사계절의 러브레터)는 테마만 공개되고 세부 프로그램은 미공개. 부스 배치도도 아직 미공개.',
+      floor_plan_note: '아직 미공개 — 공식 공지(네이버 라운지)에 배치도 슬라이드가 없다',
       stage_info_note: '일자별 상세 타임테이블은 미공개(공식 "순차 공개" 안내). 확인된 운영 시간 — 무대 이벤트 10/2~3 11:00~18:00, 10/4~5 10:30~19:00 · 럭키드로우 금·토 17:00~18:00, 일·월 16:30~17:30 · 코스프레 퍼레이드 10/4~5 18:00~19:00.',
       website: 'https://sites.google.com/mihoyo.com/hoyoland2026/hoyoland2026',
       tags: ['게임전시', '호요랜드', '호요버스', '원신', '붕괴: 스타레일', '젠레스 존 제로', 'KINTEX', '고양'],
@@ -411,6 +416,8 @@ const ONE_OFF_EVENTS = [
       // 참가 동아리(부스컷)는 comicw.net에 상시 공개(등록 즉시 반영), 배치도는
       // comicw.net/map/에 행사 임박 시 별도 공지.
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
+      floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       // 매 회차 거의 고정 시간대: 16:10 일러스트 콘테스트 → 16:30 코스프레 무대공연 → ~17:30 종료.
       stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '일산', 'KINTEX'],
@@ -448,6 +455,7 @@ const ONE_OFF_EVENTS = [
       // 역대 회차 어디서도 참가업체/부스 라인업을 공식적으로 공개한 사례를 못 찾음
       // (자체 홍보 부스 위주). 매 회차 검색해도 안 나오면 공개 안 하는 행사로 봄.
       booth_info_note: '미공개',
+      floor_plan_note: '미공개',
       // 부스와 달리 무대 라인업(게스트·최강자전 등)은 X(@cos_comic)에 공개함 —
       // "Line-up" 트윗·"최강자전 무대 신청" 공지 확인됨. 정확한 공개 시점은 불명.
       stage_info_note: '부스와 달리 무대 라인업(게스트·최강자전 등)은 공개함 — 공식 X(@cos_comic)에서 임박 시 확인',
@@ -467,6 +475,8 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
+      floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '울산'],
       confidence: 'high',
@@ -487,6 +497,7 @@ const ONE_OFF_EVENTS = [
       crowd_level: 'high',
       // 8회 사례: 최종 부스 배치도가 행사 임박(1~2주 전)해서 illustar.net 공지사항으로 공개됨.
       booth_info_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 배치도 공개',
+      floor_plan_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 공개',
       // 과거 사례(5·8·9회) 공통: 무대 시간표는 행사 임박(D-6 전후)해서 X 공지로 공개.
       // 고정 프로그램: 노래자랑(TJ), 참여형 코스플레이 공연, 랜덤플레이댄스, 인디아이돌
       // 공연, 애니송 DJ 이벤트 등.
@@ -507,6 +518,7 @@ const ONE_OFF_EVENTS = [
       description: '코스프레·동인 행사. 서울랜드 입장권 할인 혜택 제공.',
       ticket_url: null, ticket_open_date: null, admission_fee: '공식 미정',
       booth_info_note: '미공개',
+      floor_plan_note: '미공개',
       stage_info_note: '부스와 달리 무대 라인업(게스트·최강자전 등)은 공개함 — 공식 X(@cos_comic)에서 임박 시 확인',
       website: null, tags: ['코스앤코믹', '코코페', '코스프레', '서울랜드'],
       confidence: 'high',
@@ -540,6 +552,8 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
+      floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
       website: 'https://comicw.net/', tags: ['코믹월드', '동인', '코스프레', '수원'],
       confidence: 'high',
@@ -683,6 +697,19 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       if (stageNoteError) console.warn(`[known-events] 무대 공개 메모 저장 실패:`, stageNoteError.message)
       else console.log(`[known-events] 무대 공개 메모 설정됨`)
     }
+    // floor_plan_note: 부스 배치도 공개 여부·시점. booth_info_note와 따로 두는 이유는
+    // 둘이 실제로 따로 놀기 때문이다 — 코믹월드는 참가 동아리를 comicw.net에 상시
+    // 공개하면서 배치도만 행사 임박 시 올린다(부스 목록은 있는데 배치도만 없는 상태).
+    if (extracted.floor_plan_note && approved?.promoted_event_id) {
+      const { error: planNoteError } = await supabase
+        .from('events')
+        .update({ floor_plan_note: extracted.floor_plan_note })
+        .eq('id', approved.promoted_event_id)
+        .is('floor_plan_note', null)
+        .is('admin_edited_at', null)
+      if (planNoteError) console.warn(`[known-events] 배치도 공개 메모 저장 실패:`, planNoteError.message)
+      else console.log(`[known-events] 배치도 공개 메모 설정됨`)
+    }
   }
 }
 
@@ -770,6 +797,9 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   }
   if (extracted.stage_info_note) {
     patch.stage_info_note = extracted.stage_info_note
+  }
+  if (extracted.floor_plan_note) {
+    patch.floor_plan_note = extracted.floor_plan_note
   }
 
   const { data, error } = await supabase

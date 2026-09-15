@@ -321,7 +321,7 @@ const EVENT_COLUMNS = [
   'ticket_url', 'ticket_open_date', 'ticket_open_time', 'ticket_open_note',
   'ticket_status', 'admission_fee', 'website', 'trust_score',
   'past_events', 'tags', 'crowd_level', 'floor_plan_url',
-  'seoul_place_name', 'booth_info_note', 'stage_info_note',
+  'seoul_place_name', 'booth_info_note', 'stage_info_note', 'floor_plan_note',
 ]
 
 // 화면에서 <a href>·<img src>로 그대로 나가는 컬럼들. 여기에 http(s)가 아닌 값이 들어가면

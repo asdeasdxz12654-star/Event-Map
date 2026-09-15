@@ -8,7 +8,7 @@ const EMPTY = {
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
-  crowd_level: '', floor_plan_url: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '',
+  crowd_level: '', floor_plan_url: '', floor_plan_note: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '',
 }
 
 const CROWD_LEVELS = [
@@ -41,6 +41,7 @@ function toForm(event) {
     poster_url: event.posterUrl ?? '',
     crowd_level: event.crowdLevel ?? '',
     floor_plan_url: event.floorPlanUrl ?? '',
+    floor_plan_note: event.floorPlanNote ?? '',
     seoul_place_name: event.seoulPlaceName ?? '',
     booth_info_note: event.boothInfoNote ?? '',
     stage_info_note: event.stageInfoNote ?? '',
@@ -70,6 +71,7 @@ function toPayload(form) {
     poster_url: form.poster_url || null,
     crowd_level: form.crowd_level || null,
     floor_plan_url: form.floor_plan_url || null,
+    floor_plan_note: form.floor_plan_note || null,
     seoul_place_name: form.seoul_place_name || null,
     booth_info_note: form.booth_info_note || null,
     stage_info_note: form.stage_info_note || null,
@@ -257,6 +259,15 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <Field label="부스 배치도 URL">
             <input type="url" value={form.floor_plan_url} onChange={set('floor_plan_url')} className={cls} placeholder="https://" />
           </Field>
+
+          <Field label="배치도 공개 상태">
+            <input value={form.floor_plan_note} onChange={set('floor_plan_note')} className={cls}
+              placeholder='미공개 · 또는 "행사 2주 전 공식 홈페이지 공개" 같은 안내' />
+          </Field>
+          <p className="text-[11px] text-zinc-400 -mt-2">
+            배치도 URL이 비어 있을 때 그 자리에 대신 표시됩니다. "미공개"라고 적으면 주최가 공개하지
+            않는 행사로 안내하고, 그 밖의 문구는 그대로 보여줍니다. 비워두면 배치도 자리가 생기지 않습니다.
+          </p>
 
           <Field label="예상 혼잡도">
             <select value={form.crowd_level} onChange={set('crowd_level')} className={cls}>

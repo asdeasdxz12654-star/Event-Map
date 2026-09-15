@@ -29,6 +29,7 @@ export function mapEvent(row) {
     ticketOpenNote: row.ticket_open_note,
     crowdLevel: row.crowd_level,
     floorPlanUrl: httpUrl(row.floor_plan_url),
+    floorPlanNote: row.floor_plan_note,
     seoulPlaceName: row.seoul_place_name,
     boothInfoNote: row.booth_info_note,
     stageInfoNote: row.stage_info_note,

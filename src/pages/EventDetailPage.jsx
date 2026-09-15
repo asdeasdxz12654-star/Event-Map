@@ -21,6 +21,7 @@ import PerformerManager from '../components/PerformerManager'
 import SectionCard from '../components/SectionCard'
 import Tabs from '../components/Tabs'
 import EventPoster from '../components/EventPoster'
+import FloorPlan from '../components/FloorPlan'
 import EventActions from '../components/EventActions'
 import EventCta from '../components/EventCta'
 import FactTiles from '../components/FactTiles'
@@ -157,18 +158,11 @@ export default function EventDetailPage() {
   const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl
   const hasStageTab = performers.length > 0
 
-  const floorPlan = event.floorPlanUrl && (
-    <SectionCard title="부스 배치도">
-      <img
-        src={event.floorPlanUrl}
-        alt={`${event.title} 부스 배치도`}
-        className="w-full rounded-xl object-contain bg-ink/5"
-      />
-    </SectionCard>
-  )
   const boothSection = (
     <>
-      {floorPlan}
+      {/* 배치도는 부스 목록 위에 온다 — 현장에서는 "어디로 가야 하나"가 먼저다.
+          아직 안 나온 행사에서는 언제 어디에 올라오는지 안내가 그 자리를 지킨다. */}
+      <FloorPlan event={event} />
       <BoothList eventId={event.id} booths={booths} items={boothItems} note={event.boothInfoNote} />
     </>
   )
