@@ -6,6 +6,7 @@ import BoothCard from './BoothCard'
 import BoothFilters, { filterBooths } from './BoothFilters'
 import BoothDenseList from './BoothDenseList'
 import DisclosureNote from './DisclosureNote'
+import ImageField from './ImageField'
 import { FOCUS_RING } from './ui/focusRing'
 
 const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
@@ -91,7 +92,15 @@ export default function BoothList({
           </select>
           <input value={form.hall} onChange={set('hall')} placeholder="구역(1홀)" className={`${input} w-24`} />
           <input value={form.genre} onChange={set('genre')} placeholder="장르" className={`${input} w-24`} />
-          <input value={form.image_url} onChange={set('image_url')} placeholder="대표 이미지 URL" className={`${input} flex-1 min-w-[140px]`} />
+          <ImageField
+            value={form.image_url}
+            onChange={url => setForm(p => ({ ...p, image_url: url }))}
+            prefix="booths"
+            kind="thumb"
+            placeholder="대표 이미지 URL"
+            className="flex-1 min-w-[200px]"
+            inputClassName={`${input} flex-1 min-w-0`}
+          />
           <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">추가</button>
         </form>
       )}

@@ -7,6 +7,7 @@ import { adminApi } from '../lib/adminApi'
 import { BOOTH_KINDS, groupByKind, splitBoothName, operatorLabel, priceRangeLabel } from '../lib/boothKinds'
 import BoothThumb from './BoothThumb'
 import BoothItemRow from './BoothItemRow'
+import ImageField from './ImageField'
 
 const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_ITEM = { kind: 'paid', name: '', price: '', price_note: '', note: '', image_url: '', title: '', status: '' }
@@ -134,7 +135,15 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
           </select>
           <input value={boothForm.hall} onChange={setBooth('hall')} placeholder="구역(1홀)" className={`${input} w-24`} />
           <input value={boothForm.genre} onChange={setBooth('genre')} placeholder="장르" className={`${input} w-24`} />
-          <input value={boothForm.image_url} onChange={setBooth('image_url')} placeholder="대표 이미지 URL" className={`${input} flex-1 min-w-[140px]`} />
+          <ImageField
+            value={boothForm.image_url}
+            onChange={url => setBoothForm(p => ({ ...p, image_url: url }))}
+            prefix="booths"
+            kind="thumb"
+            placeholder="대표 이미지 URL"
+            className="flex-1 min-w-[200px]"
+            inputClassName={`${input} flex-1 min-w-0`}
+          />
           <input value={boothForm.goods} onChange={setBooth('goods')} placeholder="옛 자유 텍스트(항목이 없을 때만 표시)" className={`${input} flex-1 min-w-[140px]`} />
           <button onClick={saveBooth} className={`text-xs text-indigo-400 hover:text-indigo-300 rounded ${FOCUS_RING}`}>저장</button>
           <button onClick={() => setEditingBooth(false)} className={`text-xs text-zinc-400 hover:text-ink rounded ${FOCUS_RING}`}>취소</button>
@@ -220,7 +229,14 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
               <input value={form.price} onChange={set('price')} placeholder="가격" inputMode="numeric" className={`${input} w-20`} />
               <input value={form.price_note} onChange={set('price_note')} placeholder="회당" className={`${input} w-16`} />
               <input value={form.note} onChange={set('note')} placeholder="설명" className={`${input} flex-1 min-w-[120px]`} />
-              <input value={form.image_url} onChange={set('image_url')} placeholder="이미지 URL" className={`${input} flex-1 min-w-[120px]`} />
+              <ImageField
+                value={form.image_url}
+                onChange={url => setForm(p => ({ ...p, image_url: url }))}
+                prefix="items"
+                kind="photo"
+                className="flex-1 min-w-[180px]"
+                inputClassName={`${input} flex-1 min-w-0`}
+              />
               <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">추가</button>
               <button type="button" onClick={() => setShowAdd(false)} className="text-xs text-zinc-400 hover:text-ink">닫기</button>
             </form>

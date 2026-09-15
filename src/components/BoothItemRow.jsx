@@ -3,6 +3,7 @@ import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { BOOTH_KINDS, formatPrice } from '../lib/boothKinds'
 import BoothThumb from './BoothThumb'
+import ImageField from './ImageField'
 
 const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
@@ -77,7 +78,14 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
           <option value="preorder">예약 판매</option>
         </select>
         <input value={form.note} onChange={set('note')} placeholder="설명" className={`${input} flex-1 min-w-[120px]`} />
-        <input value={form.image_url} onChange={set('image_url')} placeholder="이미지 URL" className={`${input} flex-1 min-w-[120px]`} />
+        <ImageField
+          value={form.image_url}
+          onChange={url => setForm(p => ({ ...p, image_url: url }))}
+          prefix="items"
+          kind="photo"
+          className="flex-1 min-w-[180px]"
+          inputClassName={`${input} flex-1 min-w-0`}
+        />
         <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
         <button onClick={() => setEditing(false)} className="text-xs text-zinc-400 hover:text-ink">취소</button>
       </div>

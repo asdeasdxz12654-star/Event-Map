@@ -262,6 +262,61 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// ── 이미지 업로드 ─────────────────────────────────────────────────────────
+// 관리자가 공지 캡처 같은 파일을 바로 올릴 수 있게 한다.
+//
+// 왜 필요한가
+//   지금까지 이미지는 "주소를 붙여넣는" 방법뿐이었다. 그런데 실제로 필요한 사진은
+//   공식 공지 안에 박혀 있는 경우가 많다 — 호요랜드 굿즈는 1200x42,500px짜리 세로
+//   이미지 한 장, 젠레스는 1920x1080 슬라이드 9장이 전부다. 거기서 상품 부분을
+//   잘라낸 파일에는 붙여넣을 주소가 없다. 어딘가에 먼저 올려야 했고, 그 단계가
+//   사실상 입력을 막고 있었다.
+//
+// 크기 줄이기는 브라우저가 한다(ImageField의 canvas). Worker에는 이미지 처리
+// 라이브러리가 없고, 줄여서 보내면 업로드 자체도 가벼워진다.
+const UPLOAD_BUCKET = 'event-images'
+// 브라우저가 webp로 줄여 보내므로 보통 1MB를 넘지 않는다. 배치도 원본을 그대로
+// 올리는 경우를 감안해 여유를 두되, 버킷 상한(15MB)보다는 낮게 잡는다.
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024
+const UPLOAD_TYPES = ['image/webp', 'image/jpeg', 'image/png', 'image/gif']
+// 저장 경로의 앞칸. 임의의 문자열을 받으면 ../로 버킷 밖을 가리킬 수 있다.
+const UPLOAD_PREFIXES = ['items', 'booths', 'cosplayers', 'floor-plans', 'posters-manual']
+
+async function uploadImage(request, env, url) {
+  const prefix = url.searchParams.get('prefix') ?? 'items'
+  if (!UPLOAD_PREFIXES.includes(prefix)) throw new HttpError(400, 'invalid_upload')
+
+  const contentType = (request.headers.get('content-type') ?? '').split(';')[0].trim()
+  if (!UPLOAD_TYPES.includes(contentType)) throw new HttpError(400, 'invalid_upload')
+
+  const bytes = new Uint8Array(await request.arrayBuffer())
+  if (bytes.byteLength === 0) throw new HttpError(400, 'invalid_upload')
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new HttpError(413, 'file_too_large')
+
+  // 파일 이름은 서버가 정한다. 클라이언트가 준 이름을 쓰면 경로 조작과 덮어쓰기를
+  // 둘 다 열어주게 된다 — 같은 이름으로 올려 남의 이미지를 갈아치울 수 있다.
+  const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.slice('image/'.length)
+  const name = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`
+  const path = `${prefix}/${name}`
+
+  const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${UPLOAD_BUCKET}/${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': contentType,
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'cache-control': 'max-age=31536000',
+    },
+    body: bytes,
+  })
+  if (!res.ok) {
+    console.error('[upload]', res.status, await res.text().catch(() => ''))
+    throw new HttpError(502, 'upload_failed')
+  }
+
+  return `${env.SUPABASE_URL}/storage/v1/object/public/${UPLOAD_BUCKET}/${path}`
+}
+
 async function supabase(env, method, path, body) {
   const url = `${env.SUPABASE_URL}/rest/v1/${path}`
   const res = await fetch(url, {
@@ -427,6 +482,12 @@ async function handleAdmin(request, env, pathname) {
 
   if (!await verifyAdmin(request, env)) {
     return json({ error: 'unauthorized' }, env, { status: 401 })
+  }
+
+  // POST /admin/uploads?prefix=items — 이미지 파일 업로드 (본문이 JSON이 아니라 바이트다)
+  if (pathname === '/admin/uploads' && request.method === 'POST') {
+    const publicUrl = await uploadImage(request, env, new URL(request.url))
+    return json({ url: publicUrl }, env, { status: 201 })
   }
 
   const idMatch = ID_RE.exec(pathname)

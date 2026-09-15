@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import ImageField from './ImageField'
 
 const CATEGORIES = ['게임전시', '코스프레', '게임음악', '일러스트']
 
@@ -257,11 +258,28 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           </Field>
 
           <Field label="포스터 URL">
-            <input type="url" value={form.poster_url} onChange={set('poster_url')} className={cls} placeholder="https://" />
+            <ImageField
+              value={form.poster_url}
+              onChange={url => setForm(p => ({ ...p, poster_url: url }))}
+              prefix="posters-manual"
+              kind="photo"
+              placeholder="https://"
+              className="flex w-full"
+              inputClassName={`${cls} flex-1 min-w-0`}
+            />
           </Field>
 
           <Field label="부스 배치도 URL">
-            <input type="url" value={form.floor_plan_url} onChange={set('floor_plan_url')} className={cls} placeholder="https://" />
+            {/* 배치도는 확대해서 부스 번호를 읽는 그림이라 3000px까지 그대로 둔다 */}
+            <ImageField
+              value={form.floor_plan_url}
+              onChange={url => setForm(p => ({ ...p, floor_plan_url: url }))}
+              prefix="floor-plans"
+              kind="plan"
+              placeholder="https://"
+              className="flex w-full"
+              inputClassName={`${cls} flex-1 min-w-0`}
+            />
           </Field>
 
           <Field label="배치도 공개 상태">

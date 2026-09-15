@@ -7,7 +7,10 @@ const ERROR_MESSAGES = {
   internal_error: '서버 오류로 저장하지 못했습니다. 입력값을 확인하고 다시 시도해주세요.',
   invalid_json: '요청 형식이 올바르지 않습니다. 새로고침 후 다시 시도해주세요.',
   invalid_url: '주소는 http:// 또는 https:// 로 시작해야 합니다. (포스터·예매·공식사이트·배치도)',
-  not_configured: '서버에 관리자 설정이 되어 있지 않습니다. (Worker 시크릿 확인 필요)',
+  not_configured: '서버에 관리자 설정이 되어 있지 않습니다. (Worker 시크릿 확인 필요)',
+  invalid_upload: '올릴 수 없는 파일입니다. JPG·PNG·WebP·GIF 이미지만 됩니다.',
+  file_too_large: '파일이 너무 큽니다. 12MB 이하로 줄여서 올려주세요.',
+  upload_failed: '이미지를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
 }
 
 function hdrs() {
@@ -44,6 +47,34 @@ async function req(method, path, body) {
   return res.status === 204 ? null : res.json()
 }
 
+// 이미지 파일 업로드. 본문이 JSON이 아니라 바이트라 req()를 쓸 수 없다.
+// 파일 이름은 서버가 정하므로 여기서 보내지 않는다.
+async function upload(blob, prefix) {
+  let res
+  try {
+    res = await fetch(`${BASE}/admin/uploads?prefix=${encodeURIComponent(prefix)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': blob.type,
+        'Authorization': `Bearer ${getAdminToken()}`,
+      },
+      body: blob,
+    })
+  } catch (networkErr) {
+    throw new Error(`네트워크 연결 오류: ${networkErr.message}`)
+  }
+  if (!res.ok) {
+    if (res.status === 401) {
+      try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* 시크릿 모드 등, 무시 */ }
+      throw new Error('관리자 세션이 만료됐습니다. 다시 로그인해주세요.')
+    }
+    const { error: code } = await res.json().catch(() => ({}))
+    throw new Error(ERROR_MESSAGES[code] ?? `오류 ${res.status}`)
+  }
+  const { url } = await res.json()
+  return url
+}
+
 export const adminApi = {
   createEvent: (data) => req('POST', '/admin/events', data),
   updateEvent: (id, data) => req('PATCH', `/admin/events/${encodeURIComponent(id)}`, data),
@@ -75,5 +106,8 @@ export const adminApi = {
 
   createCosplayer: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/cosplayers`, data),
   updateCosplayer: (id, data) => req('PATCH', `/admin/cosplayers/${encodeURIComponent(id)}`, data),
-  deleteCosplayer: (id) => req('DELETE', `/admin/cosplayers/${encodeURIComponent(id)}`),
+  deleteCosplayer: (id) => req('DELETE', `/admin/cosplayers/${encodeURIComponent(id)}`),
+
+  // prefix는 저장 경로의 앞칸 — Worker가 허용 목록으로 검사한다.
+  uploadImage: (blob, prefix = 'items') => upload(blob, prefix),
 }

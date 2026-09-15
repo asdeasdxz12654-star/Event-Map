@@ -3,6 +3,7 @@ import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { splitBoothName } from '../lib/boothKinds'
 import { FOCUS_RING } from './ui/focusRing'
+import ImageField from './ImageField'
 
 const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY = {
@@ -82,7 +83,15 @@ export default function CosplayerAdmin({ eventId, booths, count }) {
         <input type="date" value={form.day} onChange={set('day')} className={input} />
         <input type="time" value={form.start_time} onChange={set('start_time')} className={input} />
         <input type="time" value={form.end_time} onChange={set('end_time')} className={input} />
-        <input value={form.photo_url} onChange={set('photo_url')} placeholder="사진 URL (공식 공지에 실린 것만)" className={`${input} flex-1 min-w-[160px]`} />
+        <ImageField
+          value={form.photo_url}
+          onChange={url => setForm(p => ({ ...p, photo_url: url }))}
+          prefix="cosplayers"
+          kind="photo"
+          placeholder="사진 (공식 공지에 실린 것만)"
+          className="flex-1 min-w-[220px]"
+          inputClassName={`${input} flex-1 min-w-0`}
+        />
         <input value={form.sns_url} onChange={set('sns_url')} placeholder="SNS URL" className={`${input} w-32`} />
       </div>
 
