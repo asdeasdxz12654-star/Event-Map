@@ -8,7 +8,7 @@ const EMPTY = {
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
   ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
-  crowd_level: '', floor_plan_url: '', floor_plan_note: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '',
+  crowd_level: '', floor_plan_url: '', floor_plan_note: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '', goods_info_note: '', cosplay_info_note: '',
 }
 
 const CROWD_LEVELS = [
@@ -45,6 +45,8 @@ function toForm(event) {
     seoul_place_name: event.seoulPlaceName ?? '',
     booth_info_note: event.boothInfoNote ?? '',
     stage_info_note: event.stageInfoNote ?? '',
+    goods_info_note: event.goodsInfoNote ?? '',
+    cosplay_info_note: event.cosplayInfoNote ?? '',
     trust_score: String(event.trustScore ?? 3),
     tags: (event.tags ?? []).join(', '),
   }
@@ -75,6 +77,8 @@ function toPayload(form) {
     seoul_place_name: form.seoul_place_name || null,
     booth_info_note: form.booth_info_note || null,
     stage_info_note: form.stage_info_note || null,
+    goods_info_note: form.goods_info_note || null,
+    cosplay_info_note: form.cosplay_info_note || null,
     trust_score: form.trust_score !== '' ? Number(form.trust_score) : null,
     tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
   }
@@ -318,6 +322,30 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <p className="text-[11px] text-zinc-400 -mt-2">
             부스와 별개입니다 — 코스앤코믹처럼 부스는 미공개인데 무대 라인업은
             공개하는 행사도 있으니 따로 입력하세요.
+          </p>
+
+          <Field label="굿즈 공개 상태">
+            <input
+              type="text"
+              value={form.goods_info_note}
+              onChange={set('goods_info_note')}
+              className={cls}
+              placeholder='ex) 미공개, 또는 "행사 2주 전 판매 목록 공개"'
+            />
+          </Field>
+
+          <Field label="코스어 라인업 공개 상태">
+            <input
+              type="text"
+              value={form.cosplay_info_note}
+              onChange={set('cosplay_info_note')}
+              className={cls}
+              placeholder='ex) 미공개, 또는 "초청 코스어는 행사 1주 전 공개"'
+            />
+          </Field>
+          <p className="text-[11px] text-zinc-400 -mt-2">
+            네 가지(부스·무대·굿즈·코스어) 모두 같은 규칙입니다. 값을 비워두면 해당 탭이
+            생기지 않고, "미공개"라고 적으면 주최가 공개하지 않는 행사로 안내합니다.
           </p>
 
           <Field label="신뢰도 (0~5)">

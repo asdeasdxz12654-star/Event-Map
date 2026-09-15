@@ -322,12 +322,14 @@ const EVENT_COLUMNS = [
   'ticket_status', 'admission_fee', 'website', 'trust_score',
   'past_events', 'tags', 'crowd_level', 'floor_plan_url',
   'seoul_place_name', 'booth_info_note', 'stage_info_note', 'floor_plan_note',
+  'goods_info_note', 'cosplay_info_note',
 ]
 
 // 화면에서 <a href>·<img src>로 그대로 나가는 컬럼들. 여기에 http(s)가 아닌 값이 들어가면
 // 그 값이 곧 링크가 된다(javascript:, data: 등). DB에 들어가기 전에 막는 게 제일 싸다 —
 // 저장되고 나면 프론트·미리보기 함수·ICS 내보내기까지 전부가 그 값을 쓰게 된다.
-const URL_COLUMNS = ['poster_url', 'ticket_url', 'website', 'floor_plan_url', 'image_url']
+const URL_COLUMNS = ['poster_url', 'ticket_url', 'website', 'floor_plan_url', 'image_url',
+  'photo_url', 'sns_url']
 
 function isHttpUrl(value) {
   if (typeof value !== 'string' || value === '') return false
@@ -355,14 +357,30 @@ const ID_RE = /^\/admin\/events\/([^/]+)$/
 // 행사에 딸린 하위 목록(참가 부스, 출연진)은 구조가 같아서 라우트 패턴을 공유한다 —
 // urlSegment(URL에 쓰는 이름) -> 실제 테이블명 + 허용 컬럼만 다르다.
 const SUB_RESOURCES = {
-  booths: { table: 'event_booths', columns: ['name', 'booth_no', 'goods', 'image_url', 'sort_order'] },
+  booths: {
+    table: 'event_booths',
+    columns: ['name', 'booth_no', 'goods', 'image_url', 'sort_order', 'operator', 'hall', 'genre'],
+  },
   performers: { table: 'event_performers', columns: ['artist_name', 'songs', 'sort_order'] },
+  // 무대는 장소(stages)와 시간표(stage_slots)로 나뉜다 — 한 행사에 무대가 여럿일 수 있고
+  // (지스타는 기업 부스마다 자체 무대가 있다), 같은 프로그램이 여러 날 반복되기 때문이다.
+  stages: { table: 'event_stages', columns: ['name', 'booth_id', 'location', 'sort_order'] },
+  stage_slots: {
+    table: 'event_stage_slots',
+    columns: ['stage_id', 'day', 'start_time', 'end_time', 'title', 'performer', 'note', 'kind', 'sort_order'],
+  },
+  cosplayers: {
+    table: 'event_cosplayers',
+    columns: ['name', 'booth_id', 'character', 'title', 'photo_url', 'sns_url',
+      'day', 'start_time', 'end_time', 'note', 'sort_order'],
+  },
   // 부스 안의 개별 항목(웰컴 키트·체험·굿즈 등). booth_id를 body로 받는 대신 event_id는
   // 다른 하위 리소스와 똑같이 URL에서 서버가 넣는다 — 클라이언트가 남의 행사 id를
   // 지정할 수 없고, 라우트 코드도 그대로 재사용된다.
   booth_items: {
     table: 'event_booth_items',
-    columns: ['booth_id', 'kind', 'name', 'price', 'price_note', 'note', 'image_url', 'sort_order'],
+    columns: ['booth_id', 'kind', 'name', 'price', 'price_note', 'note', 'image_url',
+      'sort_order', 'title', 'status'],
   },
 }
 const subResourcePattern = Object.keys(SUB_RESOURCES).join('|')

@@ -11,13 +11,19 @@ import { useRef, useState } from 'react'
 //
 // 패널은 선택된 것만 그린다. 전부 그려놓고 숨기면 지도·이미지처럼 무거운 것이 처음부터
 // 전부 로드되고, 부스가 많은 행사에서 첫 렌더가 눈에 띄게 느려진다.
-export default function Tabs({ tabs, idPrefix = 'tab' }) {
+// 바깥에서 탭을 바꿀 수 있게 열어둔다(activeId + onChange).
+// 굿즈 탭의 굿즈를 누르면 그 굿즈를 파는 부스로, 부스 카드의 "무대 탭 →"을 누르면
+// 그 부스의 무대로 — 네 탭이 서로를 가리키므로 활성 탭을 페이지가 들고 있어야 한다.
+// 두 값을 안 주면 예전처럼 스스로 관리한다.
+export default function Tabs({ tabs, idPrefix = 'tab', activeId: controlledId, onChange }) {
   const list = tabs.filter(Boolean)
-  const [activeId, setActiveId] = useState(list[0]?.id)
+  const [uncontrolledId, setUncontrolledId] = useState(list[0]?.id)
   const refs = useRef({})
 
   if (list.length === 0) return null
 
+  const activeId = controlledId ?? uncontrolledId
+  const setActiveId = onChange ?? setUncontrolledId
   const active = list.find(t => t.id === activeId) ?? list[0]
 
   if (list.length === 1) return <>{active.render()}</>

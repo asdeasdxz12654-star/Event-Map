@@ -16,7 +16,10 @@ import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import AdminEventForm from '../components/AdminEventForm'
 import BoothList from '../components/BoothList'
-import GoodsList from '../components/GoodsList'
+import GoodsGrid from '../components/GoodsGrid'
+import StageTimeline from '../components/StageTimeline'
+import CosplayerGrid from '../components/CosplayerGrid'
+import OverviewSummary from '../components/OverviewSummary'
 import PerformerManager from '../components/PerformerManager'
 import SectionCard from '../components/SectionCard'
 import Tabs from '../components/Tabs'
@@ -29,9 +32,12 @@ import DetailSkeleton from '../components/DetailSkeleton'
 import { useEventBooths } from '../hooks/useEventBooths'
 import { useEventBoothItems } from '../hooks/useEventBoothItems'
 import { useEventPerformers } from '../hooks/useEventPerformers'
+import { useEventStages } from '../hooks/useEventStages'
+import { useEventCosplayers } from '../hooks/useEventCosplayers'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
+import { operatorLabel, priceRangeLabel } from '../lib/boothKinds'
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -46,8 +52,21 @@ export default function EventDetailPage() {
   const { booths } = useEventBooths(id)
   const { items: boothItems } = useEventBoothItems(id)
   const { performers } = useEventPerformers(id)
+  const { stages, slots } = useEventStages(id)
+  const { cosplayers } = useEventCosplayers(id)
   const { toast, confirm } = useUIFeedback()
   const [showEditForm, setShowEditForm] = useState(false)
+  // 탭을 페이지가 들고 있어야 탭끼리 서로를 가리킬 수 있다 — 부스 카드의
+  // "굿즈 탭 →", 굿즈 사진의 "이 부스로", 무대 줄의 부스 배지가 전부 이걸 쓴다.
+  const [tab, setTab] = useState('overview')
+  const [focusBoothId, setFocusBoothId] = useState(null)
+
+  const jumpTo = (tabId, boothId = null) => {
+    setTab(tabId)
+    setFocusBoothId(boothId)
+    // 탭바는 sticky라 화면에 남지만, 긴 탭에서 넘어오면 내용이 한참 아래에서 시작한다.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // 다른 행사로 이동해도 이 컴포넌트는 언마운트되지 않는다(같은 라우트, id만 바뀜).
   // 열어둔 수정 폼을 비워주지 않으면 엉뚱한 행사의 폼으로 이어진다.
@@ -56,6 +75,8 @@ export default function EventDetailPage() {
   if (renderedId !== id) {
     setRenderedId(id)
     setShowEditForm(false)
+    setTab('overview')
+    setFocusBoothId(null)
   }
 
   const handleDelete = async () => {
@@ -155,25 +176,81 @@ export default function EventDetailPage() {
   // 있다(BoothList·PerformerManager의 DisclosureNote). 그래서 탭이 없을 때는 해당
   // 섹션을 개요 안으로 내린다.
   const goodsItems = boothItems.filter(item => item.kind === 'goods')
-  const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl
-  const hasStageTab = performers.length > 0
+  // 게임음악 행사의 "출연진·세트리스트"는 시간표가 아니라 라인업이라 성격이 다르다.
+  // 그쪽은 예전 구조(event_performers)를 그대로 쓰고, 나머지 행사만 시간표를 쓴다.
+  const isConcert = event.category === '게임음악'
+  const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl || !!event.floorPlanNote
+  const hasStageTab = isConcert ? performers.length > 0 : slots.length > 0
+  const hasGoodsTab = goodsItems.length > 0 || !!event.goodsInfoNote
+  const hasCosplayTab = cosplayers.length > 0 || !!event.cosplayInfoNote
 
   const boothSection = (
     <>
       {/* 배치도는 부스 목록 위에 온다 — 현장에서는 "어디로 가야 하나"가 먼저다.
           아직 안 나온 행사에서는 언제 어디에 올라오는지 안내가 그 자리를 지킨다. */}
       <FloorPlan event={event} />
-      <BoothList eventId={event.id} booths={booths} items={boothItems} note={event.boothInfoNote} />
+      <BoothList
+        eventId={event.id}
+        booths={booths}
+        items={boothItems}
+        note={event.boothInfoNote}
+        stages={stages}
+        slots={slots}
+        cosplayers={cosplayers}
+        onJump={jumpTo}
+      />
     </>
   )
-  const stageSection = (
+  const stageSection = isConcert ? (
     <PerformerManager
       eventId={event.id}
       category={event.category}
       note={event.stageInfoNote}
       performers={performers}
     />
+  ) : (
+    <StageTimeline
+      stages={stages}
+      slots={slots}
+      booths={booths}
+      cosplayers={cosplayers}
+      note={event.stageInfoNote}
+      onJump={jumpTo}
+    />
   )
+  const goodsSection = (
+    <GoodsGrid
+      items={boothItems}
+      booths={booths}
+      note={event.goodsInfoNote}
+      focusBoothId={focusBoothId}
+      onJump={jumpTo}
+    />
+  )
+  const cosplaySection = (
+    <CosplayerGrid
+      cosplayers={cosplayers}
+      booths={booths}
+      note={event.cosplayInfoNote}
+      focusBoothId={focusBoothId}
+      onJump={jumpTo}
+    />
+  )
+
+  // 개요 맨 위의 안내판. 탭이 다섯이 되면 개요는 "나머지 전부"가 아니라 입구다.
+  const summaryTiles = [
+    { tab: 'booths', icon: 'store', label: '참가 부스', count: booths.length,
+      value: `${booths.length}곳`, hint: boothBreakdown(booths), note: event.boothInfoNote },
+    { tab: 'stage', icon: 'calendar', label: isConcert ? '출연진' : '무대 프로그램',
+      count: isConcert ? performers.length : slots.length,
+      value: isConcert ? `${performers.length}팀` : `${slots.length}개`,
+      hint: isConcert ? null : stageBreakdown(stages, slots), note: event.stageInfoNote },
+    { tab: 'goods', icon: 'won', label: '굿즈', count: goodsItems.length,
+      value: `${goodsItems.length}종`, hint: priceRangeLabel(goodsItems), note: event.goodsInfoNote },
+    { tab: 'cosplay', icon: 'users', label: '코스어', count: cosplayers.length,
+      value: `${cosplayers.length}명`, hint: cosplayBreakdown(cosplayers), note: event.cosplayInfoNote },
+  ]
+
 
   const tabs = [
     {
@@ -181,7 +258,9 @@ export default function EventDetailPage() {
       label: '개요',
       render: () => (
         <>
-          {/* 위치 & 경로 — 개요의 맨 위다.
+          <OverviewSummary tiles={summaryTiles} onJump={jumpTo} />
+
+          {/* 위치 & 경로 — 지도는 요약 바로 아래다.
               예전엔 신뢰도·부스·무대를 전부 지나야 나오는 맨 아래였는데, 행사 당일에
               가장 자주 여는 정보가 가장 깊은 곳에 있었던 셈이다. */}
           <div className="bg-surface-1 border border-line rounded-2xl overflow-hidden mb-4">
@@ -212,9 +291,12 @@ export default function EventDetailPage() {
             <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
           </SectionCard>
 
-          {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 */}
+          {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 — 탭이 안 생겼다고 정보가
+              사라지면 안 된다("등록된 게 없다"와 "화면이 원래 다르다"는 다르다). */}
           {!hasStageTab && stageSection}
           {!hasBoothTab && boothSection}
+          {!hasGoodsTab && goodsSection}
+          {!hasCosplayTab && cosplaySection}
 
           {/* 자주 찾지는 않지만 있어야 하는 것들. 팩트 타일에서 밀려난 값이 여기 모인다. */}
           {(event.organizer || event.ticketOpenNote || event.tags?.length > 0) && (
@@ -249,21 +331,27 @@ export default function EventDetailPage() {
     },
     hasBoothTab && {
       id: 'booths',
-      label: '부스 · 체험',
+      label: '부스',
       count: booths.length,
       render: () => boothSection,
     },
-    goodsItems.length > 0 && {
+    hasStageTab && {
+      id: 'stage',
+      label: isConcert ? '출연진' : '무대',
+      count: isConcert ? performers.length : slots.length,
+      render: () => stageSection,
+    },
+    hasGoodsTab && {
       id: 'goods',
       label: '굿즈',
       count: goodsItems.length,
-      render: () => <GoodsList booths={booths} items={boothItems} />,
+      render: () => goodsSection,
     },
-    hasStageTab && {
-      id: 'stage',
-      label: event.category === '게임음악' ? '출연진' : '무대 일정',
-      count: performers.length,
-      render: () => stageSection,
+    hasCosplayTab && {
+      id: 'cosplay',
+      label: '코스프레',
+      count: cosplayers.length,
+      render: () => cosplaySection,
     },
   ].filter(Boolean)
 
@@ -342,7 +430,12 @@ export default function EventDetailPage() {
             <AdminEventForm event={event} onClose={() => setShowEditForm(false)} />
           )}
 
-          <Tabs tabs={tabs} idPrefix={`ev-${event.id}`} />
+          <Tabs
+            tabs={tabs}
+            idPrefix={`ev-${event.id}`}
+            activeId={tabs.some(t => t.id === tab) ? tab : tabs[0]?.id}
+            onChange={next => { setTab(next); setFocusBoothId(null) }}
+          />
         </div>
       </div>
     </div>
@@ -368,6 +461,30 @@ function Description({ text }) {
       </button>
     </div>
   )
+}
+
+// 요약 안내판의 둘째 줄. "36곳"만으로는 어떤 행사인지 모르지만 "기업 24 · 창작자 8"이면 안다.
+function boothBreakdown(booths) {
+  const counts = ['company', 'creator', 'host']
+    .map(op => ({ op, n: booths.filter(b => b.operator === op).length }))
+    .filter(c => c.n > 0)
+  if (counts.length < 2) return null
+  return counts.map(c => `${operatorLabel(c.op)} ${c.n}`).join(' · ')
+}
+
+function stageBreakdown(stages, slots) {
+  const days = new Set(slots.map(s => s.day)).size
+  const parts = []
+  if (stages.length > 1) parts.push(`무대 ${stages.length}곳`)
+  if (days > 1) parts.push(`${days}일간`)
+  return parts.join(' · ') || null
+}
+
+function cosplayBreakdown(cosplayers) {
+  const host = cosplayers.filter(c => !c.boothId).length
+  const booth = cosplayers.length - host
+  if (host === 0 || booth === 0) return null
+  return `주최 ${host} · 부스 ${booth}`
 }
 
 // 장소명에서 홀·층·전시장 번호를 제거해 지도 검색용 기본 장소명을 만든다.

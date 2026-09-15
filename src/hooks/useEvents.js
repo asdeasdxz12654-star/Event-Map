@@ -33,6 +33,8 @@ export function mapEvent(row) {
     seoulPlaceName: row.seoul_place_name,
     boothInfoNote: row.booth_info_note,
     stageInfoNote: row.stage_info_note,
+    goodsInfoNote: row.goods_info_note,
+    cosplayInfoNote: row.cosplay_info_note,
     admissionFee: row.admission_fee,
     website: httpUrl(row.website),
     trustScore: row.trust_score,

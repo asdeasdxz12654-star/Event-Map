@@ -62,4 +62,18 @@ export const adminApi = {
   createPerformer: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/performers`, data),
   updatePerformer: (id, data) => req('PATCH', `/admin/performers/${encodeURIComponent(id)}`, data),
   deletePerformer: (id) => req('DELETE', `/admin/performers/${encodeURIComponent(id)}`),
+
+  // 무대는 장소(stages)와 시간표(stage_slots) 두 단계다. 슬롯은 stage_id를 body로
+  // 보내지만 event_id는 booth_items와 똑같이 URL에서 서버가 넣는다.
+  createStage: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/stages`, data),
+  updateStage: (id, data) => req('PATCH', `/admin/stages/${encodeURIComponent(id)}`, data),
+  deleteStage: (id) => req('DELETE', `/admin/stages/${encodeURIComponent(id)}`),
+
+  createStageSlot: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/stage_slots`, data),
+  updateStageSlot: (id, data) => req('PATCH', `/admin/stage_slots/${encodeURIComponent(id)}`, data),
+  deleteStageSlot: (id) => req('DELETE', `/admin/stage_slots/${encodeURIComponent(id)}`),
+
+  createCosplayer: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/cosplayers`, data),
+  updateCosplayer: (id, data) => req('PATCH', `/admin/cosplayers/${encodeURIComponent(id)}`, data),
+  deleteCosplayer: (id) => req('DELETE', `/admin/cosplayers/${encodeURIComponent(id)}`),
 }

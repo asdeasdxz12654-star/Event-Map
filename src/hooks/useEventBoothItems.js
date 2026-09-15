@@ -11,6 +11,10 @@ function mapItem(row) {
     name: row.name,
     price: row.price,
     priceNote: row.price_note,
+    // 이 항목이 속한 게임·작품. 비어 있으면 화면이 부스 이름을 타이틀로 쓴다 —
+    // 호요랜드처럼 부스 = 타이틀인 행사의 옛 데이터를 그대로 살리기 위해서다.
+    title: row.title ?? null,
+    status: row.status ?? null,
     note: row.note,
     // 이미지 주소는 관리자 입력이라 형식이 보장되지 않는다 — <img src>로 나가므로 거른다.
     imageUrl: httpUrl(row.image_url),
