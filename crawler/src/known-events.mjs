@@ -105,6 +105,8 @@ const KNOWN_EVENTS = [
         // 2025년 나흘간 20.2만명 방문(역대 2위 규모) — 국내 최대 게임전시라 항상 매우 혼잡.
         crowd_level: 'very_high',
         booth_info_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) BTC 부스배치도 페이지에 공개',
+        goods_info_note: '참가사별 굿즈는 부스 배치도와 같은 시점에 참가사 안내로 공개',
+        cosplay_info_note: '게임 코스프레 어워즈 참가자는 행사 임박 시 공개, 초청 코스어 라인업은 공개 사례 없음',
         // 2026-09-15 확인: 전시장 안내·BTC 참가사 안내 메뉴가 아직 비활성(javascript:void(0))이다.
         floor_plan_note: '예년 기준 행사 2~3주 전 공식 홈페이지(gstar.or.kr) 전시장 안내 페이지에 공개',
         // 2025년 세부 일정(무대 포함)은 개최 21일 전(10/23)에 공개됨. 고정 프로그램:
@@ -172,6 +174,8 @@ const KNOWN_EVENTS = [
         // 2025년 사흘간 10만명 최초 돌파(역대 최대, 티켓 발권 기준 집계) — 혼잡.
         crowd_level: 'high',
         booth_info_note: '참가사별 부스 프로그램은 행사 한 달 전부터 순차 공개, 종합 배치도는 임박 시 공개',
+        goods_info_note: '참가사 굿즈는 부스 프로그램과 함께 순차 공개',
+        cosplay_info_note: '레드/블루 스테이지 코스프레 프로그램은 타임테이블과 같은 시점에 공개',
         floor_plan_note: '종합 배치도는 행사 임박 시 공개 (참가사별 부스 프로그램은 한 달 전부터 순차 공개)',
         // 2025년 레드/블루 스테이지 1차 타임테이블 10/17(행사 약 7주 전), 2차 10/24 공개.
         stage_info_note: '레드/블루 스테이지 타임테이블은 예년 기준 행사 약 6~7주 전부터 순차 공개',
@@ -283,6 +287,7 @@ const ONE_OFF_EVENTS = [
       // 호요버스 단독 행사 + 킨텍스 2개 홀·후면광장 규모라 조별 입장으로 운영된다.
       crowd_level: 'high',
       booth_info_note: '게임 5종 테마관 + 파트너 부스(구글플레이·몬스터 에너지) + 공식 굿즈 판매존 + 2차 창작 전시존으로 구성. 붕괴3rd(환야의 숨바꼭질)·미해결사건부(미림 장터·사계절의 러브레터)는 테마만 공개되고 세부 프로그램은 미공개. 부스 배치도도 아직 미공개.',
+      cosplay_info_note: '코스프레 런웨이·퍼레이드 운영은 확인됨, 참가 코스어 명단은 미공개',
       floor_plan_note: '아직 미공개 — 공식 공지(네이버 라운지)에 배치도 슬라이드가 없다',
       stage_info_note: '일자별 상세 타임테이블은 미공개(공식 "순차 공개" 안내). 확인된 운영 시간 — 무대 이벤트 10/2~3 11:00~18:00, 10/4~5 10:30~19:00 · 럭키드로우 금·토 17:00~18:00, 일·월 16:30~17:30 · 코스프레 퍼레이드 10/4~5 18:00~19:00.',
       website: 'https://sites.google.com/mihoyo.com/hoyoland2026/hoyoland2026',
@@ -416,6 +421,8 @@ const ONE_OFF_EVENTS = [
       // 참가 동아리(부스컷)는 comicw.net에 상시 공개(등록 즉시 반영), 배치도는
       // comicw.net/map/에 행사 임박 시 별도 공지.
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      goods_info_note: '굿즈는 동아리마다 달라 공식에서 따로 공개하지 않습니다. 참가 동아리 목록은 comicw.net에서 확인하세요',
+      cosplay_info_note: '코스프레 무대공연 참가자는 현장 접수라 사전 명단이 없습니다',
       // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
       floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       // 매 회차 거의 고정 시간대: 16:10 일러스트 콘테스트 → 16:30 코스프레 무대공연 → ~17:30 종료.
@@ -475,6 +482,8 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      goods_info_note: '굿즈는 동아리마다 달라 공식에서 따로 공개하지 않습니다. 참가 동아리 목록은 comicw.net에서 확인하세요',
+      cosplay_info_note: '코스프레 무대공연 참가자는 현장 접수라 사전 명단이 없습니다',
       // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
       floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
@@ -497,6 +506,8 @@ const ONE_OFF_EVENTS = [
       crowd_level: 'high',
       // 8회 사례: 최종 부스 배치도가 행사 임박(1~2주 전)해서 illustar.net 공지사항으로 공개됨.
       booth_info_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 배치도 공개',
+      goods_info_note: '참가 부스 굿즈는 개별 공개, 공식 굿즈는 행사 임박 시 X(@illustar_fes) 공지',
+      cosplay_info_note: '참여형 코스플레이 공연 운영은 확인됨, 초청 코스어 명단은 임박 시 공개',
       floor_plan_note: '과거 사례 기준 행사 1~2주 전 공식 홈페이지(illustar.net) 공지사항으로 공개',
       // 과거 사례(5·8·9회) 공통: 무대 시간표는 행사 임박(D-6 전후)해서 X 공지로 공개.
       // 고정 프로그램: 노래자랑(TJ), 참여형 코스플레이 공연, 랜덤플레이댄스, 인디아이돌
@@ -552,6 +563,8 @@ const ONE_OFF_EVENTS = [
       ticket_url: 'https://comicw.net/', ticket_open_date: null, admission_fee: '사전예매 7,000원 (현장 구매 10,000원)',
       crowd_level: 'high', // 코믹월드는 회차·지역과 무관하게 전시장 면적 대비 초과 밀집으로 알려짐
       booth_info_note: '참가 동아리는 comicw.net에서 상시 확인 가능, 배치도는 행사 임박 시 공개',
+      goods_info_note: '굿즈는 동아리마다 달라 공식에서 따로 공개하지 않습니다. 참가 동아리 목록은 comicw.net에서 확인하세요',
+      cosplay_info_note: '코스프레 무대공연 참가자는 현장 접수라 사전 명단이 없습니다',
       // 2026-09-15 확인: comicw.net/map/ 은 회차별 배치도 페이지다(확대하면 부스번호가 보이는 이미지).
       floor_plan_note: '회차별 배치도는 행사 임박 시 comicw.net/map/ 에 회차 번호별로 올라온다 (2026-09-15 확인: 336회 등록됨, 337회 미등록)',
       stage_info_note: '무대공연은 매 회차 대체로 16:10 일러스트 콘테스트, 16:30 코스프레 무대공연으로 고정',
@@ -710,6 +723,18 @@ async function upsertOneEvent(supabase, slug, year, extracted, posterUrl = null)
       if (planNoteError) console.warn(`[known-events] 배치도 공개 메모 저장 실패:`, planNoteError.message)
       else console.log(`[known-events] 배치도 공개 메모 설정됨`)
     }
+    // goods_info_note / cosplay_info_note도 같은 규칙이다. 굿즈·코스어 탭이 비어 있을 때
+    // "원래 안 내는 행사"인지 "아직인지"를 화면이 구분해 말할 수 있게 한다.
+    for (const column of ['goods_info_note', 'cosplay_info_note']) {
+      if (!extracted[column] || !approved?.promoted_event_id) continue
+      const { error: noteError } = await supabase
+        .from('events')
+        .update({ [column]: extracted[column] })
+        .eq('id', approved.promoted_event_id)
+        .is(column, null)
+        .is('admin_edited_at', null)
+      if (noteError) console.warn(`[known-events] ${column} 저장 실패:`, noteError.message)
+    }
   }
 }
 
@@ -800,6 +825,12 @@ async function syncExistingEvent(supabase, slug, year, extracted, promotedEventI
   }
   if (extracted.floor_plan_note) {
     patch.floor_plan_note = extracted.floor_plan_note
+  }
+  if (extracted.goods_info_note) {
+    patch.goods_info_note = extracted.goods_info_note
+  }
+  if (extracted.cosplay_info_note) {
+    patch.cosplay_info_note = extracted.cosplay_info_note
   }
 
   const { data, error } = await supabase

@@ -108,6 +108,9 @@ export const adminApi = {
   updateCosplayer: (id, data) => req('PATCH', `/admin/cosplayers/${encodeURIComponent(id)}`, data),
   deleteCosplayer: (id) => req('DELETE', `/admin/cosplayers/${encodeURIComponent(id)}`),
 
+  // 감지 알림 확인 처리. "봤다"만 기록하므로 body가 없다.
+  ackWatch: (key) => req('POST', `/admin/watches/${encodeURIComponent(key)}/ack`),
+
   // prefix는 저장 경로의 앞칸 — Worker가 허용 목록으로 검사한다.
   uploadImage: (blob, prefix = 'items') => upload(blob, prefix),
 }

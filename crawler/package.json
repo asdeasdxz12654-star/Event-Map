@@ -8,7 +8,9 @@
     "verify:posters": "node src/verify-poster-images.mjs",
     "verify:coords": "node src/verify-venue-coords.mjs",
     "optimize:posters": "node src/optimize-poster-images.mjs",
-    "mirror:images": "node src/mirror-images.mjs"
+    "mirror:images": "node src/mirror-images.mjs",
+    "watch:sources": "node src/watch-sources.mjs",
+    "booths:comicworld": "node src/comicworld-booths.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.113.0",

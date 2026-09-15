@@ -338,8 +338,13 @@ async function supabase(env, method, path, body) {
 }
 
 // PATCH 결과가 빈 배열이면 그 id를 가진 행이 없다는 뜻 -> 404.
+// source_watches는 기본키가 id가 아니라 key다. 테이블마다 기본키 이름을 따로 두는 것보다
+// 예외 하나를 여기 적어두는 편이 읽기 쉽다.
+const PK = { source_watches: 'key' }
+
 async function updateRow(env, table, id, body) {
-  const rows = await supabase(env, 'PATCH', `${table}?id=eq.${encodeURIComponent(id)}`, body)
+  const pk = PK[table] ?? 'id'
+  const rows = await supabase(env, 'PATCH', `${table}?${pk}=eq.${encodeURIComponent(id)}`, body)
   if (!Array.isArray(rows) || rows.length === 0) throw new HttpError(404, 'not_found')
   return rows[0]
 }
@@ -488,6 +493,16 @@ async function handleAdmin(request, env, pathname) {
   if (pathname === '/admin/uploads' && request.method === 'POST') {
     const publicUrl = await uploadImage(request, env, new URL(request.url))
     return json({ url: publicUrl }, env, { status: 201 })
+  }
+
+  // POST /admin/watches/:key/ack — 감지 알림을 확인 처리한다.
+  // 값을 바꾸는 게 아니라 "봤다"를 기록하는 것이라 body가 없다.
+  const ackMatch = /^\/admin\/watches\/([^/]+)\/ack$/.exec(pathname)
+  if (ackMatch && request.method === 'POST') {
+    await updateRow(env, 'source_watches', decodeURIComponent(ackMatch[1]), {
+      acknowledged_at: new Date().toISOString(),
+    })
+    return json({ ok: true }, env)
   }
 
   const idMatch = ID_RE.exec(pathname)

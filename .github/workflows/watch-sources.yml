@@ -1,0 +1,63 @@
+name: Watch official sources
+
+# 공식 사이트에 정보가 올라왔는지 확인하고, 자동으로 채울 수 있는 것만 채운다.
+#
+# 이 워크플로가 하는 일은 두 가지로 나뉜다.
+#
+#   1) 감지 — 정해진 주소를 열어 "관심 있는 링크·이미지가 어제와 달라졌는가"만 본다.
+#      값을 읽어내지 않는다. 바뀌면 source_watches에 기록되고 /admin/drafts 화면에 뜬다.
+#      틀려도 손해가 헛걸음 한 번이라, 자동으로 해도 되는 유일한 단계다.
+#
+#   2) 수집 — 코믹월드 참가 동아리만. comicw.net이 HTML 텍스트로 상시 공개하고,
+#      수백~수천 개라 애초에 손으로 넣을 수 있는 양이 아니다. 모델을 쓰지 않고
+#      파서로 긁으므로 형식이 바뀌면 0건이 되어 바로 드러난다.
+#
+# 이미지 속 가격표·시간표를 읽어내는 단계는 여기 없다 — 이 저장소가 이미 틀린 값을
+# 만들어 본 방법이다(supabase/hoyoland_goods_2026-09-14.sql 주석). 그건 사람이 한다.
+#
+# 검색 API를 안 쓰므로 크레딧과 무관하다.
+on:
+  schedule:
+    # 매일 22:00 UTC = 07:00 KST. 일일 크롤(21:00)·이미지 사본(21:30) 다음.
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: '실제로 저장할지 (끄면 확인만)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: watch-sources
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: 공식 소스 변경 감지
+        # --apply는 스크립트가 무시하는 값이다. GitHub 식에서 빈 문자열은 거짓이라
+        # `apply && '' || '--dry-run'`이 항상 --dry-run이 된다 (fill-posters.yml과 같은 방식).
+        run: node src/watch-sources.mjs ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      # 감지가 실패해도 부스 수집은 돌린다 — 서로 다른 사이트를 보는 별개의 일이다.
+      - name: 코믹월드 참가 동아리 수집
+        if: always()
+        run: node src/comicworld-booths.mjs ${{ (github.event_name == 'schedule' || inputs.apply) && '--apply' || '--dry-run' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

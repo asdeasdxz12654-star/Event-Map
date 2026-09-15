@@ -4,6 +4,7 @@ import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import Icon from '../components/icons'
+import SourceWatchPanel from '../components/SourceWatchPanel'
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
@@ -62,6 +63,10 @@ export default function AdminDraftsPage() {
           로그아웃
         </button>
       </div>
+
+      {/* 공식 소스 감지 — 검수 대기 목록보다 위에 둔다. "새 정보가 올라왔다"는
+          지금 바로 움직여야 하는 신호이고, 아래 목록은 쌓여 있는 일이다. */}
+      <SourceWatchPanel />
 
       <div className="flex gap-2 mb-6">
         {TABS.map(tab => (
