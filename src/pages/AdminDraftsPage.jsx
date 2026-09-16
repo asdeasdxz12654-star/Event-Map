@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
+import { useAdmin } from '../contexts/AdminContext'
 import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
-import Icon from '../components/icons'
+import AdminGate from '../components/admin/AdminGate'
 import SourceWatchPanel from '../components/SourceWatchPanel'
-
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
 const TABS = [
   { value: 'pending', label: '검수 대기' },
@@ -18,49 +16,26 @@ const CONFIDENCE_LABEL = { high: '높음', medium: '보통', low: '낮음' }
 
 export default function AdminDraftsPage() {
   useDocumentTitle('행사 검수')
-  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
+  return (
+    <AdminGate title="행사 검수">
+      <DraftsScreen />
+    </AdminGate>
+  )
+}
+
+// 목록 조회를 문 안쪽 컴포넌트로 내린다. 바깥에 두면 로그인하지 않은 방문자가 들어와도
+// 조회가 한 번 나가고, 그 401이 adminApi에서 토큰을 지우는 처리를 깨운다.
+function DraftsScreen() {
+  const { logout } = useAdmin()
   const [status, setStatus] = useState('pending')
   const { drafts, loading, error, refresh } = useEventDrafts(status)
-
-  // ── 로딩 ──
-  if (authLoading) {
-    return <div className="py-20 text-center text-zinc-400 animate-pulse">잠시만요...</div>
-  }
-
-  // ── 비로그인 ──
-  if (!user) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <Icon name="gear" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
-        <h1 className="text-xl font-bold text-ink mb-2">행사 검수</h1>
-        <p className="text-zinc-400 text-sm mb-8">관리자만 접근 가능합니다. Google 계정으로 로그인해 주세요.</p>
-        <button
-          onClick={() => signInWithGoogle('/admin/drafts')}
-          className="px-6 py-3 bg-ink text-surface font-semibold rounded-xl hover:opacity-90 transition-opacity"
-        >
-          Google로 계속하기
-        </button>
-      </div>
-    )
-  }
-
-  // ── 관리자 아님 ──
-  if (!ADMIN_EMAIL || user.email !== ADMIN_EMAIL) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <Icon name="ban" className="w-12 h-12 mx-auto mb-4 text-zinc-500" />
-        <h1 className="text-xl font-bold text-ink mb-2">접근 권한이 없습니다</h1>
-        <p className="text-zinc-400 text-sm">이 페이지는 관리자 계정으로만 이용할 수 있습니다.</p>
-      </div>
-    )
-  }
 
   return (
     <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-ink">행사 검수</h1>
-        <button onClick={signOut} className="text-sm text-zinc-400 hover:text-ink transition-colors">
-          로그아웃
+        <button onClick={logout} className="text-sm text-zinc-400 hover:text-ink transition-colors">
+          관리자 모드 종료
         </button>
       </div>
 

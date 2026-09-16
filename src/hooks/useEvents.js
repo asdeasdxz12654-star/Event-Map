@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { httpUrl } from '../lib/url'
+import { fetchAllRows } from '../lib/fetchAllRows'
 
 // DB 행(snake_case) -> 컴포넌트가 쓰는 이벤트 객체(camelCase)로 변환
 // (useEvent.js가 행사 한 건을 직접 받아올 때도 같은 변환을 써야 해서 export한다)
@@ -45,8 +46,6 @@ export function mapEvent(row) {
   }
 }
 
-const PAGE_SIZE = 1000 // PostgREST 기본 상한
-
 function sortByStartDate(list) {
   return [...list].sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))
 }
@@ -72,27 +71,12 @@ export function useEvents() {
     const in90Days = new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)
     const rangeEnd = in90Days > yearEnd ? in90Days : yearEnd
 
-    // PostgREST는 요청당 기본 1000행까지만 준다 — 에러도 없이 잘려 나가므로,
-    // 끝 페이지(요청한 개수보다 적게 온 페이지)가 나올 때까지 range로 이어 받는다.
-    async function fetchAllEvents() {
-      const rows = []
-      for (let from = 0; ; from += PAGE_SIZE) {
-        const { data, error: fetchError } = await supabase
-          .from('events')
-          .select('*')
-          .gte('start_date', rangeStart)
-          .lte('start_date', rangeEnd)
-          // 페이지 사이에 순서가 흔들리면 행이 누락/중복되므로 정렬을 고정한다.
-          .order('start_date', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, from + PAGE_SIZE - 1)
-        if (fetchError) throw fetchError
-        rows.push(...data)
-        if (data.length < PAGE_SIZE) return rows
-      }
-    }
-
-    fetchAllEvents()
+    // 1000행 상한을 넘겨 전부 받는다 — 페이징 루프는 src/lib/fetchAllRows.js에 있다
+    // (부스 목록도 같은 함정을 밟고 있어서 공용으로 뺐다).
+    fetchAllRows(() => supabase.from('events').select('*'), {
+      build: q => q.gte('start_date', rangeStart).lte('start_date', rangeEnd),
+      order: [{ column: 'start_date', ascending: true }],
+    })
       .then(rows => {
         if (cancelled) return
         setEvents(sortByStartDate(rows.map(mapEvent)))

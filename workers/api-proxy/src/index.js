@@ -395,6 +395,14 @@ const EVENT_COLUMNS = [
   'goods_info_note', 'cosplay_info_note',
 ]
 
+// 검수 화면이 바꿀 수 있는 event_drafts 컬럼. 나머지(extracted·source_*·promoted_event_id)는
+// 크롤러와 트리거가 정한다 — 관리자가 고칠 것은 "승인할지 말지"와 그 사유뿐이다.
+const DRAFT_COLUMNS = ['status', 'review_note']
+const DRAFT_STATUSES = ['pending', 'approved', 'rejected']
+// 검수 목록은 한 화면에서 훑는 용도라 페이지네이션이 없다. PostgREST 기본 상한과
+// 무관하게 여기서 끊어두면, 초안이 쌓여도 응답이 무한정 커지지 않는다.
+const DRAFT_LIMIT = 200
+
 // 화면에서 <a href>·<img src>로 그대로 나가는 컬럼들. 여기에 http(s)가 아닌 값이 들어가면
 // 그 값이 곧 링크가 된다(javascript:, data: 등). DB에 들어가기 전에 막는 게 제일 싸다 —
 // 저장되고 나면 프론트·미리보기 함수·ICS 내보내기까지 전부가 그 값을 쓰게 된다.
@@ -515,6 +523,43 @@ async function handleAdmin(request, env, pathname) {
     return json({ ok: true }, env)
   }
 
+  // ── event_drafts ──────────────────────────────────────────────────────────
+  // 검수 화면이 쓰던 경로다. 예전엔 브라우저가 Supabase를 직접 부르고 RLS가
+  // "auth.jwt()->>'email'이 관리자 이메일인가"로 막았는데, 그러려면 구글 로그인이
+  // 따로 필요했다 — 나머지 관리 기능은 전부 이 Worker의 관리자 코드를 쓰는데
+  // 검수 화면 하나만 로그인이 달라서, 한쪽만 로그인된 상태에서는 목록이 조용히
+  // 비어 보였다(RLS는 에러가 아니라 빈 배열을 준다). 여기로 옮겨 하나로 합친다.
+
+  // GET /admin/drafts?status=pending — 이 Worker의 첫 조회 엔드포인트다.
+  if (pathname === '/admin/drafts' && request.method === 'GET') {
+    const status = new URL(request.url).searchParams.get('status') ?? 'pending'
+    // status는 그대로 쿼리에 들어가므로 아는 값만 통과시킨다.
+    if (!DRAFT_STATUSES.includes(status)) throw new HttpError(400, 'invalid_status')
+    const rows = await supabase(
+      env,
+      'GET',
+      `event_drafts?status=eq.${status}&order=created_at.desc&limit=${DRAFT_LIMIT}`
+    )
+    return json(rows ?? [], env)
+  }
+
+  // PATCH /admin/drafts/:id — 승인/반려.
+  //
+  // 승인하면 promote_event_draft() 트리거가 events에 행을 만든다. 실패하면 트리거가
+  // 그 draft만 rejected로 돌리고 review_note에 사유를 적으므로, 여기서는 200으로
+  // 끝나도 status가 rejected일 수 있다 — 바뀐 행을 통째로 돌려줘서 호출부가 그걸
+  // 보고 판단하게 한다. ({ok:true}만 주면 "승인했는데 왜 반려됨?"을 알 길이 없다.)
+  const draftMatch = /^\/admin\/drafts\/([^/]+)$/.exec(pathname)
+  if (draftMatch && request.method === 'PATCH') {
+    const body = await readJsonBody(request)
+    const patch = pick(body, DRAFT_COLUMNS)
+    if (patch.status != null && !DRAFT_STATUSES.includes(patch.status)) {
+      throw new HttpError(400, 'invalid_status')
+    }
+    const row = await updateRow(env, 'event_drafts', decodeURIComponent(draftMatch[1]), patch)
+    return json(row, env)
+  }
+
   const idMatch = ID_RE.exec(pathname)
   const subOfEventMatch = SUB_OF_EVENT_RE.exec(pathname)
   const subIdMatch = SUB_ID_RE.exec(pathname)
@@ -568,6 +613,21 @@ async function handleAdmin(request, env, pathname) {
       ...assertUrlColumns(pick(body, EVENT_COLUMNS)),
       admin_edited_at: new Date().toISOString(),
     })
+    return json({ ok: true }, env)
+  }
+
+  // POST /admin/events/:id/unlock — 크롤러 자동 갱신을 다시 켠다.
+  //
+  // 위 PATCH가 admin_edited_at을 찍고 나면 크롤러 13곳이 그 행을 건너뛴다
+  // (known-events.mjs 등에서 .is('admin_edited_at', null)). 제목 오타 하나를 고쳐도
+  // 그 행사는 이후 공식 포스터·예매 링크가 발표돼도 영영 자동으로 안 채워진다.
+  // 지금까지 이 값을 되돌릴 방법이 아예 없었다 — 그래서 되돌리는 문을 하나 낸다.
+  //
+  // PATCH의 한 필드로 두지 않는 이유: PATCH는 무조건 admin_edited_at을 찍으므로
+  // 같은 요청 안에서 켜고 끄는 게 서로 어긋난다. 별도 동작으로 두는 편이 분명하다.
+  const unlockMatch = /^\/admin\/events\/([^/]+)\/unlock$/.exec(pathname)
+  if (unlockMatch && request.method === 'POST') {
+    await updateRow(env, 'events', decodeURIComponent(unlockMatch[1]), { admin_edited_at: null })
     return json({ ok: true }, env)
   }
 
