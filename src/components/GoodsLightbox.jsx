@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './icons'
 import { FOCUS_RING } from './ui/focusRing'
-import { boothHue, boothInitial, formatPrice, splitBoothName } from '../lib/boothKinds'
+import { boothHue, formatPrice, splitBoothName } from '../lib/boothKinds'
 
 const STATUS_LABEL = { soldout: '품절', limited: '수량 한정', preorder: '예약 판매' }
 
@@ -69,12 +69,14 @@ export default function GoodsLightbox({ items, index, booths, onIndexChange, onC
         {item.imageUrl ? (
           <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain rounded-xl" />
         ) : (
+          // 격자의 대체 타일과 같은 처리 — 크게 띄운 자리에 글자 한 자만 있으면
+          // 사진이 안 뜬 것처럼 보인다. 무엇이 없는지 분명히 적는다.
           <div
-            className="w-56 h-56 max-w-full rounded-xl grid place-items-center text-4xl font-bold text-white/90"
-            style={{ background: `linear-gradient(140deg, hsl(${hue} 45% 42%), hsl(${(hue + 28) % 360} 40% 26%))` }}
-            aria-hidden="true"
+            className="w-56 h-56 max-w-full rounded-xl flex flex-col items-center justify-center gap-2"
+            style={{ background: `linear-gradient(140deg, hsl(${hue} 28% 22%), hsl(${(hue + 28) % 360} 24% 14%))` }}
           >
-            {boothInitial(item.name)}
+            <Icon name="image" className="w-10 h-10 text-white/30" />
+            <span className="text-xs text-white/45">사진 없음</span>
           </div>
         )}
       </div>

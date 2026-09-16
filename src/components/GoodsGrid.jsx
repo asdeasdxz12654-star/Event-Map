@@ -7,7 +7,7 @@ import DisclosureNote from './DisclosureNote'
 import GoodsLightbox from './GoodsLightbox'
 import { FOCUS_RING } from './ui/focusRing'
 import {
-  boothHue, boothInitial, formatPrice, itemTitle, matchesBucket,
+  boothHue, formatPrice, itemTitle, matchesBucket,
   priceBuckets, priceRangeLabel, splitBoothName,
 } from '../lib/boothKinds'
 
@@ -314,14 +314,20 @@ function GoodsCard({ item, booth, onOpen }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          // 사진이 없을 때도 빈칸이 아니라 부스와 같은 색 타일이 나온다 — 격자에서
-          // 어느 부스 굿즈인지가 색으로도 읽힌다.
+          // 사진이 없을 때.
+          //
+          // 예전엔 부스 색 타일에 이름 첫 글자를 큼직하게 얹었다. 36px짜리 썸네일
+          // (BoothThumb)에서는 그게 아바타처럼 읽히는데, 격자의 정사각형은 훨씬 커서
+          // 글자 한 자만 덩그러니 놓이니 "사진이 깨졌다"로 보였다.
+          //
+          // 그래서 채도를 낮춰 빈 자리임을 분명히 하고, 무엇이 없는지 글자로 밝힌다.
+          // 색을 완전히 버리지는 않는다 — 부스마다 다른 색이라 격자가 단조로워지지 않는다.
           <div
-            aria-hidden="true"
-            className="w-full h-full grid place-items-center text-xl font-bold text-white/90"
-            style={{ background: `linear-gradient(140deg, hsl(${hue} 45% 42%), hsl(${(hue + 28) % 360} 40% 26%))` }}
+            className="w-full h-full flex flex-col items-center justify-center gap-1.5"
+            style={{ background: `linear-gradient(140deg, hsl(${hue} 28% 22%), hsl(${(hue + 28) % 360} 24% 14%))` }}
           >
-            {boothInitial(item.name)}
+            <Icon name="image" className="w-6 h-6 text-white/35" />
+            <span className="text-[10px] text-white/45">사진 없음</span>
           </div>
         )}
         {/* 품절·한정은 카드를 지우지 않고 덮는다 — "원래 없는 것"과 "다 팔린 것"은 다르다 */}
