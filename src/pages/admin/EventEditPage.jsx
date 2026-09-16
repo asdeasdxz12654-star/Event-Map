@@ -16,6 +16,7 @@ import { useEventCosplayers } from '../../hooks/useEventCosplayers'
 import { useEventPerformers } from '../../hooks/useEventPerformers'
 import { useEventTabs } from '../../hooks/useEventTabs'
 import TabConfigEditor from '../../components/admin/TabConfigEditor'
+import BannerCropper from '../../components/admin/BannerCropper'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useUIFeedback } from '../../contexts/UIFeedbackContext'
 import { adminApi } from '../../lib/adminApi'
@@ -38,6 +39,7 @@ const TABS = [
   { id: 'goods', label: '굿즈' },
   { id: 'stage', label: '무대' },
   { id: 'cosplay', label: '코스어' },
+  { id: 'images', label: '이미지' },
   { id: 'tabs', label: '탭 구성' },
 ]
 
@@ -165,7 +167,8 @@ function EditScreen({ id }) {
             goods: goodsItems.length,
             stage: isConcert ? performers.length : slots.length,
             cosplay: cosplayers.length,
-            // 탭 구성은 "설정한 개수"라 0이 정상이다. 숫자를 안 보여준다.
+            // 이미지·탭 구성은 "설정한 개수"라 0이 정상이다. 숫자를 안 보여준다.
+            images: null,
             tabs: null,
           }[t.id]
           return (
@@ -212,6 +215,7 @@ function EditScreen({ id }) {
         <CosplayerGrid eventId={event.id} cosplayers={cosplayers} booths={booths} note={event.cosplayInfoNote} />
       )}
 
+      {tab === 'images' && <BannerCropper items={items} booths={booths} />}
       {tab === 'tabs' && <TabConfigEditor eventId={event.id} config={tabConfig} />}
 
       {editing && <AdminEventForm event={event} onClose={() => setEditing(false)} />}
