@@ -123,6 +123,14 @@ export default function GoodsGrid({ items, booths, note, focusBoothId, onJump })
   const range = priceRangeLabel(filtered)
   const visible = filtered.slice(0, shown)
 
+  // 굿즈가 하나도 안 올라온 부스.
+  //
+  // 호요랜드에서 "붕괴3rd랑 미해결사건부가 왜 없냐"는 질문을 받았다. 부스는 있는데
+  // 굿즈만 공개가 안 된 것인데, 격자에는 그 부스가 아예 안 나오니 빠뜨린 것처럼 보인다.
+  // 이 화면은 "등록된 게 없다"와 "원래 없다"를 구분해 적어 온 곳인데(DisclosureNote)
+  // 굿즈 탭에만 그 안내가 없었다.
+  const boothsWithoutGoods = booths.filter(b => !goods.some(g => g.boothId === b.id))
+
   return (
     <div className="flex flex-col gap-3 mb-4">
       {axes.length > 0 && (
@@ -189,6 +197,13 @@ export default function GoodsGrid({ items, booths, note, focusBoothId, onJump })
             </button>
           )}
         </>
+      )}
+
+      {boothsWithoutGoods.length > 0 && (
+        <p className="text-xs text-zinc-500 leading-relaxed border-t border-line pt-3">
+          {boothsWithoutGoods.map(b => splitBoothName(b.name).main).join(' · ')}
+          {' — 굿즈가 아직 공개되지 않았습니다'}
+        </p>
       )}
 
       {note && <p className="text-xs text-zinc-500 leading-relaxed">{note}</p>}
