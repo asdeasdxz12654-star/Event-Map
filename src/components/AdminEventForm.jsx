@@ -10,9 +10,21 @@ const EMPTY = {
   title: '', category: '게임전시', start_date: '', end_date: '',
   venue: '', venue_address: '', venue_lat: '', venue_lng: '',
   organizer: '', description: '', ticket_url: '', ticket_open_date: '', ticket_open_time: '',
-  ticket_open_note: '', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '',
+  ticket_open_note: '', ticket_status: 'unknown', admission_fee: '', website: '', poster_url: '', trust_score: '3', tags: '', past_events: '',
   crowd_level: '', floor_plan_url: '', floor_plan_note: '', seoul_place_name: '', booth_info_note: '', stage_info_note: '', goods_info_note: '', cosplay_info_note: '',
 }
+
+// 예매 상태. DB 기본값이 'unknown'이라 "아직 모른다"가 빈칸이 아니라 하나의 값이다.
+//
+// 이 값이 화면 여섯 군데를 가른다 — 목록 카드의 매진 배지(EventCard), 상세의 예매 버튼과
+// 하단 고정 바(EventCta), 핵심정보 타일(EventDetailPage), 혼잡도 상향(CrowdBadge),
+// 홈의 "매진 숨기기" 필터(HomePage). 그런데 지금까지 이 폼에 칸이 없어서 SQL로만 바꿀 수
+// 있었고, 그래서 매진 표시가 사실상 한 번도 뜨지 않았다.
+const TICKET_STATUSES = [
+  { value: 'unknown', label: '미정 — 아직 모름' },
+  { value: 'available', label: '예매 중' },
+  { value: 'soldout', label: '매진' },
+]
 
 const CROWD_LEVELS = [
   { value: '', label: '(추정 근거 없음 — 표시 안 함)' },
@@ -39,10 +51,12 @@ function toForm(event) {
     ticket_open_date: event.ticketOpenDate ?? '',
     ticket_open_time: event.ticketOpenTime ?? '',
     ticket_open_note: event.ticketOpenNote ?? '',
+    ticket_status: event.ticketStatus ?? 'unknown',
     admission_fee: event.admissionFee ?? '',
     website: event.website ?? '',
     poster_url: event.posterUrl ?? '',
     crowd_level: event.crowdLevel ?? '',
+    past_events: (event.pastEvents ?? []).join('\n'),
     floor_plan_url: event.floorPlanUrl ?? '',
     floor_plan_note: event.floorPlanNote ?? '',
     seoul_place_name: event.seoulPlaceName ?? '',
@@ -70,6 +84,10 @@ function toPayload(form) {
     ticket_url: form.ticket_url || null,
     ticket_open_date: form.ticket_open_date || null,
     ticket_open_time: form.ticket_open_time || null,
+    // NOT NULL 컬럼이라 빈 문자열을 null로 떨구면 안 된다.
+    ticket_status: form.ticket_status || 'unknown',
+    // 한 줄에 하나. 화면(TrustScore)이 "취소"·"연기"가 들어간 줄만 경고 아이콘으로 바꾼다.
+    past_events: form.past_events.split('\n').map(s => s.trim()).filter(Boolean),
     ticket_open_note: form.ticket_open_note || null,
     admission_fee: form.admission_fee || null,
     website: form.website || null,
@@ -238,8 +256,14 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
               <input type="text" value={form.ticket_open_time} onChange={set('ticket_open_time')} className={cls} placeholder="ex) 20:00, 오후 8시" />
             </Field>
           </div>
+          <Field label="예매 상태">
+            <select value={form.ticket_status} onChange={set('ticket_status')} className={cls}>
+              {TICKET_STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
           <p className="text-[11px] text-zinc-400 -mt-2">
-            예매 사이트명은 별도 입력 없이 예매 URL에서 자동으로 표시됩니다.
+            “매진”으로 두면 목록 카드에 매진 배지가 붙고, 예매 버튼이 눌리지 않게 바뀌며,
+            홈의 “매진 숨기기”에 걸립니다. 예매 사이트명은 예매 URL에서 자동으로 표시됩니다.
           </p>
 
           <Field label="사전예매 안내 (예매 단계가 여러 개일 때만)">
@@ -368,6 +392,20 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
           <Field label="신뢰도 (0~5)">
             <input type="number" min="0" max="5" value={form.trust_score} onChange={set('trust_score')} className={cls} />
           </Field>
+
+          <Field label="과거 개최 이력 (한 줄에 하나)">
+            <textarea
+              value={form.past_events}
+              onChange={set('past_events')}
+              rows={3}
+              className={cls + ' resize-none'}
+              placeholder={'ex)\n2025년 정상 개최\n2024년 태풍으로 하루 연기\n2023년 정상 개최'}
+            />
+          </Field>
+          <p className="text-[11px] text-zinc-400 -mt-2">
+            상세 화면의 “행사 신뢰도”에 나옵니다. “취소”·“연기”가 들어간 줄은 경고 표시로
+            바뀝니다. 신뢰도와 이력이 둘 다 비면 그 칸은 화면에 아예 안 나옵니다.
+          </p>
 
           <Field label="태그 (쉼표 구분)">
             <input type="text" value={form.tags} onChange={set('tags')} className={cls} placeholder="ex) 게임전시, 부산, BEXCO" />

@@ -10,7 +10,7 @@ import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { FOCUS_RING } from './ui/focusRing'
-import { boothHue, splitBoothName } from '../lib/boothKinds'
+import { boothHue, splitBoothName, slotKindLabel } from '../lib/boothKinds'
 import { parseLocalDate } from '../data/events'
 
 // "14:30:00" -> "14:30". DB의 time 값은 초까지 온다.
@@ -255,6 +255,13 @@ function Slot({ slot, stage, past = false, live = false, showStage, onJump, onEd
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink leading-snug">
           {slot.title}
+          {/* 종류는 제목 옆에 작게. 줄을 따로 쓰면 시간표가 두 배로 길어진다 —
+              무대 탭은 한 화면에 몇 시에 뭐가 있는지를 훑는 자리다. */}
+          {slotKindLabel(slot.kind) && (
+            <span className="ml-1.5 align-middle text-[10px] font-medium text-zinc-400 bg-surface-2 px-1.5 py-0.5 rounded-md">
+              {slotKindLabel(slot.kind)}
+            </span>
+          )}
           {onEdit && (
             <button
               type="button"

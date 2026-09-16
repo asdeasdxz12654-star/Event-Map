@@ -297,9 +297,13 @@ export default function EventDetailPage() {
           {/* 실시간 인구 혼잡도 (서울시 주요 120장소에 한함) */}
           <LiveCongestion placeName={showingLiveCongestion ? event.seoulPlaceName : null} />
 
-          <SectionCard title="행사 신뢰도">
-            <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
-          </SectionCard>
+          {/* 점수도 이력도 없으면 카드 자체를 안 그린다 — "행사 신뢰도"라는 제목만
+              달린 빈 상자는 알려주는 게 없으면서 자리만 차지한다. */}
+          {(typeof event.trustScore === 'number' || event.pastEvents?.length > 0) && (
+            <SectionCard title="행사 신뢰도">
+              <TrustScore score={event.trustScore} pastEvents={event.pastEvents} />
+            </SectionCard>
+          )}
 
           {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 — 탭이 안 생겼다고 정보가
               사라지면 안 된다("등록된 게 없다"와 "화면이 원래 다르다"는 다르다). */}

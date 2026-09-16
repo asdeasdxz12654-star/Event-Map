@@ -65,6 +65,23 @@ export function formatPrice(price, priceNote) {
 // ── 부스 운영 주체 ──────────────────────────────────────────────────────────
 // 같은 "부스"라도 기업 부스(수십 개)와 창작자 부스(수백~수천 개)와 주최 직영 체험은
 // 규모도 찾는 방법도 다르다. 이 값 하나가 부스 탭의 세그먼트와 표시 방식을 정한다.
+// 무대 프로그램의 종류. DB check 제약(stages_2026-09-15.sql:50)과 값이 같아야 한다.
+//
+// 컬럼·매핑·Worker 화이트리스트는 처음부터 있었는데 입력칸도 표시도 없어서, 넣을 수도
+// 볼 수도 없는 값이었다. 목록을 여기 두는 이유는 폼(StageAdmin)과 표시(StageTimeline)가
+// 같은 표를 봐야 하기 때문이다.
+export const SLOT_KINDS = [
+  { id: 'talk', label: '토크' },
+  { id: 'live', label: '공연' },
+  { id: 'cosplay', label: '코스프레' },
+  { id: 'event', label: '이벤트' },
+  { id: 'etc', label: '기타' },
+]
+
+export function slotKindLabel(id) {
+  return SLOT_KINDS.find(k => k.id === id)?.label ?? null
+}
+
 export const OPERATORS = [
   { id: 'company', label: '기업' },
   { id: 'creator', label: '창작자' },

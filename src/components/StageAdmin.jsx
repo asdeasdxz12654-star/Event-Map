@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
-import { splitBoothName } from '../lib/boothKinds'
+import { splitBoothName, SLOT_KINDS } from '../lib/boothKinds'
 import { FOCUS_RING } from './ui/focusRing'
 import { ADMIN_INPUT as input } from './ui/formStyles'
 import { useFormFields } from '../hooks/useFormFields'
 
 const EMPTY_STAGE = { name: '', booth_id: '', location: '' }
-const EMPTY_SLOT = { stage_id: '', day: '', start_time: '', end_time: '', title: '', performer: '', note: '' }
+const EMPTY_SLOT = { stage_id: '', day: '', start_time: '', end_time: '', title: '', kind: '', performer: '', note: '' }
 
 // 입력칸은 null을 못 다룬다(value={null}이면 비제어 입력이 된다). 전부 문자열로 맞춘다.
 function stageToForm(s) {
@@ -21,6 +21,7 @@ function slotToForm(s) {
     start_time: s.startTime?.slice(0, 5) ?? '',
     end_time: s.endTime?.slice(0, 5) ?? '',
     title: s.title ?? '',
+    kind: s.kind ?? '',
     performer: s.performer ?? '',
     note: s.note ?? '',
   }
@@ -110,6 +111,8 @@ export default function StageAdmin({ eventId, stages, booths, editingSlot = null
       start_time: slotForm.start_time || null,
       end_time: slotForm.end_time || null,
       title: slotForm.title.trim(),
+      // 비우면 종류 없음. DB check가 null을 허용한다.
+      kind: slotForm.kind || null,
       performer: slotForm.performer.trim() || null,
       note: slotForm.note.trim() || null,
     }
@@ -207,6 +210,10 @@ export default function StageAdmin({ eventId, stages, booths, editingSlot = null
             <input type="time" value={slotForm.start_time} onChange={setSlot('start_time')} className={input} />
             <input type="time" value={slotForm.end_time} onChange={setSlot('end_time')} className={input} />
             <input value={slotForm.title} onChange={setSlot('title')} placeholder="프로그램명 *" className={`${input} w-36`} required />
+            <select value={slotForm.kind} onChange={setSlot('kind')} className={input} aria-label="프로그램 종류">
+              <option value="">종류 없음</option>
+              {SLOT_KINDS.map(k => <option key={k.id} value={k.id}>{k.label}</option>)}
+            </select>
             <input value={slotForm.performer} onChange={setSlot('performer')} placeholder="출연자" className={`${input} w-24`} />
             <input value={slotForm.note} onChange={setSlot('note')} placeholder="설명" className={`${input} flex-1 min-w-[120px]`} />
             <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">

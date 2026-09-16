@@ -1,20 +1,29 @@
 name: Verify event data
 
-# 이미 저장된 행사 데이터(포스터 이미지 · 행사장 좌표)를 검증한다.
+# 이미 저장된 행사 데이터를 검증하고, 비어 있는 값을 메운다.
+#
 # 검색 결과 1순위를 검증 없이 저장하던 시절에 들어온 "무관한 썸네일 / 엉뚱한 위치"를
-# 찾아내기 위한 것이라, 정기 실행이 아니라 Actions 탭에서 필요할 때 수동으로 돌린다.
+# 찾아내기 위해 만들었고, 그래서 정기 실행이 아니라 Actions 탭에서 필요할 때 돌린다.
 #
 # 기본값은 "검사만" 이다 — 무엇이 잘못됐는지 로그로 먼저 확인하고,
 # 납득이 되면 apply를 켜서 다시 돌리면 실제로 고친다.
+#
+# 2026-09-16: 로컬에서만 돌릴 수 있던 보수 스크립트 셋을 여기로 들였다.
+#   fix-organizers / fix-venue-numbers / fix-venue-addresses
+# 세 파일 다 만들어 두고 워크플로도 npm 스크립트도 없어서, 사실상 아무도 못 돌리는
+# 상태였다. 지금 행사 51건 중 공식사이트 26·예매링크 17건만 채워져 있는 것과 무관하지 않다.
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: '무엇을 검증할지'
+        description: '무엇을 할지'
         type: choice
         options:
           - posters
           - coords
+          - organizers
+          - venue-cleanup
+          - venue-addresses
           - both
         default: both
       apply:
@@ -55,3 +64,41 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      # 주최사가 비어 있는 행사에 뉴스 검색 + Groq로 주최를 채운다.
+      - name: 주최사 채우기
+        if: inputs.target == 'organizers' || inputs.target == 'both'
+        run: node src/fix-organizers.mjs ${{ inputs.apply && '--fix' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+      # venue에 "장충체육관(09/13)"처럼 날짜가 섞여 들어간 것을 정리한다.
+      - name: 장소명 정리
+        if: inputs.target == 'venue-cleanup' || inputs.target == 'both'
+        run: node src/fix-venue-numbers.mjs ${{ inputs.apply && '--fix' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      # 주소 채우기는 dry-run 플래그가 없어 돌리면 무조건 쓴다.
+      # 그래서 'both'에 넣지 않고, apply를 켰을 때만 돌게 한다 —
+      # "보고만" 이라고 적어놓고 실제로 쓰는 단계가 섞여 있으면 그 워크플로 전체를
+      # 못 믿게 된다.
+      - name: 주소·좌표 채우기 (쓰기 전용)
+        if: inputs.target == 'venue-addresses' && inputs.apply
+        run: node src/fix-venue-addresses.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+      - name: 안내
+        if: inputs.target == 'venue-addresses' && !inputs.apply
+        run: |
+          echo "주소·좌표 채우기는 '보고만' 모드가 없습니다(스크립트에 dry-run 플래그가 없음)."
+          echo "돌리려면 apply를 켜고 다시 실행하세요."
