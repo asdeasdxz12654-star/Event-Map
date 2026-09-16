@@ -18,7 +18,16 @@ export function isOurStorage(url) {
   return typeof url === 'string' && url.includes('/storage/v1/object/public/')
 }
 
+// 바이트만 필요할 때. 포스터 쪽(poster-storage.mjs)이 이 형태로 쓴다.
 export async function downloadImage(url) {
+  return (await downloadImageTyped(url)).buffer
+}
+
+// 바이트 + 서버가 밝힌 실제 형식.
+//
+// 주소의 확장자는 믿을 수 없다 — .jpg로 끝나는데 서버가 avif를 주는 경우가 흔하다.
+// 원본을 그대로 올릴지 판단하려면 진짜 형식을 알아야 한다.
+export async function downloadImageTyped(url) {
   const res = await fetch(url, {
     headers: { 'User-Agent': UA },
     redirect: 'follow',
@@ -27,6 +36,7 @@ export async function downloadImage(url) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const type = res.headers.get('content-type') ?? ''
   if (!type.startsWith('image/')) throw new Error(`이미지가 아님 (${type})`)
+  const contentType = type.split(';')[0].trim()
   const declared = Number(res.headers.get('content-length') ?? 0)
   if (declared > MAX_DOWNLOAD_BYTES) throw new Error(`너무 큼 (${(declared / 1048576).toFixed(1)}MB)`)
 
@@ -42,7 +52,7 @@ export async function downloadImage(url) {
     }
     chunks.push(chunk)
   }
-  return Buffer.concat(chunks.map(c => Buffer.from(c)))
+  return { buffer: Buffer.concat(chunks.map(c => Buffer.from(c))), contentType }
 }
 
 // 이미지 종류별 처리 규칙.
@@ -77,9 +87,9 @@ export async function mirrorImage(supabase, {
   if (!id || !sourceUrl?.startsWith('http')) return null
   if (isOurStorage(sourceUrl)) return null
 
-  let original
+  let original, originalType
   try {
-    original = await downloadImage(sourceUrl)
+    ({ buffer: original, contentType: originalType } = await downloadImageTyped(sourceUrl))
   } catch (err) {
     // 여기서 실패하는 건 대부분 "원본이 이미 사라졌다"는 뜻이다. 그 사실을 로그로 남기는
     // 것이 이 스크립트의 부수적인 쓸모이기도 하다 — 깨진 주소를 찾아준다.
@@ -100,12 +110,18 @@ export async function mirrorImage(supabase, {
 
   // 변환 결과가 더 크면 원본을 그대로 올린다. 이미 잘 압축된 작은 png를 webp로 바꾸면
   // 커지는 경우가 있는데, 그때 굳이 큰 쪽을 쓸 이유가 없다.
-  const useOriginal = converted.byteLength >= original.byteLength
+  //
+  // 단, 버킷이 받아주는 형식일 때만이다. 서버가 avif를 주는 일이 흔한데(주소가 .jpg여도)
+  // 그걸 원본 그대로 올리면 버킷이 거절하거나, 더 나쁘게는 avif 바이트를 image/jpeg로
+  // 표시해 올려서 브라우저가 못 읽는 그림이 된다. 그럴 땐 변환본을 쓴다 —
+  // 조금 커지는 것보다 안 보이는 게 훨씬 나쁘다.
+  const BUCKET_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const useOriginal = converted.byteLength >= original.byteLength && BUCKET_TYPES.includes(originalType)
   const body = useOriginal ? original : converted
   const path = useOriginal
-    ? storagePath(prefix, id, sourceUrl).replace(/\.webp$/, extOf(sourceUrl))
+    ? storagePath(prefix, id, sourceUrl).replace(/\.webp$/, extOf(originalType))
     : storagePath(prefix, id, sourceUrl)
-  const contentType = useOriginal ? mimeOf(path) : 'image/webp'
+  const contentType = useOriginal ? originalType : 'image/webp'
 
   const summary = `${(original.byteLength / 1024).toFixed(0)}KB -> ${(body.byteLength / 1024).toFixed(0)}KB`
   if (dryRun) return { url: null, summary, path }
@@ -120,14 +136,10 @@ export async function mirrorImage(supabase, {
   return { url: data.publicUrl, summary, path }
 }
 
-function extOf(url) {
-  const m = /\.(jpe?g|png|gif|webp)(?:\?|#|$)/i.exec(url)
-  return m ? `.${m[1].toLowerCase()}` : '.jpg'
-}
-
-function mimeOf(path) {
-  if (path.endsWith('.png')) return 'image/png'
-  if (path.endsWith('.gif')) return 'image/gif'
-  if (path.endsWith('.webp')) return 'image/webp'
-  return 'image/jpeg'
+// 확장자는 서버가 밝힌 형식에서 뽑는다. 주소의 확장자를 쓰면 실제 바이트와 어긋난다.
+function extOf(contentType) {
+  if (contentType === 'image/png') return '.png'
+  if (contentType === 'image/gif') return '.gif'
+  if (contentType === 'image/webp') return '.webp'
+  return '.jpg'
 }

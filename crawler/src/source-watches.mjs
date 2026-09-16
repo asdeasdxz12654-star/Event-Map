@@ -139,8 +139,18 @@ async function imageSize(url) {
       signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) return null
-    const buf = Buffer.from(await res.arrayBuffer())
-    return imageSizeFromBytes(buf)
+
+    // Range를 무시하고 전부 보내는 서버가 있다. arrayBuffer()로 받으면 배치도 원본
+    // 수십 MB를 그대로 메모리에 올리게 되고, 한 페이지에 그런 이미지가 여러 장이면
+    // CI가 죽는다. 크기 정보는 파일 앞부분에 있으니 그만큼만 읽고 끊는다.
+    const chunks = []
+    let received = 0
+    for await (const chunk of res.body) {
+      chunks.push(Buffer.from(chunk))
+      received += chunk.byteLength
+      if (received >= IMAGE_HEAD_BYTES) break
+    }
+    return imageSizeFromBytes(Buffer.concat(chunks))
   } catch {
     return null
   }

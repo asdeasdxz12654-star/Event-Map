@@ -289,8 +289,15 @@ async function uploadImage(request, env, url) {
   const contentType = (request.headers.get('content-type') ?? '').split(';')[0].trim()
   if (!UPLOAD_TYPES.includes(contentType)) throw new HttpError(400, 'invalid_upload')
 
+  // 크기는 본문을 읽기 "전에" 먼저 본다. arrayBuffer()는 통째로 메모리에 올리므로,
+  // 읽고 나서 재면 이미 늦다 — 100MB짜리가 들어오면 그걸 다 담은 뒤에 413을 주게 되고
+  // 그 전에 아이솔레이트 메모리 한도(128MB)에 먼저 부딪힌다.
+  const declared = Number(request.headers.get('content-length') ?? 0)
+  if (declared > MAX_UPLOAD_BYTES) throw new HttpError(413, 'file_too_large')
+
   const bytes = new Uint8Array(await request.arrayBuffer())
   if (bytes.byteLength === 0) throw new HttpError(400, 'invalid_upload')
+  // Content-Length를 안 보내는 요청(청크 전송)도 있으므로 실제 크기로 한 번 더 막는다.
   if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new HttpError(413, 'file_too_large')
 
   // 파일 이름은 서버가 정한다. 클라이언트가 준 이름을 쓰면 경로 조작과 덮어쓰기를
@@ -298,8 +305,11 @@ async function uploadImage(request, env, url) {
   const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.slice('image/'.length)
   const name = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`
   const path = `${prefix}/${name}`
+  // 시크릿에 끝 슬래시가 붙어 있으면 ".../storage//..." 같은 주소가 만들어진다.
+  // Storage는 그걸 다른 경로로 보기 때문에 올린 파일을 못 찾게 된다.
+  const base = (env.SUPABASE_URL ?? '').replace(/\/+$/, '')
 
-  const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${UPLOAD_BUCKET}/${path}`, {
+  const res = await fetch(`${base}/storage/v1/object/${UPLOAD_BUCKET}/${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': contentType,
@@ -314,7 +324,7 @@ async function uploadImage(request, env, url) {
     throw new HttpError(502, 'upload_failed')
   }
 
-  return `${env.SUPABASE_URL}/storage/v1/object/public/${UPLOAD_BUCKET}/${path}`
+  return `${base}/storage/v1/object/public/${UPLOAD_BUCKET}/${path}`
 }
 
 async function supabase(env, method, path, body) {

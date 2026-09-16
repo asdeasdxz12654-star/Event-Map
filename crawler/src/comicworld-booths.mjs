@@ -45,21 +45,36 @@ export function parseFares(html) {
 }
 
 // 부스 카드. 번호가 아직 없으면 "미배정"이 들어 있다 — 그건 번호 없음으로 본다.
+//
+// 같은 동아리가 두 번 나온다
+//   페이지가 요일 패널(d0=첫날, d1=둘째날) 둘로 나뉘어 있고, 양일 참가 동아리는 양쪽에
+//   모두 실린다. 2026-09-16 확인: 337회 64칸 중 27칸, 338회 103칸 중 44칸이 같은 동아리다.
+//   그대로 넣으면 부스 목록에 같은 이름이 두 줄씩 생긴다 — 실제로 첫 수집에서 그렇게 됐다.
+//
+//   data-itid가 동아리의 고유 번호라 그걸로 묶는다. 요일별로 부스 번호가 다를 수 있지만
+//   event_booths에는 요일 칸이 없어 어차피 한쪽만 담을 수 있다. 번호가 붙은 쪽을
+//   남긴다 — 둘 다 미배정이면 어느 쪽이든 같다.
 export function parseBooths(html) {
-  const booths = []
+  const byId = new Map()
   for (const m of html.matchAll(/<a\b[^>]*class=["'][^"']*bc-card[^"']*["'][\s\S]*?<\/a>/gi)) {
     const card = m[0]
     const name = pick(card, /<div[^>]*class=["'][^"']*bc-booth-name[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
     if (!name) continue
     const rawNo = pick(card, /<div[^>]*class=["'][^"']*bc-booth-num[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
     const itid = /data-itid=["'](\d+)["']/.exec(card)?.[1] ?? null
-    booths.push({
+    const booth = {
       name,
       boothNo: !rawNo || rawNo === '미배정' ? null : rawNo,
       itid,
-    })
+    }
+    // itid가 없는 카드(형식이 바뀐 경우)는 이름으로 묶는다. 우리 쪽 키가 이름이라
+    // 어차피 같은 이름 둘은 구분해 담을 수 없다.
+    const key = itid ?? `name:${name}`
+    const seen = byId.get(key)
+    if (!seen) byId.set(key, booth)
+    else if (!seen.boothNo && booth.boothNo) byId.set(key, booth)
   }
-  return booths
+  return [...byId.values()]
 }
 
 function pick(html, re) {
@@ -160,10 +175,16 @@ async function syncBooths(event, booths) {
   const byName = new Map(existing.map(b => [b.name, b]))
   const toInsert = []
   const toUpdate = []
+  // 이번에 넣기로 한 이름. parseBooths가 itid로 이미 묶었지만, 서로 다른 동아리가
+  // 같은 이름을 쓰는 경우가 남는다 — 우리 쪽 키가 이름이라 그때도 한 줄만 넣어야 한다
+  // (event_booths에 creator 부분 유니크 인덱스가 걸려 있어 안 그러면 저장이 통째로 실패한다).
+  const queued = new Set()
 
   booths.forEach((booth, i) => {
     const found = byName.get(booth.name)
     if (!found) {
+      if (queued.has(booth.name)) return
+      queued.add(booth.name)
       toInsert.push({
         event_id: event.id,
         name: booth.name,
