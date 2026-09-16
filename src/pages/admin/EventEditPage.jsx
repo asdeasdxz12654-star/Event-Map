@@ -14,6 +14,8 @@ import { useEventBoothItems } from '../../hooks/useEventBoothItems'
 import { useEventStages } from '../../hooks/useEventStages'
 import { useEventCosplayers } from '../../hooks/useEventCosplayers'
 import { useEventPerformers } from '../../hooks/useEventPerformers'
+import { useEventTabs } from '../../hooks/useEventTabs'
+import TabConfigEditor from '../../components/admin/TabConfigEditor'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useUIFeedback } from '../../contexts/UIFeedbackContext'
 import { adminApi } from '../../lib/adminApi'
@@ -36,6 +38,7 @@ const TABS = [
   { id: 'goods', label: '굿즈' },
   { id: 'stage', label: '무대' },
   { id: 'cosplay', label: '코스어' },
+  { id: 'tabs', label: '탭 구성' },
 ]
 
 export default function EventEditPage() {
@@ -71,6 +74,7 @@ function EditScreen({ id }) {
   const { stages, slots } = useEventStages(id)
   const { cosplayers } = useEventCosplayers(id)
   const { performers } = useEventPerformers(id)
+  const { tabs: tabConfig } = useEventTabs(id)
   const [tab, setTab] = useState('basic')
   const [editing, setEditing] = useState(false)
   const [unlocking, setUnlocking] = useState(false)
@@ -161,6 +165,8 @@ function EditScreen({ id }) {
             goods: goodsItems.length,
             stage: isConcert ? performers.length : slots.length,
             cosplay: cosplayers.length,
+            // 탭 구성은 "설정한 개수"라 0이 정상이다. 숫자를 안 보여준다.
+            tabs: null,
           }[t.id]
           return (
             <button
@@ -205,6 +211,8 @@ function EditScreen({ id }) {
       {tab === 'cosplay' && (
         <CosplayerGrid eventId={event.id} cosplayers={cosplayers} booths={booths} note={event.cosplayInfoNote} />
       )}
+
+      {tab === 'tabs' && <TabConfigEditor eventId={event.id} config={tabConfig} />}
 
       {editing && <AdminEventForm event={event} onClose={() => setEditing(false)} />}
     </div>

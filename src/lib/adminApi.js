@@ -109,6 +109,12 @@ export const adminApi = {
   updateCosplayer: (id, data) => req('PATCH', `/admin/cosplayers/${encodeURIComponent(id)}`, data),
   deleteCosplayer: (id) => req('DELETE', `/admin/cosplayers/${encodeURIComponent(id)}`),
 
+  // 상세페이지 탭 구성. key가 'booths'|'stage'|'goods'|'cosplay'면 기본 탭을 덮어쓰고,
+  // 그 외 슬러그면 새 탭이 된다(builtin 값이 둘을 가른다).
+  createTab: (eventId, data) => req('POST', `/admin/events/${encodeURIComponent(eventId)}/tabs`, data),
+  updateTab: (id, data) => req('PATCH', `/admin/tabs/${encodeURIComponent(id)}`, data),
+  deleteTab: (id) => req('DELETE', `/admin/tabs/${encodeURIComponent(id)}`),
+
   // 크롤러 자동 갱신을 다시 켠다. updateEvent가 admin_edited_at을 찍고 나면 크롤러가
   // 그 행사를 통째로 건너뛰는데, 지금까지 되돌릴 방법이 없었다.
   unlockEvent: (id) => req('POST', `/admin/events/${encodeURIComponent(id)}/unlock`),

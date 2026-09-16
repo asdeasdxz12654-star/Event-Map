@@ -460,6 +460,12 @@ const SUB_RESOURCES = {
     columns: ['booth_id', 'kind', 'name', 'price', 'price_note', 'note', 'image_url',
       'sort_order', 'title', 'status'],
   },
+  // 상세페이지 탭의 이름·순서·표시 여부와, 직접 만든 탭의 본문.
+  // 행이 없으면 화면은 예전처럼 동작한다 — 이 표의 행은 기본 동작을 덮어쓰는 예외다.
+  tabs: {
+    table: 'event_tabs',
+    columns: ['key', 'builtin', 'label', 'body', 'visible', 'sort_order'],
+  },
 }
 const subResourcePattern = Object.keys(SUB_RESOURCES).join('|')
 const SUB_OF_EVENT_RE = new RegExp(`^/admin/events/([^/]+)/(${subResourcePattern})$`)

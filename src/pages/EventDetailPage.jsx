@@ -34,6 +34,9 @@ import { useEventBoothItems } from '../hooks/useEventBoothItems'
 import { useEventPerformers } from '../hooks/useEventPerformers'
 import { useEventStages } from '../hooks/useEventStages'
 import { useEventCosplayers } from '../hooks/useEventCosplayers'
+import { useEventTabs } from '../hooks/useEventTabs'
+import { mergeTabs, hiddenBuiltinKeys } from '../lib/tabConfig'
+import CustomTab from '../components/CustomTab'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
@@ -54,6 +57,8 @@ export default function EventDetailPage() {
   const { performers } = useEventPerformers(id)
   const { stages, slots } = useEventStages(id)
   const { cosplayers } = useEventCosplayers(id)
+  // 관리자가 정한 탭 구성. 행이 없으면 빈 배열이고, 화면은 지금까지와 똑같이 그려진다.
+  const { tabs: tabConfig } = useEventTabs(id)
   const { toast, confirm } = useUIFeedback()
   const [showEditForm, setShowEditForm] = useState(false)
   // 탭을 페이지가 들고 있어야 탭끼리 서로를 가리킬 수 있다 — 부스 카드의
@@ -179,6 +184,9 @@ export default function EventDetailPage() {
   // 게임음악 행사의 "출연진·세트리스트"는 시간표가 아니라 라인업이라 성격이 다르다.
   // 그쪽은 예전 구조(event_performers)를 그대로 쓰고, 나머지 행사만 시간표를 쓴다.
   const isConcert = event.category === '게임음악'
+  // 관리자가 명시적으로 끈 탭. "데이터가 없어서 탭이 안 생긴 것"과 구분해야 한다 —
+  // 전자는 개요 아래에도 넣지 않고, 후자는 넣는다.
+  const hiddenTabKeys = hiddenBuiltinKeys(tabConfig)
   const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl || !!event.floorPlanNote
   const hasStageTab = isConcert ? performers.length > 0 : slots.length > 0
   const hasGoodsTab = goodsItems.length > 0 || !!event.goodsInfoNote
@@ -254,7 +262,7 @@ export default function EventDetailPage() {
   ]
 
 
-  const tabs = [
+  const baseTabs = [
     {
       id: 'overview',
       label: '개요',
@@ -295,10 +303,10 @@ export default function EventDetailPage() {
 
           {/* 탭으로 갈라지지 않은 섹션은 여기 남는다 — 탭이 안 생겼다고 정보가
               사라지면 안 된다("등록된 게 없다"와 "화면이 원래 다르다"는 다르다). */}
-          {!hasStageTab && stageSection}
-          {!hasBoothTab && boothSection}
-          {!hasGoodsTab && goodsSection}
-          {!hasCosplayTab && cosplaySection}
+          {!hasStageTab && !hiddenTabKeys.has('stage') && stageSection}
+          {!hasBoothTab && !hiddenTabKeys.has('booths') && boothSection}
+          {!hasGoodsTab && !hiddenTabKeys.has('goods') && goodsSection}
+          {!hasCosplayTab && !hiddenTabKeys.has('cosplay') && cosplaySection}
 
           {/* 자주 찾지는 않지만 있어야 하는 것들. 팩트 타일에서 밀려난 값이 여기 모인다. */}
           {(event.organizer || event.ticketOpenNote || event.tags?.length > 0) && (
@@ -356,6 +364,10 @@ export default function EventDetailPage() {
       render: () => cosplaySection,
     },
   ].filter(Boolean)
+
+  // 관리자가 정한 탭 구성(이름·순서·표시)과 직접 만든 탭을 얹는다.
+  // event_tabs에 행이 없으면 baseTabs가 그대로 나온다 — 지금까지와 똑같다.
+  const { tabs } = mergeTabs(baseTabs, tabConfig, tab => <CustomTab tab={tab} />)
 
   const backLink = (
     <Link to="/" className={`flex items-center gap-1.5 text-sm text-zinc-400 hover:text-ink transition-colors rounded ${FOCUS_RING}`}>
