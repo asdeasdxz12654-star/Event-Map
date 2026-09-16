@@ -43,6 +43,9 @@ export function mapEvent(row) {
     tags: row.tags ?? [],
     ticketStatus: row.ticket_status ?? 'unknown',
     createdAt: row.created_at ?? null,
+    // 관리자가 직접 수정해서 크롤러가 이 행을 건너뛰는지. 방문자 화면은 안 쓰지만,
+    // 어드민이 이 값을 보려면 mapEvent를 지나야 한다(useEvent가 이 변환만 쓴다).
+    adminEditedAt: row.admin_edited_at ?? null,
   }
 }
 

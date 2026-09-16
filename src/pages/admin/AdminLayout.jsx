@@ -17,6 +17,7 @@ import { FOCUS_RING } from '../../components/ui/focusRing'
 //   모바일에서는 가로 스크롤 줄로 접는다 — 좁은 화면에서 세로 목록은 본문을 밀어낸다.
 const MENU = [
   { to: '/admin', end: true, icon: 'home', label: '대시보드' },
+  { to: '/admin/events', icon: 'store', label: '행사 관리' },
   { to: '/admin/drafts', icon: 'list', label: '행사 검수' },
   { to: '/admin/sources', icon: 'bell', label: '소스 감시' },
 ]

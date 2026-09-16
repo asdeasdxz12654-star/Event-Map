@@ -18,6 +18,8 @@ const BookmarksPage = lazy(() => import('./pages/BookmarksPage'))
 const EventDetailPage = lazy(() => import('./pages/EventDetailPage'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const AdminDashboardPage = lazy(() => import('./pages/admin/DashboardPage'))
+const AdminEventsPage = lazy(() => import('./pages/admin/EventsPage'))
+const AdminEventEditPage = lazy(() => import('./pages/admin/EventEditPage'))
 const AdminDraftsPage = lazy(() => import('./pages/admin/DraftsPage'))
 const AdminSourcesPage = lazy(() => import('./pages/admin/SourcesPage'))
 
@@ -68,6 +70,9 @@ export default function App() {
                   유지한다(북마크해 둔 곳이 있다). */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboardPage />} />
+                <Route path="events" element={<AdminEventsPage />} />
+                <Route path="events/new" element={<AdminEventEditPage />} />
+                <Route path="events/:id" element={<AdminEventEditPage />} />
                 <Route path="drafts" element={<AdminDraftsPage />} />
                 <Route path="sources" element={<AdminSourcesPage />} />
               </Route>
