@@ -174,8 +174,7 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
             <Slot
               slot={slot}
               stage={stageLabel(slot)}
-              past={isToday && hhmm(slot.endTime ?? slot.startTime) < nowHm}
-              live={isToday && hhmm(slot.startTime) <= nowHm && (!slot.endTime || hhmm(slot.endTime) > nowHm)}
+              {...liveState(slot, isToday, nowHm)}
               showStage={showStages || !!slot.isCosplay}
               onJump={onJump}
               onRemove={isAdmin && !slot.isCosplay ? () => removeSlot(slot) : null}
@@ -205,6 +204,19 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
       {note && <p className="text-xs text-zinc-500 leading-relaxed">{note}</p>}
     </div>
   )
+}
+
+// 진행 중과 지난 것은 함께 참일 수 없다.
+//
+// 예전엔 둘을 따로 계산했는데, 끝 시각이 없는 프로그램(시작만 공지된 경우)은
+// "시작했으므로 지났다"와 "시작했고 안 끝났으므로 진행 중"이 동시에 참이 돼서
+// 흐려진 채로 강조되는 줄이 나왔다. 진행 중을 먼저 정하고 나머지를 지난 것으로 본다.
+function liveState(slot, isToday, nowHm) {
+  if (!isToday) return { past: false, live: false }
+  const start = hhmm(slot.startTime)
+  const end = hhmm(slot.endTime)
+  const live = start <= nowHm && (!end || end > nowHm)
+  return { live, past: !live && (end ?? start) < nowHm }
 }
 
 function NowLine({ time }) {

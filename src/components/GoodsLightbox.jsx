@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './icons'
 import { FOCUS_RING } from './ui/focusRing'
@@ -13,12 +13,20 @@ const STATUS_LABEL = { soldout: '품절', limited: '수량 한정', preorder: '�
 // 좌우로 넘겨 다음 굿즈로 갈 수 있다 — 하나 보고 닫고 또 누르는 걸 반복하지 않도록.
 export default function GoodsLightbox({ items, index, booths, onIndexChange, onClose, onJump }) {
   const item = items[index]
+  // 호출부가 인라인 화살표로 넘기는 콜백이라, 의존성에 넣으면 부모가 다시 그릴 때마다
+  // 이펙트가 통째로 다시 돈다(배경 스크롤 잠금을 풀었다 걸었다 한다).
+  // 최신 값은 ref로 읽고 이펙트는 열릴 때 한 번만 돌린다. Sheet와 같은 이유다.
+  const handlers = useRef({ onClose, onIndexChange, index, count: items.length })
+  handlers.current = { onClose, onIndexChange, index, count: items.length }
 
   useEffect(() => {
     const onKey = e => {
-      if (e.key === 'Escape') onClose()
-      else if (e.key === 'ArrowRight') onIndexChange((index + 1) % items.length)
-      else if (e.key === 'ArrowLeft') onIndexChange((index - 1 + items.length) % items.length)
+      const { onClose: close, onIndexChange: move, index: i, count } = handlers.current
+      if (e.key === 'Escape') close()
+      // 목록이 비면(실시간으로 전부 삭제) 나눗셈이 NaN이 된다 — 그땐 넘길 곳도 없다.
+      else if (count === 0) return
+      else if (e.key === 'ArrowRight') move((i + 1) % count)
+      else if (e.key === 'ArrowLeft') move((i - 1 + count) % count)
     }
     const { overflow } = document.body.style
     document.body.style.overflow = 'hidden'
@@ -27,7 +35,8 @@ export default function GoodsLightbox({ items, index, booths, onIndexChange, onC
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = overflow
     }
-  }, [index, items.length, onClose, onIndexChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!item) return null
 

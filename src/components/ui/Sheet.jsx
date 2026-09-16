@@ -18,6 +18,14 @@ const FOCUSABLE =
 export default function Sheet({ title, onClose, children, footer }) {
   const panelRef = useRef(null)
   const openerRef = useRef(null)
+  // onClose는 호출부에서 대개 인라인 화살표 함수로 온다 — 부모가 다시 그릴 때마다
+  // 새 함수가 되므로, 이걸 의존성에 넣으면 아래 이펙트가 매 렌더 다시 돈다.
+  // 그러면 정리 단계가 포커스를 시트 밖(열었던 버튼)으로 보내고 설정 단계가 다시
+  // 시트 안 첫 요소로 가져와서, 시트 안에서 스위치 하나 누를 때마다 포커스가 튄다.
+  // 실제로 홈 필터 시트에서 "매진 숨기기"를 켜면 그 자리에서 포커스를 잃었다.
+  // 이펙트는 열릴 때 한 번만 돌리고, 최신 onClose는 ref로 읽는다.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
   useEffect(() => {
     openerRef.current = document.activeElement
@@ -28,7 +36,7 @@ export default function Sheet({ title, onClose, children, footer }) {
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        closeRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -54,7 +62,9 @@ export default function Sheet({ title, onClose, children, footer }) {
       document.body.style.overflow = overflow
       openerRef.current?.focus?.()
     }
-  }, [onClose])
+    // 의존성은 비워 둔다 — 열릴 때 한 번만 잠그고 닫힐 때 한 번만 되돌린다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return createPortal(
     <div
