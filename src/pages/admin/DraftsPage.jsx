@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { useAdmin } from '../contexts/AdminContext'
-import { useEventDrafts, setDraftStatus } from '../hooks/useEventDrafts'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { useUIFeedback } from '../contexts/UIFeedbackContext'
-import AdminGate from '../components/admin/AdminGate'
-import SourceWatchPanel from '../components/SourceWatchPanel'
+import { useEventDrafts, setDraftStatus } from '../../hooks/useEventDrafts'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle'
+import { useUIFeedback } from '../../contexts/UIFeedbackContext'
 
 const TABS = [
   { value: 'pending', label: '검수 대기' },
@@ -14,34 +11,19 @@ const TABS = [
 
 const CONFIDENCE_LABEL = { high: '높음', medium: '보통', low: '낮음' }
 
-export default function AdminDraftsPage() {
+// 로그인 문과 바깥 틀은 AdminLayout이 갖고 있다. 이 화면은 본문만 그린다.
+//
+// 소스 감지 패널이 예전엔 이 화면 위에 얹혀 있었는데 /admin/sources로 옮겼다.
+// 둘은 성격이 다른 일이다 — 검수는 쌓여 있는 일감이고, 감지는 "지금 가서 보라"는
+// 신호다. 대시보드가 둘을 각각 세어 보여주므로 한 화면에 겹쳐둘 이유가 없어졌다.
+export default function DraftsPage() {
   useDocumentTitle('행사 검수')
-  return (
-    <AdminGate title="행사 검수">
-      <DraftsScreen />
-    </AdminGate>
-  )
-}
-
-// 목록 조회를 문 안쪽 컴포넌트로 내린다. 바깥에 두면 로그인하지 않은 방문자가 들어와도
-// 조회가 한 번 나가고, 그 401이 adminApi에서 토큰을 지우는 처리를 깨운다.
-function DraftsScreen() {
-  const { logout } = useAdmin()
   const [status, setStatus] = useState('pending')
   const { drafts, loading, error, refresh } = useEventDrafts(status)
 
   return (
-    <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-ink">행사 검수</h1>
-        <button onClick={logout} className="text-sm text-zinc-400 hover:text-ink transition-colors">
-          관리자 모드 종료
-        </button>
-      </div>
-
-      {/* 공식 소스 감지 — 검수 대기 목록보다 위에 둔다. "새 정보가 올라왔다"는
-          지금 바로 움직여야 하는 신호이고, 아래 목록은 쌓여 있는 일이다. */}
-      <SourceWatchPanel />
+    <div>
+      <h2 className="text-lg font-semibold text-ink mb-3">행사 검수</h2>
 
       <div className="flex gap-2 mb-6">
         {TABS.map(tab => (
