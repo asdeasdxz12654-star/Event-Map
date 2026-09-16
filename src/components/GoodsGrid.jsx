@@ -55,6 +55,27 @@ export default function GoodsGrid({ items, booths, note, focusBoothId, onJump })
     return [...counts].map(([label, count]) => ({ id: label, label, count }))
   }, [goods, boothById])
 
+  // 타이틀 축이 부스 축과 똑같은 묶음이면 필터를 두 번 보여줄 이유가 없다.
+  //
+  // itemTitle()은 item.title이 비어 있으면 부스 이름을 타이틀로 쓴다. 호요랜드처럼
+  // 부스가 곧 게임 타이틀인 행사에서는 그 대체 덕분에 게임 필터가 그냥 동작하지만,
+  // 그러면 "부스"와 "타이틀"이 글자 그대로 같은 목록이 된다 — 실제로 굿즈 38건이
+  // 전부 title이 비어 있어서 두 버튼이 같은 것을 보여주고 있었다.
+  //
+  // 두 축이 정말 다른 건 한 부스가 여러 타이틀을 다룰 때뿐이다(넥슨 부스의 메이플·던파).
+  // 타이틀 하나가 부스 하나에만 걸리고 개수도 같으면 같은 묶음이므로 감춘다.
+  const titleIsRedundant = useMemo(() => {
+    if (titleOptions.length !== boothOptions.length) return false
+    const boothsOfTitle = new Map()
+    for (const g of goods) {
+      const t = itemTitle(g, boothById.get(g.boothId))
+      if (!t) continue
+      if (!boothsOfTitle.has(t)) boothsOfTitle.set(t, new Set())
+      boothsOfTitle.get(t).add(g.boothId)
+    }
+    return [...boothsOfTitle.values()].every(set => set.size === 1)
+  }, [goods, titleOptions, boothOptions, boothById])
+
   const buckets = useMemo(() => priceBuckets(goods), [goods])
   const bucket = buckets.find(b => b.id === bucketId) ?? null
 
@@ -95,7 +116,7 @@ export default function GoodsGrid({ items, booths, note, focusBoothId, onJump })
 
   const axes = [
     boothOptions.length > 1 && { id: 'booth', label: '부스', on: !!boothId },
-    titleOptions.length > 1 && { id: 'title', label: '타이틀', on: !!title },
+    !titleIsRedundant && titleOptions.length > 1 && { id: 'title', label: '타이틀', on: !!title },
     buckets.length > 1 && { id: 'price', label: '가격', on: !!bucket },
   ].filter(Boolean)
 
