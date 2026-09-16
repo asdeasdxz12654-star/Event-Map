@@ -3,8 +3,9 @@ import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
 import { splitBoothName } from '../lib/boothKinds'
 import { FOCUS_RING } from './ui/focusRing'
+import { ADMIN_INPUT as input } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 
-const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_STAGE = { name: '', booth_id: '', location: '' }
 const EMPTY_SLOT = { stage_id: '', day: '', start_time: '', end_time: '', title: '', performer: '', note: '' }
 
@@ -19,12 +20,10 @@ const EMPTY_SLOT = { stage_id: '', day: '', start_time: '', end_time: '', title:
 export default function StageAdmin({ eventId, stages, booths }) {
   const { toast, confirm } = useUIFeedback()
   const [open, setOpen] = useState(false)
-  const [stageForm, setStageForm] = useState(EMPTY_STAGE)
-  const [slotForm, setSlotForm] = useState(EMPTY_SLOT)
+  const [stageForm, setStage, setStageForm] = useFormFields(EMPTY_STAGE)
+  const [slotForm, setSlot, setSlotForm] = useFormFields(EMPTY_SLOT)
   const [saving, setSaving] = useState(false)
 
-  const setStage = f => e => setStageForm(p => ({ ...p, [f]: e.target.value }))
-  const setSlot = f => e => setSlotForm(p => ({ ...p, [f]: e.target.value }))
 
   const addStage = async (e) => {
     e.preventDefault()

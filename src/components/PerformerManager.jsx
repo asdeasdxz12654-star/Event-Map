@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
+import { ADMIN_INPUT } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 import SectionCard from './SectionCard'
 import DisclosureNote from './DisclosureNote'
 
@@ -27,10 +29,9 @@ function copyFor(category) {
 function PerformerRow({ performer, copy, isAdmin, onSaved }) {
   const { toast, confirm } = useUIFeedback()
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ artist_name: performer.artistName, songs: performer.songs ?? '' })
+  const [form, set] = useFormFields({ artist_name: performer.artistName, songs: performer.songs ?? '' })
   const [saving, setSaving] = useState(false)
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const save = async () => {
     if (!form.artist_name.trim()) return
@@ -59,18 +60,17 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
     }
   }
 
-  const cls = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   if (editing) {
     return (
       <div className="py-2 border-b border-ink/5 last:border-0 space-y-1.5">
-        <input value={form.artist_name} onChange={set('artist_name')} placeholder={copy.namePlaceholder} className={cls + ' w-full'} />
+        <input value={form.artist_name} onChange={set('artist_name')} placeholder={copy.namePlaceholder} className={`${ADMIN_INPUT} w-full`} />
         <textarea
           value={form.songs}
           onChange={set('songs')}
           placeholder={copy.detailPlaceholder}
           rows={3}
-          className={cls + ' w-full resize-none'}
+          className={`${ADMIN_INPUT} w-full resize-none`}
         />
         <div className="flex gap-2">
           <button onClick={save} disabled={saving} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">저장</button>
@@ -114,11 +114,10 @@ export default function PerformerManager({ eventId, category, note, performers }
   const { isAdmin } = useAdmin()
   const { toast } = useUIFeedback()
   const [showAddForm, setShowAddForm] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, set, setForm] = useFormFields(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const copy = copyFor(category)
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const addPerformer = async (e) => {
     e.preventDefault()
@@ -142,7 +141,6 @@ export default function PerformerManager({ eventId, category, note, performers }
   // 행사마다 이 칸이 있다 없다 해서, 보는 쪽에서는 "이 행사는 무대 프로그램이 없나?
   // 아니면 화면이 원래 이런가?"를 구분할 수 없었다. 이제는 항상 자리를 지키고,
   // 비어 있으면 비어 있다고 적는다(DisclosureNote).
-  const cls = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
   return (
     <SectionCard
@@ -163,13 +161,13 @@ export default function PerformerManager({ eventId, category, note, performers }
 
       {isAdmin && showAddForm && (
         <form onSubmit={addPerformer} className="mt-3 pt-3 border-t border-line space-y-1.5">
-          <input value={form.artist_name} onChange={set('artist_name')} placeholder={`${copy.namePlaceholder} *`} className={cls + ' w-full'} required />
+          <input value={form.artist_name} onChange={set('artist_name')} placeholder={`${copy.namePlaceholder} *`} className={`${ADMIN_INPUT} w-full`} required />
           <textarea
             value={form.songs}
             onChange={set('songs')}
             placeholder={copy.detailPlaceholder}
             rows={3}
-            className={cls + ' w-full resize-none'}
+            className={`${ADMIN_INPUT} w-full resize-none`}
           />
           <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">
             추가

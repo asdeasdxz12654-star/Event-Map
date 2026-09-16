@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
 import ImageField from './ImageField'
+import { ADMIN_FIELD as cls } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 
 const CATEGORIES = ['게임전시', '코스프레', '게임음악', '일러스트']
 
@@ -85,8 +87,6 @@ function toPayload(form) {
   }
 }
 
-const cls = 'w-full bg-surface-2 border border-line focus:border-indigo-500 rounded-xl px-3 py-2 text-ink placeholder:text-zinc-600 focus:outline-none text-sm'
-
 function Field({ label, children }) {
   return (
     <div>
@@ -100,7 +100,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
   const isEdit = !!event
   const initialRef = useRef(null)
   if (initialRef.current === null) initialRef.current = toForm(event)
-  const [form, setForm] = useState(initialRef.current)
+  const [form, set, setForm] = useFormFields(initialRef.current)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -129,7 +129,6 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const submit = async (e) => {
     e.preventDefault()

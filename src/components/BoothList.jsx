@@ -7,9 +7,10 @@ import BoothFilters, { filterBooths } from './BoothFilters'
 import BoothDenseList from './BoothDenseList'
 import DisclosureNote from './DisclosureNote'
 import ImageField from './ImageField'
+import { ADMIN_INPUT as input } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 import { FOCUS_RING } from './ui/focusRing'
 
-const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_BOOTH = { name: '', booth_no: '', image_url: '', operator: 'company', hall: '', genre: '' }
 
 // 부스가 이 수를 넘으면 카드를 쌓지 않고 한 줄짜리 밀집 목록으로 바꾼다.
@@ -28,13 +29,12 @@ export default function BoothList({
   const { isAdmin } = useAdmin()
   const { toast } = useUIFeedback()
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState(EMPTY_BOOTH)
+  const [form, set, setForm] = useFormFields(EMPTY_BOOTH)
   const [saving, setSaving] = useState(false)
   const [operator, setOperator] = useState(null)
   const [hall, setHall] = useState(null)
   const [search, setSearch] = useState('')
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const itemsOf = (boothId) => items.filter(item => item.boothId === boothId)
   // 이 부스에 딸린 무대가 몇 번 도는지. 무대(장소)는 부스에 붙고 슬롯은 무대에 붙으므로

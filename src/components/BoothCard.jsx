@@ -8,8 +8,9 @@ import { BOOTH_KINDS, groupByKind, splitBoothName, operatorLabel, priceRangeLabe
 import BoothThumb from './BoothThumb'
 import BoothItemRow from './BoothItemRow'
 import ImageField from './ImageField'
+import { ADMIN_INPUT as input } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 
-const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY_ITEM = { kind: 'paid', name: '', price: '', price_note: '', note: '', image_url: '', title: '', status: '' }
 
 // 부스 하나.
@@ -27,10 +28,10 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
   const { toast, confirm } = useUIFeedback()
   const [expanded, setExpanded] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState(EMPTY_ITEM)
+  const [form, set, setForm] = useFormFields(EMPTY_ITEM)
   const [saving, setSaving] = useState(false)
   const [editingBooth, setEditingBooth] = useState(false)
-  const [boothForm, setBoothForm] = useState({
+  const [boothForm, setBooth, setBoothForm] = useFormFields({
     name: booth.name,
     booth_no: booth.boothNo ?? '',
     image_url: booth.imageUrl ?? '',
@@ -40,8 +41,6 @@ export default function BoothCard({ eventId, booth, items, stageCount = 0, cospl
     genre: booth.genre ?? '',
   })
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
-  const setBooth = (field) => (e) => setBoothForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const goods = items.filter(item => item.kind === 'goods')
   const experiences = items.filter(item => item.kind !== 'goods')

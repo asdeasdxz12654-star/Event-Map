@@ -4,8 +4,9 @@ import { adminApi } from '../lib/adminApi'
 import { splitBoothName } from '../lib/boothKinds'
 import { FOCUS_RING } from './ui/focusRing'
 import ImageField from './ImageField'
+import { ADMIN_INPUT as input } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 
-const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 const EMPTY = {
   name: '', booth_id: '', character: '', title: '',
   photo_url: '', sns_url: '', day: '', start_time: '', end_time: '', note: '',
@@ -18,10 +19,9 @@ const EMPTY = {
 export default function CosplayerAdmin({ eventId, booths, count }) {
   const { toast } = useUIFeedback()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState(EMPTY)
+  const [form, set, setForm] = useFormFields(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
   const add = async (e) => {
     e.preventDefault()

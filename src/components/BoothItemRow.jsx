@@ -4,8 +4,9 @@ import { adminApi } from '../lib/adminApi'
 import { BOOTH_KINDS, formatPrice } from '../lib/boothKinds'
 import BoothThumb from './BoothThumb'
 import ImageField from './ImageField'
+import { ADMIN_INPUT as input } from './ui/formStyles'
+import { useFormFields } from '../hooks/useFormFields'
 
-const input = 'bg-surface-2 border border-line rounded-lg px-2 py-1 text-ink text-xs focus:outline-none focus:border-indigo-500'
 
 // 부스 항목 한 줄. 읽기 상태에서는 썸네일 · 이름 · 설명 · 가격만 보이고,
 // 가격은 오른쪽 끝에 tabular-nums로 붙어 세로줄이 맞는다 — 같은 부스 안에서
@@ -14,7 +15,7 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
   const { toast, confirm } = useUIFeedback()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
+  const [form, set, setForm] = useFormFields({
     kind: item.kind,
     name: item.name,
     price: item.price == null ? '' : String(item.price),
@@ -25,7 +26,6 @@ export default function BoothItemRow({ item, isAdmin, hueFrom }) {
     status: item.status ?? '',
   })
 
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const save = async () => {
     if (!form.name.trim()) return
