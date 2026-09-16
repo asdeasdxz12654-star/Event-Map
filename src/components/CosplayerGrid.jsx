@@ -30,6 +30,8 @@ export default function CosplayerGrid({ eventId, cosplayers, booths, note, focus
   const [origin, setOrigin] = useState(focusBoothId ? 'booth' : null)
   const [boothId, setBoothId] = useState(focusBoothId ?? null)
   const [day, setDay] = useState(null)
+  // 고치는 중인 코스어. 폼이 격자 위에 한 벌만 있으므로 여기서 들고 있는다.
+  const [editing, setEditing] = useState(null)
 
   useEffect(() => {
     setBoothId(focusBoothId ?? null)
@@ -78,7 +80,15 @@ export default function CosplayerGrid({ eventId, cosplayers, booths, note, focus
 
   return (
     <div className="flex flex-col gap-3 mb-4">
-      {isAdmin && <CosplayerAdmin eventId={eventId} booths={booths} count={cosplayers.length} />}
+      {isAdmin && (
+        <CosplayerAdmin
+          eventId={eventId}
+          booths={booths}
+          count={cosplayers.length}
+          editing={editing}
+          onDone={() => setEditing(null)}
+        />
+      )}
 
       {showOrigin && (
         <Segmented
@@ -125,6 +135,7 @@ export default function CosplayerGrid({ eventId, cosplayers, booths, note, focus
                 cosplayer={c}
                 booth={c.boothId ? boothById.get(c.boothId) : null}
                 onJump={onJump}
+                onEdit={isAdmin ? () => setEditing(c) : null}
                 onRemove={isAdmin ? () => remove(c) : null}
               />
             </li>
@@ -167,7 +178,7 @@ export default function CosplayerGrid({ eventId, cosplayers, booths, note, focus
   )
 }
 
-function Card({ cosplayer: c, booth, onJump, onRemove }) {
+function Card({ cosplayer: c, booth, onJump, onEdit, onRemove }) {
   const [imgFailed, setImgFailed] = useState(false)
   const hue = boothHue(c.name)
   const showImage = !!c.photoUrl && !imgFailed
@@ -214,12 +225,22 @@ function Card({ cosplayer: c, booth, onJump, onRemove }) {
             <Icon name="external" className="w-3.5 h-3.5" />
           </a>
         )}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`${c.name} 수정`}
+            className={`ml-auto text-[11px] text-zinc-400 hover:text-ink rounded ${FOCUS_RING}`}
+          >
+            수정
+          </button>
+        )}
         {onRemove && (
           <button
             type="button"
             onClick={onRemove}
             aria-label={`${c.name} 삭제`}
-            className={`ml-auto text-[11px] text-danger/80 hover:text-danger rounded ${FOCUS_RING}`}
+            className={`text-[11px] text-danger/80 hover:text-danger rounded ${FOCUS_RING}`}
           >
             삭제
           </button>

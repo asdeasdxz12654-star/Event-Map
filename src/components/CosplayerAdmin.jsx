@@ -12,39 +12,87 @@ const EMPTY = {
   photo_url: '', sns_url: '', day: '', start_time: '', end_time: '', note: '',
 }
 
+// 코스어 객체(카멜) -> 폼 값(스네이크, 전부 문자열).
+// 입력칸은 null을 다루지 못한다 — value={null}이면 React가 비제어 입력으로 본다.
+function toForm(c) {
+  return {
+    name: c.name ?? '',
+    booth_id: c.boothId ?? '',
+    character: c.character ?? '',
+    title: c.title ?? '',
+    photo_url: c.photoUrl ?? '',
+    sns_url: c.snsUrl ?? '',
+    day: c.day ?? '',
+    start_time: c.startTime?.slice(0, 5) ?? '',
+    end_time: c.endTime?.slice(0, 5) ?? '',
+    note: c.note ?? '',
+  }
+}
+
 // 코스어 입력.
 //
 // 부스를 비워두면 주최 초청이 된다 — 화면의 세그먼트가 그 값으로 갈린다.
 // 사진은 공식 공지에 실린 것만 넣는다. 현장에서 찍힌 사진을 임의로 모아 넣지 않는다.
-export default function CosplayerAdmin({ eventId, booths, count }) {
+//
+// 추가와 수정을 한 폼으로 쓴다
+//   지금까지 이 폼은 추가만 했고, 오타 하나를 고치려면 지우고 다시 넣어야 했다
+//   (adminApi.updateCosplayer는 만들어져 있었는데 부르는 곳이 없었다). 그런데 코스어는
+//   칸이 열 개라 다시 넣는 비용이 크고, 지우는 순간 sort_order와 id가 바뀐다.
+//   입력칸이 완전히 같으므로 폼을 나누지 않고 editing 유무로 동작만 가른다.
+export default function CosplayerAdmin({ eventId, booths, count, editing = null, onDone }) {
   const { toast } = useUIFeedback()
   const [open, setOpen] = useState(false)
   const [form, set, setForm] = useFormFields(EMPTY)
   const [saving, setSaving] = useState(false)
 
+  // 바깥에서 "이 코스어를 고치자"고 하면 폼을 열고 값을 채운다.
+  //
+  // 이펙트가 아니라 렌더 중에 맞춘다. 이펙트로 하면 한 번 그린 뒤에 값이 들어가서
+  // 빈 폼이 한 프레임 비쳤다가 채워진다. (EventDetailPage가 라우트 id 변경을 다루는
+  // 방식과 같다 — React가 권하는 "props가 바뀌면 state를 조정하기" 패턴이다.)
+  const [lastEditing, setLastEditing] = useState(editing)
+  if (editing !== lastEditing) {
+    setLastEditing(editing)
+    if (editing) {
+      setForm(toForm(editing))
+      setOpen(true)
+    }
+  }
 
-  const add = async (e) => {
+  const close = () => {
+    setOpen(false)
+    setForm(EMPTY)
+    onDone?.()
+  }
+
+  const submit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
+    const payload = {
+      name: form.name.trim(),
+      booth_id: form.booth_id || null,
+      character: form.character.trim() || null,
+      title: form.title.trim() || null,
+      photo_url: form.photo_url.trim() || null,
+      sns_url: form.sns_url.trim() || null,
+      // 날짜를 비우면 "행사 기간 내내 상주"로 본다.
+      day: form.day || null,
+      start_time: form.start_time || null,
+      end_time: form.end_time || null,
+      note: form.note.trim() || null,
+    }
     try {
-      await adminApi.createCosplayer(eventId, {
-        name: form.name.trim(),
-        booth_id: form.booth_id || null,
-        character: form.character.trim() || null,
-        title: form.title.trim() || null,
-        photo_url: form.photo_url.trim() || null,
-        sns_url: form.sns_url.trim() || null,
-        // 날짜를 비우면 "행사 기간 내내 상주"로 본다.
-        day: form.day || null,
-        start_time: form.start_time || null,
-        end_time: form.end_time || null,
-        note: form.note.trim() || null,
-        sort_order: count,
-      })
-      setForm({ ...EMPTY, booth_id: form.booth_id, day: form.day })
+      if (editing) {
+        await adminApi.updateCosplayer(editing.id, payload)
+        close()
+      } else {
+        await adminApi.createCosplayer(eventId, { ...payload, sort_order: count })
+        // 다음 사람도 같은 부스·같은 날인 경우가 대부분이라 그 둘만 남긴다.
+        setForm({ ...EMPTY, booth_id: form.booth_id, day: form.day })
+      }
     } catch (err) {
-      toast(`추가 실패: ${err.message}`)
+      toast(`${editing ? '수정' : '추가'} 실패: ${err.message}`)
     } finally {
       setSaving(false)
     }
@@ -61,10 +109,10 @@ export default function CosplayerAdmin({ eventId, booths, count }) {
   }
 
   return (
-    <form onSubmit={add} className="border border-line rounded-xl p-3 mb-3 flex flex-col gap-2">
+    <form onSubmit={submit} className="border border-line rounded-xl p-3 mb-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-ink">코스어 추가</p>
-        <button type="button" onClick={() => setOpen(false)} className={`text-xs text-zinc-400 hover:text-ink rounded ${FOCUS_RING}`}>닫기</button>
+        <p className="text-xs font-semibold text-ink">{editing ? `코스어 수정 — ${editing.name}` : '코스어 추가'}</p>
+        <button type="button" onClick={close} className={`text-xs text-zinc-400 hover:text-ink rounded ${FOCUS_RING}`}>닫기</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -97,7 +145,9 @@ export default function CosplayerAdmin({ eventId, booths, count }) {
 
       <div className="flex flex-wrap items-center gap-1.5">
         <input value={form.note} onChange={set('note')} placeholder="설명 (포토타임 장소 등)" className={`${input} flex-1 min-w-[160px]`} />
-        <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">추가</button>
+        <button type="submit" disabled={saving} className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg">
+          {saving ? '저장 중...' : editing ? '수정 완료' : '추가'}
+        </button>
       </div>
 
       <p className="text-[11px] text-zinc-500">

@@ -75,6 +75,9 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
 
   const all = useMemo(() => [...slots, ...cosplaySlots], [slots, cosplaySlots])
 
+  // 고치는 중인 프로그램. 폼이 타임라인 위에 한 벌만 있으므로 여기서 들고 있는다.
+  const [editingSlot, setEditingSlot] = useState(null)
+
   const removeSlot = async (slot) => {
     if (!await confirm(`"${slot.title}" 프로그램을 삭제하시겠습니까?`)) return
     try {
@@ -127,7 +130,15 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
 
   return (
     <div className="flex flex-col gap-3 mb-4">
-      {isAdmin && <StageAdmin eventId={eventId} stages={stages} booths={booths} />}
+      {isAdmin && (
+        <StageAdmin
+          eventId={eventId}
+          stages={stages}
+          booths={booths}
+          editingSlot={editingSlot}
+          onDone={() => setEditingSlot(null)}
+        />
+      )}
 
       {showDays && (
         <Segmented
@@ -177,6 +188,7 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
               {...liveState(slot, isToday, nowHm)}
               showStage={showStages || !!slot.isCosplay}
               onJump={onJump}
+              onEdit={isAdmin && !slot.isCosplay ? () => setEditingSlot(slot) : null}
               onRemove={isAdmin && !slot.isCosplay ? () => removeSlot(slot) : null}
             />
           </div>
@@ -195,6 +207,7 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
               stage={stageLabel(slot)}
               showStage={showStages}
               onJump={onJump}
+              onEdit={isAdmin && !slot.isCosplay ? () => setEditingSlot(slot) : null}
               onRemove={isAdmin && !slot.isCosplay ? () => removeSlot(slot) : null}
             />
           ))}
@@ -229,7 +242,7 @@ function NowLine({ time }) {
   )
 }
 
-function Slot({ slot, stage, past = false, live = false, showStage, onJump, onRemove }) {
+function Slot({ slot, stage, past = false, live = false, showStage, onJump, onEdit, onRemove }) {
   const booth = stage?.booth
   return (
     <div className={`grid grid-cols-[58px_1fr] gap-3 py-3 border-b border-line last:border-0 ${past ? 'opacity-50' : ''} ${
@@ -242,6 +255,15 @@ function Slot({ slot, stage, past = false, live = false, showStage, onJump, onRe
       <div className="min-w-0">
         <p className="text-sm font-semibold text-ink leading-snug">
           {slot.title}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className={`ml-2 align-middle text-[11px] font-normal text-zinc-400 hover:text-ink rounded ${FOCUS_RING}`}
+            >
+              수정
+            </button>
+          )}
           {onRemove && (
             <button
               type="button"
