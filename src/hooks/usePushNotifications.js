@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getToken, onMessage } from 'firebase/messaging'
+import { deleteToken, getToken, onMessage } from 'firebase/messaging'
 import { getMessagingIfSupported } from '../firebase'
 import { supabase } from '../supabase'
 
@@ -14,6 +14,9 @@ const SW_PATH = `${import.meta.env.BASE_URL}firebase-messaging-sw.js`
 // SecurityError(스코프가 허용 범위 밖)로 실패한다.
 const SW_SCOPE = `${import.meta.env.BASE_URL}firebase-cloud-messaging-push-scope`
 const TOKEN_STORAGE_KEY = 'gameEventHub.pushToken'
+// 구독 해제는 Worker를 거친다. push_subscriptions의 RLS가 insert만 열어두고 있어서
+// (브라우저가 남의 구독을 지우지 못하게) 삭제는 service_role만 할 수 있다.
+const API_BASE = import.meta.env.VITE_ADMIN_API_URL || 'https://event-map-api-proxy.asdeasdxz12654.workers.dev'
 
 // navigator.serviceWorker.ready는 "현재 페이지(스코프 '/')를 담당하는" 등록을 기다리는 API라
 // 여기서 쓰면 안 된다 — PWA 워커(sw.js, 스코프 '/')를 기다리게 되어 우리가 방금 등록한
@@ -103,5 +106,46 @@ export function usePushNotifications() {
     }
   }, [])
 
-  return { supported, permission, subscribed, loading, error, subscribe }
+  // 알림 끄기.
+  //
+  // 지금까지 이게 없었다. 한 번 켜면 앱 안에서 끌 방법이 없어서 브라우저 권한을 직접
+  // 차단하는 수밖에 없었고, 그래도 서버의 토큰은 만료될 때까지 남아 계속 발송 대상이었다.
+  // 못 끄는 알림은 애초에 켜기 부담스럽다.
+  //
+  // 두 가지를 다 해야 진짜로 꺼진다.
+  //   deleteToken  — FCM이 이 기기로 더 보내지 않게 한다
+  //   Worker 삭제  — 우리 DB에서 발송 대상에서 뺀다
+  // 하나만 하면 "안 오는데 목록에는 남아 있는" 상태가 된다.
+  const unsubscribe = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    let token = null
+    try { token = localStorage.getItem(TOKEN_STORAGE_KEY) } catch { /* 시크릿 모드 등 */ }
+
+    try {
+      const messaging = await getMessagingIfSupported()
+      if (messaging) {
+        // 이미 사라진 토큰이면 예외가 날 수 있다. 그건 이미 꺼진 상태이므로 실패가 아니다.
+        await deleteToken(messaging).catch(() => {})
+      }
+
+      if (token) {
+        const res = await fetch(`${API_BASE}/push/unsubscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+        if (!res.ok) throw new Error('서버에서 구독을 지우지 못했습니다')
+      }
+
+      try { localStorage.removeItem(TOKEN_STORAGE_KEY) } catch { /* 무시 */ }
+      setSubscribed(false)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  return { supported, permission, subscribed, loading, error, subscribe, unsubscribe }
 }

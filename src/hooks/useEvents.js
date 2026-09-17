@@ -62,17 +62,27 @@ export function useEvents() {
   useEffect(() => {
     let cancelled = false
 
-    // 목록에는 "올해 행사 + 앞으로 90일"만 노출한다.
+    // 목록에는 "지난 1년 ~ 앞으로 1년"을 노출한다.
     //
-    // 내년 행사까지 전부 보이면 지금 갈 수 있는 행사와 1년 뒤 행사가 같은 목록에 섞여서
-    // "예정" 탭이 실제보다 부풀려 보인다. 그렇다고 올해(12/31)로 딱 자르면 연말에
-    // 문제가 생긴다 — 12월에 들어오면 코앞인 1월 행사가 목록에서 통째로 사라진다.
-    // 그래서 연말에는 다음 해로 90일만 창을 넓힌다.
+    // 예전엔 "올해 + 앞으로 90일"이었다. 연말 문제(12월에 들어오면 코앞인 1월 행사가
+    // 안 보이는 것)는 그 90일이 막아줬지만, 더 큰 문제가 남아 있었다 —
+    // **1월 1일이 되면 작년 행사가 한꺼번에 사라진다.**
+    //
+    //   2027-01-01 → 조회 범위가 2027-01-01부터
+    //              → 2026년에 열린 행사 전부가 목록·달력·북마크에서 빠진다
+    //
+    // 상세 주소로는 열리지만 찾아갈 길이 없어지고, 북마크해 둔 행사까지 북마크 화면에서
+    // 빠진다(BookmarksPage가 이 목록과 교집합을 낸다). 매년 1월 1일에 사이트가 기억을
+    // 통째로 잃는 셈이다.
+    //
+    // 범위를 오늘 기준 앞뒤 1년으로 바꾼다. "예정 탭이 부풀어 보인다"는 원래 걱정은
+    // 상태 필터(예정/진행중/종료)가 이미 해결하고 있다 — 기본값도 "예정"이라
+    // 처음 들어온 사람에게는 달라지는 게 없다.
+    const DAY = 86400000
+    const ymd = d => new Date(d).toISOString().slice(0, 10)
     const now = new Date()
-    const rangeStart = `${now.getFullYear()}-01-01`
-    const yearEnd = `${now.getFullYear()}-12-31`
-    const in90Days = new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)
-    const rangeEnd = in90Days > yearEnd ? in90Days : yearEnd
+    const rangeStart = ymd(now.getTime() - 365 * DAY)
+    const rangeEnd = ymd(now.getTime() + 365 * DAY)
 
     // 1000행 상한을 넘겨 전부 받는다 — 페이징 루프는 src/lib/fetchAllRows.js에 있다
     // (부스 목록도 같은 함정을 밟고 있어서 공용으로 뺐다).

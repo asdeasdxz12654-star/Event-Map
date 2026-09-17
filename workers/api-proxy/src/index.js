@@ -779,10 +779,39 @@ async function handleSeoulCongestion(request, env) {
   )
 }
 
+// POST /push/unsubscribe  { token }
+//
+// 알림을 끄는 문. 지금까지는 켜기만 되고 끄는 방법이 앱 안에 없었다 —
+// 브라우저 권한을 직접 차단하는 수밖에 없었고, 그래도 서버의 토큰은 만료될 때까지 남아
+// 계속 발송 대상이었다. 한 번 켜면 못 끄는 알림은 애초에 켜기 부담스럽다.
+//
+// 관리자 인증을 걸 수 없다(방문자가 하는 일이다). 대신 토큰 자체가 열쇠다 —
+// 남의 구독을 지우려면 그 사람의 FCM 토큰(150자 안팎의 불투명한 값)을 알아야 하는데,
+// 그건 발급받은 브라우저 말고는 알 수 없다. 켤 때(insert)와 같은 신뢰 모델이다.
+//
+// 토큰을 URL이 아니라 본문으로 받는다. 경로에 넣으면 액세스 로그·리퍼러에 남는다.
+async function handlePushUnsubscribe(request, env) {
+  if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed')
+  const body = await readJsonBody(request)
+  const token = body.token
+
+  // DB의 insert 정책과 같은 길이 조건. 형식이 아닌 값은 애초에 우리 토큰일 수 없다.
+  if (typeof token !== 'string' || token.length < 100 || token.length > 300) {
+    throw new HttpError(400, 'invalid_token')
+  }
+
+  await supabase(env, 'DELETE', `push_subscriptions?token=eq.${encodeURIComponent(token)}`)
+  // 없는 토큰을 지워도 성공으로 답한다 — "그 토큰이 등록돼 있었는지"를 알려주면
+  // 이 엔드포인트가 토큰 존재 여부를 확인하는 도구가 된다.
+  return json({ ok: true }, env)
+}
+
 const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
 
   '/seoul-congestion': handleSeoulCongestion,
+
+  '/push/unsubscribe': handlePushUnsubscribe,
 }
 
 export default {
@@ -822,6 +851,10 @@ export default {
     try {
       return await handler(request, env)
     } catch (err) {
+      // /admin/* 쪽과 같은 처리. 예전엔 여기서 HttpError를 안 봐서, 잘못된 요청까지
+      // 전부 500으로 나갔다 — 호출부는 "서버가 고장났나?"와 "내가 잘못 보냈나?"를
+      // 구분할 수 없고, 로그에는 우리 잘못이 아닌 것이 서버 오류로 쌓인다.
+      if (err instanceof HttpError) return json({ error: err.code }, env, { status: err.status })
       console.error('[route]', pathname, err)
       return json({ error: 'internal_error' }, env, { status: 500 })
     }

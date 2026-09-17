@@ -35,7 +35,7 @@ const quietClass =
   'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-ink/5 hover:bg-ink/10 text-zinc-300 border border-line'
 
 function NotificationRow() {
-  const { supported, permission, subscribed, loading, error, subscribe } = usePushNotifications()
+  const { supported, permission, subscribed, loading, error, subscribe, unsubscribe } = usePushNotifications()
 
   // 지원 여부를 확인하는 동안에는 줄을 비워두지 않고 "확인 중"으로 둔다 — 줄이 나중에
   // 튀어나오면 설정 화면이 흔들린다.
@@ -44,14 +44,23 @@ function NotificationRow() {
       : supported === false ? '이 브라우저에서는 웹 푸시를 지원하지 않습니다'
       : permission === 'denied' ? '브라우저 설정에서 이 사이트의 알림이 차단되어 있습니다'
       : subscribed ? '예매 오픈·행사 시작 하루 전에 알려드려요'
-      : error ? '알림 설정에 실패했습니다. 잠시 후 다시 시도해 주세요'
+      : error ? '알림 설정을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요'
       : '예매 오픈일과 행사 하루 전에 알림을 받습니다'
 
   return (
     <Row icon="bell" title="행사 알림" description={description}>
       {supported === true && permission !== 'denied' && (
         subscribed
-          ? <span className="text-xs text-emerald-400 font-medium">받는 중</span>
+          ? (
+            // 끄는 버튼이 없으면 켜는 것도 망설이게 된다. "받는 중"만 적어두던 자리에
+            // 끄기를 함께 둔다 — 브라우저 권한을 직접 차단하러 가지 않아도 되게.
+            <span className="flex items-center gap-2">
+              <span className="text-xs text-emerald-400 font-medium">받는 중</span>
+              <button onClick={unsubscribe} disabled={loading} className={quietClass}>
+                {loading ? '끄는 중...' : '끄기'}
+              </button>
+            </span>
+          )
           : <button onClick={subscribe} disabled={loading} className={actionClass}>
               {loading ? '설정 중...' : '받기'}
             </button>
