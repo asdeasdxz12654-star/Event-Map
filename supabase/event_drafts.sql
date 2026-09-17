@@ -1,3 +1,10 @@
+-- ⚠ 이 파일에는 promote_event_draft()의 **옛 정의**가 들어 있다.
+--   지금 쓰는 정의는 supabase/functions/promote_event_draft.sql 하나뿐이다.
+--   이 파일을 통째로 다시 실행하면 그 함수가 옛 버전으로 되돌아간다 — 실제로 한 번 그랬다.
+--   여기서 필요한 것(테이블·컬럼·제약)만 골라 실행하고, 함수 정의 블록은 건너뛸 것.
+--   지금 살아 있는 버전 확인:
+--     select obj_description('public.promote_event_draft()'::regprocedure);
+
 -- game-event-hub: 뉴스 크롤러가 추출한 행사 후보를 담아두는 테이블 + 검수 승인 시 자동 게시 트리거.
 -- Supabase 대시보드 > SQL Editor 에서 실행하세요.
 

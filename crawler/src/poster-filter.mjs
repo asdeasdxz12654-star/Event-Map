@@ -11,6 +11,8 @@
 // (포스터가 없으면 카테고리 기본 이미지와 "공식 포스터 미정"이 나온다).
 
 // 공식 포스터로 부적합한 도메인 — 핀터레스트 등 개인 큐레이션 이미지 제외
+import { UA } from './util.mjs'
+
 const EXCLUDED_DOMAINS = ['pinimg.com', 'pinterest.com', 'pinterest.co.kr']
 
 const MIN_SIDE_PX = 200          // 너무 작은 썸네일 제외
@@ -325,7 +327,7 @@ export async function isUsableImageUrl(url) {
     // Range로 첫 바이트만 요청 — 큰 이미지를 통째로 받지 않기 위해서.
     // HEAD를 막아둔 서버가 많아서 GET을 쓴다.
     const res = await fetch(url, {
-      headers: { Range: 'bytes=0-0', 'User-Agent': 'Mozilla/5.0 (compatible; game-event-hub/1.0)' },
+      headers: { Range: 'bytes=0-0', 'User-Agent': UA },
       signal: AbortSignal.timeout(7_000),
     })
     if (!res.ok && res.status !== 206) return false

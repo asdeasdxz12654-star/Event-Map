@@ -1,40 +1,25 @@
--- ⚠ 이 파일에는 promote_event_draft()의 **옛 정의**가 들어 있다.
---   지금 쓰는 정의는 supabase/functions/promote_event_draft.sql 하나뿐이다.
---   이 파일을 통째로 다시 실행하면 그 함수가 옛 버전으로 되돌아간다 — 실제로 한 번 그랬다.
---   여기서 필요한 것(테이블·컬럼·제약)만 골라 실행하고, 함수 정의 블록은 건너뛸 것.
---   지금 살아 있는 버전 확인:
---     select obj_description('public.promote_event_draft()'::regprocedure);
-
--- promote_event_draft() 회귀 복구 (2026-09-16)
--- Supabase 대시보드 > SQL Editor 에서 실행하세요. 여러 번 실행해도 안전합니다.
+-- promote_event_draft() — 검수 승인 시 events로 승격하는 트리거 함수.
 --
--- 무슨 일이 있었나
---   dedupe_events_by_title_2026-09-16.sql이 이 함수를 다시 정의하면서 중복 판정만
---   normalized_title() 비교로 바꾸고, 직전 버전(validate_urls_2026-09-14.sql)에 있던
---   나머지를 옮겨 적지 않았다. 그래서 네 가지가 한꺼번에 사라졌다.
+-- ⚠ 이 파일이 **유일한 정의**다. 다른 파일에서 이 함수를 다시 정의하지 말 것.
 --
---     1) set search_path = public, pg_temp
---        security definer 함수에서 search_path를 고정하지 않으면, 호출자가 만든 스키마가
---        앞에 끼어들어 우리가 부르려던 함수 대신 남의 함수가 실행될 수 있다.
---        (Supabase 린터가 지적하는 바로 그 항목이다.)
+-- 왜 이 파일이 생겼나
+--   이 함수가 아홉 개 파일에 흩어져 있었다. 마이그레이션을 손으로 실행하는 구조라,
+--   어느 파일을 언제 돌렸느냐에 따라 살아 있는 정의가 달라진다. 실제로 그랬다 —
+--   dedupe_events_by_title_2026-09-16.sql이 중복 판정만 새로 쓰고 나머지를 옮겨
+--   적지 않아서, search_path 고정·safe_url·예외 처리·컬럼 두 개가 한꺼번에 사라졌다.
+--   화면에는 아무 변화가 없었고, 승인이 터지고 나서야 알았다.
 --
---     2) safe_url(ticket_url) / safe_url(website)
---        extracted는 뉴스 기사를 LLM에 넣어 뽑아낸 값이라 주소 형식이 보장되지 않는다.
---        이게 빠지면서 http(s)가 아닌 문자열이 events에 그대로 들어가게 됐다.
---        events_urls_are_http CHECK가 not valid라 신규 insert는 막히긴 하지만,
---        그러면 이번엔 3)이 없어서 승인 자체가 터진다.
+--   같은 일이 또 나지 않게 정의를 여기 하나로 모은다. 옛 파일들은 그때 무슨 일이
+--   있었는지 남기는 기록으로만 두고, 함수 정의 부분은 실행하지 않는다.
 --
---     3) begin ... exception → rejected + review_note
---        insert가 실패하면 승인 UPDATE 전체가 raw PostgreSQL 에러로 터진다.
---        관리자 화면에는 "23514: new row violates check constraint..." 같은 문구가 그대로
---        뜨고, 무엇을 고쳐야 하는지는 아무 데도 안 남는다. 원래는 그 draft만 반려하고
---        사유를 review_note에 적었다.
+-- 바꿀 때
+--   1) 이 파일을 고친다
+--   2) 맨 아래 comment on function의 v날짜를 오늘로 올린다
+--   3) 대시보드 SQL Editor에서 이 파일을 통째로 실행한다
+--   4) supabase/README.md의 확인 쿼리로 버전이 바뀌었는지 본다
 --
---     4) insert 컬럼 ticket_open_time, ticket_open_note
---        크롤러가 뽑아둔 값이 승격 과정에서 조용히 버려지고 있었다.
---
---   이 파일은 09-14의 네 가지를 되돌리고, 09-16이 가져온 normalized_title 비교는 유지한다.
---   즉 두 버전의 합집합이다.
+-- 지금 DB에 무엇이 살아 있는지 확인:
+--   select obj_description('public.promote_event_draft()'::regprocedure);
 
 -- 이 파일이 의존하는 것들이 실제로 있는지 먼저 본다. 없는 상태로 함수만 바꾸면
 -- 승인할 때가 되어서야 "함수가 없다"로 터진다 — 그때는 원인을 찾기 어렵다.
@@ -133,6 +118,11 @@ create trigger event_drafts_promote
   before update on public.event_drafts
   for each row execute function public.promote_event_draft();
 
+-- 버전을 주석에 박아 둔다. 파일을 아무리 잘 관리해도 "DB에 지금 무엇이 들어 있는가"는
+-- DB에게 물어봐야 알 수 있다 — 옛 파일을 잘못 실행하면 이 값이 옛날 것으로 돌아간다.
 comment on function public.promote_event_draft() is
-  '승인된 draft를 events로 승격한다. 제목은 normalized_title로 비교해 중복을 막고, '
-  '주소는 safe_url로 거르며, 실패하면 그 draft만 rejected + review_note로 남긴다.';
+  'v2026-09-17 · 승인된 draft를 events로 승격한다. 제목은 normalized_title로 비교해 '
+  '중복을 막고, 주소는 safe_url로 거르며, 실패하면 그 draft만 rejected + review_note로 남긴다. '
+  '정의는 supabase/functions/promote_event_draft.sql 하나뿐이다.';
+
+select obj_description('public.promote_event_draft()'::regprocedure) as "지금 살아 있는 버전";

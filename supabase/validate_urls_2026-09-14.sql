@@ -1,3 +1,10 @@
+-- ⚠ 이 파일에는 promote_event_draft()의 **옛 정의**가 들어 있다.
+--   지금 쓰는 정의는 supabase/functions/promote_event_draft.sql 하나뿐이다.
+--   이 파일을 통째로 다시 실행하면 그 함수가 옛 버전으로 되돌아간다 — 실제로 한 번 그랬다.
+--   여기서 필요한 것(테이블·컬럼·제약)만 골라 실행하고, 함수 정의 블록은 건너뛸 것.
+--   지금 살아 있는 버전 확인:
+--     select obj_description('public.promote_event_draft()'::regprocedure);
+
 -- 보안 점검(2026-09-14) 후속: 링크로 나가는 컬럼에 http(s) 주소만 들어가게 한다.
 -- Supabase 대시보드 > SQL Editor 에서 위에서부터 그대로 실행하세요. 여러 번 실행해도 안전합니다.
 --

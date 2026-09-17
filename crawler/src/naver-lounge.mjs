@@ -5,6 +5,8 @@
 // URL 형식: /nng_main/v1/user/{userIdHash}/feeds?limit=20&loungeId={loungeId}&offset=0&order=NEW
 // 응답 구조: data.content.feeds[] — 각 항목: feed(title/contents/createdDate), user(userRoleCode), feedLink(pc)
 
+import { UA } from './util.mjs'
+
 const USER_FEEDS_API = 'https://comm-api.game.naver.com/nng_main/v1/user'
 
 const LOUNGES = [
@@ -86,7 +88,7 @@ export async function fetchNaverLoungeCandidates() {
     let data
     try {
       const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; EventMapCrawler/1.0)' },
+        headers: { 'User-Agent': UA },
         signal: AbortSignal.timeout(10_000),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
