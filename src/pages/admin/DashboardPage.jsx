@@ -53,6 +53,13 @@ export default function DashboardPage() {
       warn: stats.brokenWatches > 0,
     },
     {
+      to: '/admin/reports',
+      icon: 'warn',
+      label: '제보 · 신고',
+      count: stats.openReports,
+      hint: '방문자가 보낸 것',
+    },
+    {
       icon: 'warn',
       label: '중복 의심',
       count: stats.duplicates.length,

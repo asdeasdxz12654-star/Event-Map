@@ -12,6 +12,7 @@ import { useHomeFilters } from '../hooks/useHomeFilters'
 import { useListColumns, eventGridClass } from '../hooks/useListColumns'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useAdmin } from '../contexts/AdminContext'
+import ReportSheet from '../components/ReportSheet'
 import AdminEventForm from '../components/AdminEventForm'
 
 export default function HomePage() {
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [columns, setColumns] = useListColumns()
   const [showAddForm, setShowAddForm] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   const {
     status: activeStatus,
     category: activeCategory,
@@ -178,6 +180,14 @@ export default function HomePage() {
               조건 모두 해제
             </button>
           )}
+          {/* 찾던 행사가 없을 때가 제보하기 제일 좋은 순간이다 — 그 사람은 지금
+              그 행사를 알고 있고, 우리는 모르고 있다. */}
+          <button
+            onClick={() => setShowReport(true)}
+            className={`block mx-auto mt-4 text-sm text-zinc-400 hover:text-ink underline underline-offset-4 rounded ${FOCUS_RING}`}
+          >
+            찾는 행사가 없나요? 알려주세요
+          </button>
         </div>
       ) : (
         <div className={eventGridClass(columns)}>
@@ -186,6 +196,17 @@ export default function HomePage() {
           ))}
         </div>
       )}
+
+      {filtered.length > 0 && (
+        <button
+          onClick={() => setShowReport(true)}
+          className={`block mx-auto mt-8 text-xs text-zinc-500 hover:text-ink transition-colors rounded ${FOCUS_RING}`}
+        >
+          빠진 행사가 있나요? 제보하기
+        </button>
+      )}
+
+      {showReport && <ReportSheet kind="new_event" onClose={() => setShowReport(false)} />}
     </div>
   )
 }

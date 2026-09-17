@@ -47,6 +47,19 @@ const LOGIN_GLOBAL_THROTTLE_MS = 2000
 // 실패 응답은 항상 이만큼 늦춘다 — 응답 속도 차이로 정답을 좁혀 들어가지 못하게.
 const LOGIN_FAILURE_DELAY_MS = 400
 
+// 방문자 제보 보호값. 로그인이 없으므로 IP당 횟수로만 막는다.
+// 캡차는 넣지 않았다 — 지금 방문자가 얼마나 되는지도 모르는데 캡차부터 세우면
+// 정상 제보의 문턱만 올린다. 실제로 스팸이 오면 그때 Turnstile을 얹는다.
+const REPORT_RATE_LIMIT = 5              // IP당 허용 건수
+const REPORT_RATE_WINDOW_MS = 60 * 60 * 1000  // 1시간
+const REPORT_MESSAGE_MIN = 5
+const REPORT_MESSAGE_MAX = 2000
+const REPORT_CONTACT_MAX = 200
+const REPORT_KINDS = ['correction', 'new_event']
+const REPORT_STATUSES = ['open', 'resolved', 'rejected']
+// 검수 목록도 한 화면에서 훑는 용도라 상한을 둔다(drafts와 같은 이유).
+const REPORT_LIMIT = 200
+
 // /seoul-congestion 보호 값. 이 라우트는 우리 인증키로 서울시 원본을 대신 호출하므로
 // 인증 없는 공개 프록시가 되지 않게 두 겹으로 막는다(자세한 설명은 handleSeoulCongestion).
 const SEOUL_PLACES_TTL_MS = 10 * 60 * 1000 // 허용 장소 목록 캐시 수명
@@ -566,6 +579,38 @@ async function handleAdmin(request, env, pathname) {
     return json(row, env)
   }
 
+  // ── event_reports (방문자 제보) ────────────────────────────────────────────
+  // 넣는 문은 /reports(공개)이고, 여기는 읽고 처리하는 쪽이다.
+  // 제보에는 연락처가 들어 있어서 공개 읽기를 열지 않았다 — 이 경로로만 볼 수 있다.
+
+  // GET /admin/reports?status=open — 대상 행사 제목을 함께 가져온다.
+  // 제보만 봐서는 어느 행사 얘기인지 id밖에 안 보인다.
+  if (pathname === '/admin/reports' && request.method === 'GET') {
+    const status = new URL(request.url).searchParams.get('status') ?? 'open'
+    if (!REPORT_STATUSES.includes(status)) throw new HttpError(400, 'invalid_status')
+    const rows = await supabase(
+      env,
+      'GET',
+      `event_reports?status=eq.${status}&select=*,events(title,start_date)` +
+      `&order=created_at.desc&limit=${REPORT_LIMIT}`
+    )
+    return json(rows ?? [], env)
+  }
+
+  // PATCH /admin/reports/:id — 처리 완료/반려 + 메모.
+  const reportMatch = /^\/admin\/reports\/([^/]+)$/.exec(pathname)
+  if (reportMatch && request.method === 'PATCH') {
+    const body = await readJsonBody(request)
+    const patch = pick(body, ['status', 'admin_note'])
+    if (patch.status != null && !REPORT_STATUSES.includes(patch.status)) {
+      throw new HttpError(400, 'invalid_status')
+    }
+    // 처리 시각은 서버가 찍는다 — 클라이언트 시계를 믿을 이유가 없다.
+    if (patch.status && patch.status !== 'open') patch.reviewed_at = new Date().toISOString()
+    const row = await updateRow(env, 'event_reports', decodeURIComponent(reportMatch[1]), patch)
+    return json(row, env)
+  }
+
   const idMatch = ID_RE.exec(pathname)
   const subOfEventMatch = SUB_OF_EVENT_RE.exec(pathname)
   const subIdMatch = SUB_ID_RE.exec(pathname)
@@ -806,12 +851,80 @@ async function handlePushUnsubscribe(request, env) {
   return json({ ok: true }, env)
 }
 
+// 아이솔레이트 메모리 카운터. seoulHits와 같은 방식이다 — 콜로마다 따로 세므로
+// 완벽하진 않지만, 한 브라우저가 무제한으로 밀어 넣는 것은 막는다.
+const reportHits = new Map()
+
+function reportRateExceeded(request) {
+  const ip = clientIp(request)
+  const now = Date.now()
+  const entry = reportHits.get(ip)
+  if (!entry || entry.resetAt <= now) {
+    reportHits.set(ip, { count: 1, resetAt: now + REPORT_RATE_WINDOW_MS })
+    if (reportHits.size > 5000) {
+      for (const [key, value] of reportHits) if (value.resetAt <= now) reportHits.delete(key)
+    }
+    return 0
+  }
+  entry.count += 1
+  return entry.count > REPORT_RATE_LIMIT ? Math.ceil((entry.resetAt - now) / 1000) : 0
+}
+
+// POST /reports  { kind, event_id?, message, contact? }
+//
+// 방문자가 "이 정보 틀렸어요" 또는 "이런 행사가 있어요"를 보내는 문.
+// 로그인이 없으므로 누구나 보낼 수 있고, 그래서 IP당 횟수로만 막는다.
+//
+// 브라우저가 Supabase에 직접 넣게 하지 않는 이유: 그러면 속도 제한을 걸 자리가 없다.
+// event_reports의 RLS는 정책을 하나도 두지 않아 service_role만 통과한다.
+async function handleReportCreate(request, env) {
+  if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed')
+
+  const retryAfter = reportRateExceeded(request)
+  if (retryAfter > 0) {
+    return json({ error: 'too_many_reports' }, env, {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    })
+  }
+
+  const body = await readJsonBody(request)
+  const kind = body.kind
+  if (!REPORT_KINDS.includes(kind)) throw new HttpError(400, 'invalid_report')
+
+  const message = typeof body.message === 'string' ? body.message.trim() : ''
+  if (message.length < REPORT_MESSAGE_MIN || message.length > REPORT_MESSAGE_MAX) {
+    throw new HttpError(400, 'invalid_message')
+  }
+
+  const contact = typeof body.contact === 'string' ? body.contact.trim() : ''
+  if (contact.length > REPORT_CONTACT_MAX) throw new HttpError(400, 'invalid_contact')
+
+  // correction은 대상 행사가 있어야 하고, new_event는 없어야 한다(DB check와 같은 규칙).
+  const eventId = typeof body.event_id === 'string' && body.event_id ? body.event_id : null
+  if (kind === 'correction' && !eventId) throw new HttpError(400, 'invalid_report')
+  if (kind === 'new_event' && eventId) throw new HttpError(400, 'invalid_report')
+
+  await supabase(env, 'POST', 'event_reports', {
+    kind,
+    event_id: eventId,
+    message,
+    contact: contact || null,
+  })
+
+  // 저장된 행을 돌려주지 않는다 — 보낸 사람에게 id를 알려줄 이유가 없고,
+  // 그걸로 남의 제보를 넘겨짚을 수 있는 실마리를 만들 이유도 없다.
+  return json({ ok: true }, env, { status: 201 })
+}
+
 const routes = {
   '/health': (_req, env) => json({ ok: true, service: 'event-map-api-proxy' }, env),
 
   '/seoul-congestion': handleSeoulCongestion,
 
   '/push/unsubscribe': handlePushUnsubscribe,
+
+  '/reports': handleReportCreate,
 }
 
 export default {

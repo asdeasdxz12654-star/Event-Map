@@ -85,7 +85,7 @@ async function load() {
   const [
     total, upcoming, ongoing, ended,
     noPoster, noCoords, noFloorPlan, goodsNoImage, locked,
-    drafts, watches, titles,
+    drafts, reports, watches, titles,
   ] = await Promise.all([
     countWhere('events', q => q),
     countWhere('events', q => q.gt('start_date', now)),
@@ -103,6 +103,9 @@ async function load() {
     // 검수 대기는 Worker에서 온다. 여기가 실패하면 화면 전체를 오류로 세운다 —
     // "검수 대기 0건"은 밀린 일이 없다는 뜻이라, 못 물어본 것과 결코 같지 않다.
     adminApi.listDrafts('pending'),
+    // 제보도 Worker에서 온다. 여기가 실패하면 화면 전체를 오류로 세운다 —
+    // "제보 0건"은 밀린 일이 없다는 뜻이라, 못 물어본 것과 결코 같지 않다.
+    adminApi.listReports('open'),
     // 감시 테이블은 없을 수 있다(마이그레이션 전). 그건 실패가 아니라 "아직"이다.
     supabase.from('source_watches').select('*')
       .then(({ data, error }) => (error ? [] : data))
@@ -123,6 +126,7 @@ async function load() {
     gaps: { noPoster, noCoords, noFloorPlan, goodsNoImage },
     locked,
     pendingDrafts: drafts.length,
+    openReports: reports.length,
     freshWatches: freshWatches.length,
     brokenWatches: brokenWatches.length,
     duplicates: findDuplicates(titles),

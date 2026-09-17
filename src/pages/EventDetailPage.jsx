@@ -37,6 +37,7 @@ import { useEventCosplayers } from '../hooks/useEventCosplayers'
 import { useEventTabs } from '../hooks/useEventTabs'
 import { mergeTabs, hiddenBuiltinKeys } from '../lib/tabConfig'
 import CustomTab from '../components/CustomTab'
+import ReportSheet from '../components/ReportSheet'
 import LiveCongestion from '../components/LiveCongestion'
 import DirectionsButtons from '../components/DirectionsButtons'
 import { ticketSiteName } from '../lib/ticketSite'
@@ -61,6 +62,7 @@ export default function EventDetailPage() {
   const { tabs: tabConfig } = useEventTabs(id)
   const { toast, confirm } = useUIFeedback()
   const [showEditForm, setShowEditForm] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   // 탭을 페이지가 들고 있어야 탭끼리 서로를 가리킬 수 있다 — 부스 카드의
   // "굿즈 탭 →", 굿즈 사진의 "이 부스로", 무대 줄의 부스 배지가 전부 이걸 쓴다.
   const [tab, setTab] = useState('overview')
@@ -347,6 +349,17 @@ export default function EventDetailPage() {
               )}
             </SectionCard>
           )}
+
+          {/* 틀린 정보를 발견해도 알려줄 곳이 없었다. 개요 맨 아래에 둔다 —
+              위쪽에 두면 정보보다 먼저 눈에 띄어서, 읽기도 전에 신고부터 권하는 꼴이 된다. */}
+          <button
+            type="button"
+            onClick={() => setShowReport(true)}
+            className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs text-zinc-400 hover:text-ink transition-colors rounded-xl ${FOCUS_RING}`}
+          >
+            <Icon name="warn" className="w-3.5 h-3.5" />
+            이 행사 정보가 틀렸나요?
+          </button>
         </>
       ),
     },
@@ -453,6 +466,9 @@ export default function EventDetailPage() {
 
           {showEditForm && (
             <AdminEventForm event={event} onClose={() => setShowEditForm(false)} />
+          )}
+          {showReport && (
+            <ReportSheet kind="correction" event={event} onClose={() => setShowReport(false)} />
           )}
 
           <Tabs

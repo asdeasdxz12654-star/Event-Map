@@ -12,6 +12,10 @@ const ERROR_MESSAGES = {
   file_too_large: '파일이 너무 큽니다. 12MB 이하로 줄여서 올려주세요.',
   upload_failed: '이미지를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
   invalid_status: '알 수 없는 검수 상태입니다. 새로고침 후 다시 시도해주세요.',
+  too_many_reports: '제보를 너무 자주 보내셨습니다. 잠시 후 다시 시도해주세요.',
+  invalid_report: '제보 내용을 확인해주세요.',
+  invalid_message: '내용을 5자 이상 2000자 이하로 적어주세요.',
+  invalid_contact: '연락처가 너무 깁니다. 200자 이하로 적어주세요.',
 }
 
 function hdrs() {
@@ -125,6 +129,11 @@ export const adminApi = {
   // 승인이 실패하면 트리거가 그 draft만 rejected로 돌리고 사유를 적는다 — 그래서
   // 요청이 성공해도 돌아온 행의 status가 rejected일 수 있다. 바뀐 행을 그대로 돌려준다.
   updateDraft: (id, data) => req('PATCH', `/admin/drafts/${encodeURIComponent(id)}`, data),
+
+  // 방문자 제보 검수. 목록에는 대상 행사 제목이 함께 온다(제보만 봐서는 어느 행사
+  // 얘기인지 id밖에 안 보인다). 넣는 쪽은 관리자가 아니라 방문자라 여기 없다 — reportApi.
+  listReports: (status = 'open') => req('GET', `/admin/reports?status=${encodeURIComponent(status)}`),
+  updateReport: (id, data) => req('PATCH', `/admin/reports/${encodeURIComponent(id)}`, data),
 
   // 감지 알림 확인 처리. "봤다"만 기록하므로 body가 없다.
   ackWatch: (key) => req('POST', `/admin/watches/${encodeURIComponent(key)}/ack`),

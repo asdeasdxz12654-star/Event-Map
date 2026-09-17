@@ -23,6 +23,7 @@ const AdminEventsPage = lazy(() => import('./pages/admin/EventsPage'))
 const AdminEventEditPage = lazy(() => import('./pages/admin/EventEditPage'))
 const AdminDraftsPage = lazy(() => import('./pages/admin/DraftsPage'))
 const AdminSourcesPage = lazy(() => import('./pages/admin/SourcesPage'))
+const AdminReportsPage = lazy(() => import('./pages/admin/ReportsPage'))
 
 function PageFallback() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
                 <Route path="events/new" element={<AdminEventEditPage />} />
                 <Route path="events/:id" element={<AdminEventEditPage />} />
                 <Route path="drafts" element={<AdminDraftsPage />} />
+                <Route path="reports" element={<AdminReportsPage />} />
                 <Route path="sources" element={<AdminSourcesPage />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />
