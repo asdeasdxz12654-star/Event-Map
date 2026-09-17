@@ -4,7 +4,15 @@ const BASE = import.meta.env.VITE_ADMIN_API_URL || 'https://event-map-api-proxy.
 
 const ERROR_MESSAGES = {
   not_found: '대상을 찾을 수 없습니다. 다른 곳에서 이미 삭제됐을 수 있습니다.',
-  internal_error: '서버 오류로 저장하지 못했습니다. 입력값을 확인하고 다시 시도해주세요.',
+  // 예전엔 DB가 거절한 것도 전부 internal_error로 왔다. 그래서 이 문구가 '서버
+  // 오류'와 '입력값을 확인하세요'를 한 문장에 담고 있었다 — 둘 중 어느 쪽인지
+  // 서버가 말해주지 못하니 화면도 얼버무릴 수밖에 없었다. 이제는 갈라져 온다.
+  internal_error: '서버 오류로 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+  missing_required: '필수 항목이 비어 있습니다. 제목·시작일·종료일을 확인해주세요.',
+  invalid_value: '값의 형식이나 범위가 맞지 않습니다. 날짜·숫자·선택 항목을 확인해주세요.',
+  invalid_reference: '대상을 찾을 수 없습니다. 연결한 행사·부스·무대가 지워졌을 수 있습니다.',
+  duplicate: '이미 같은 값이 있습니다.',
+  method_not_allowed: '이 항목에는 할 수 없는 동작입니다.',
   invalid_json: '요청 형식이 올바르지 않습니다. 새로고침 후 다시 시도해주세요.',
   invalid_url: '주소는 http:// 또는 https:// 로 시작해야 합니다. (포스터·예매·공식사이트·배치도)',
   not_configured: '서버에 관리자 설정이 되어 있지 않습니다. (Worker 시크릿 확인 필요)',

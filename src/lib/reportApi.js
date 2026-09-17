@@ -8,6 +8,9 @@ const MESSAGES = {
   invalid_message: '내용을 5자 이상 2000자 이하로 적어주세요.',
   invalid_contact: '연락처가 너무 깁니다. 200자 이하로 적어주세요.',
   invalid_report: '보낼 수 없는 형식입니다. 새로고침 후 다시 시도해주세요.',
+  // 없는 행사 id로 보낸 경우. 예전엔 Worker가 이것도 invalid_report로 뭉갰는데,
+  // 지금은 DB 제약 위반을 한 곳에서 번역하면서 따로 온다(workers lib/db.js).
+  invalid_reference: '그 행사를 찾을 수 없습니다. 목록이 바뀌었을 수 있으니 새로고침 후 다시 시도해주세요.',
   invalid_json: '보낼 수 없는 형식입니다. 새로고침 후 다시 시도해주세요.',
   internal_error: '지금은 접수가 안 됩니다. 잠시 후 다시 시도해주세요.',
 }
