@@ -29,7 +29,6 @@ import { fetchCulturePerformanceCandidates, buildCulturePerformanceDraft } from 
 import { fetchNaverCandidates, fetchNaverCafeCandidates } from './naver.mjs'
 import { lookupVenueCoords } from './naver-local.mjs'
 import { attachEventPoster } from './poster-lookup.mjs'
-import { fetchOfficialSiteCandidates } from './official-sites.mjs'
 import { fetchNaverLoungeCandidates } from './naver-lounge.mjs'
 import { upsertKnownEvents } from './known-events.mjs'
 import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from './subculture-calendar.mjs'
@@ -424,14 +423,12 @@ async function main() {
     }
   }
 
-  // 공식 행사 사이트 직접 수집 — 뉴스/카페보다 날짜가 정확하고 빠름. 별도 환경변수 불필요.
-  let officialItems = []
-  try {
-    officialItems = await fetchOfficialSiteCandidates()
-  } catch (err) {
-    console.error('[공식사이트] 후보 조회 실패:', err.message)
-  }
-  await processTextCandidates('공식사이트', '공식사이트', officialItems)
+  // 예전엔 여기서 "공식 사이트 직접 수집"을 한 번 더 돌렸다. 2026-09-05에 대상 목록이
+  // 빈 배열이 된 뒤로는 매일 호출만 되고 늘 0건이었고, 2026-09-17에 그 경로를 지웠다.
+  // 담당하던 두 곳은 이미 다른 데서 다룬다 —
+  //   코믹월드    subculture-calendar.mjs(comicw.co.kr/c) + known-events.mjs
+  //   일러스타페스 SPA라 HTML에서 아무것도 안 나온다(source-watches.mjs 주석 참고)
+  // 되살릴 일이 생기면 git에 남아 있다: git show cf5a94b^:crawler/src/official-sites.mjs
 }
 
 main().catch(err => {
