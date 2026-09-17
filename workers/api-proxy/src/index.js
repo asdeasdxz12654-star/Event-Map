@@ -851,23 +851,30 @@ async function handlePushUnsubscribe(request, env) {
   return json({ ok: true }, env)
 }
 
-// 아이솔레이트 메모리 카운터. seoulHits와 같은 방식이다 — 콜로마다 따로 세므로
-// 완벽하진 않지만, 한 브라우저가 무제한으로 밀어 넣는 것은 막는다.
-const reportHits = new Map()
-
-function reportRateExceeded(request) {
-  const ip = clientIp(request)
+// 제보 횟수 세기. 로그인 레이트리밋과 같은 저장소를 쓴다(counterStore) —
+// KV가 붙어 있으면 KV, 없으면 아이솔레이트 메모리.
+//
+// 처음엔 메모리 Map만 썼는데 실제로 재보니 안 걸렸다. Cloudflare는 요청을 여러
+// 아이솔레이트·콜로로 흩뿌리고 배포할 때마다 새로 뜨기 때문에, 메모리 카운터는
+// "1시간에 5건"이 아니라 "아이솔레이트마다 5건"이 된다. 로그인 쪽이 이미 KV를
+// 쓰고 있으므로 같은 것을 쓴다 — 바인딩 이름이 LOGIN_RATE_LIMIT이지만 용도는 카운터다.
+//
+// 초과했으면 남은 초, 아니면 0.
+async function reportRateExceeded(request, env) {
+  const key = `report:${clientIp(request)}`
+  const store = counterStore(env)
   const now = Date.now()
-  const entry = reportHits.get(ip)
+  const entry = await store.get(key)
+
   if (!entry || entry.resetAt <= now) {
-    reportHits.set(ip, { count: 1, resetAt: now + REPORT_RATE_WINDOW_MS })
-    if (reportHits.size > 5000) {
-      for (const [key, value] of reportHits) if (value.resetAt <= now) reportHits.delete(key)
-    }
+    await store.put(key, { count: 1, resetAt: now + REPORT_RATE_WINDOW_MS },
+      Math.ceil(REPORT_RATE_WINDOW_MS / 1000))
     return 0
   }
-  entry.count += 1
-  return entry.count > REPORT_RATE_LIMIT ? Math.ceil((entry.resetAt - now) / 1000) : 0
+
+  const next = { count: entry.count + 1, resetAt: entry.resetAt }
+  await store.put(key, next, Math.max(60, Math.ceil((entry.resetAt - now) / 1000)))
+  return next.count > REPORT_RATE_LIMIT ? Math.ceil((entry.resetAt - now) / 1000) : 0
 }
 
 // POST /reports  { kind, event_id?, message, contact? }
@@ -880,7 +887,7 @@ function reportRateExceeded(request) {
 async function handleReportCreate(request, env) {
   if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed')
 
-  const retryAfter = reportRateExceeded(request)
+  const retryAfter = await reportRateExceeded(request, env)
   if (retryAfter > 0) {
     return json({ error: 'too_many_reports' }, env, {
       status: 429,
@@ -905,12 +912,24 @@ async function handleReportCreate(request, env) {
   if (kind === 'correction' && !eventId) throw new HttpError(400, 'invalid_report')
   if (kind === 'new_event' && eventId) throw new HttpError(400, 'invalid_report')
 
-  await supabase(env, 'POST', 'event_reports', {
-    kind,
-    event_id: eventId,
-    message,
-    contact: contact || null,
-  })
+  try {
+    await supabase(env, 'POST', 'event_reports', {
+      kind,
+      event_id: eventId,
+      message,
+      contact: contact || null,
+    })
+  } catch (err) {
+    // 없는 행사 id로 신고하면 FK 위반(23503)이 난다. 그건 우리 잘못이 아니라 요청이
+    // 잘못된 것이라 400으로 답한다 — 500으로 두면 "서버가 고장났다"로 읽히고,
+    // 그 사이 진짜 서버 오류가 같은 코드에 묻힌다.
+    // (check 제약 위반 23514도 같다 — 길이·조합 규칙을 DB가 한 번 더 보는 자리다.)
+    const text = String(err?.message ?? '')
+    if (text.includes('23503') || text.includes('23514')) {
+      throw new HttpError(400, 'invalid_report')
+    }
+    throw err
+  }
 
   // 저장된 행을 돌려주지 않는다 — 보낸 사람에게 id를 알려줄 이유가 없고,
   // 그걸로 남의 제보를 넘겨짚을 수 있는 실마리를 만들 이유도 없다.
