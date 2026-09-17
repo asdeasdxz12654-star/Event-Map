@@ -84,7 +84,7 @@ async function load() {
 
   const [
     total, upcoming, ongoing, ended,
-    noPoster, noCoords, noFloorPlan, goodsNoImage, locked,
+    noPoster, noCoords, noFloorPlan, goodsNoImage, noDisclosure, locked,
     drafts, reports, watches, titles,
   ] = await Promise.all([
     countWhere('events', q => q),
@@ -98,6 +98,14 @@ async function load() {
     // 발표를 안 했으면 floor_plan_note에 "미공개"가 적혀 있고, 그건 채워진 상태다.
     countWhere('events', q => q.is('floor_plan_url', null).is('floor_plan_note', null).gte('end_date', now)),
     countWhere('event_booth_items', q => q.eq('kind', 'goods').is('image_url', null)),
+    // 네 탭(부스·무대·굿즈·코스어)의 "공개 상태" 메모가 하나라도 비어 있는 예정 행사.
+    //
+    // 이게 왜 빈 자리인가: 메모가 비어 있고 데이터도 없으면 그 탭은 아예 안 생긴다.
+    // 방문자는 "공식이 아직 발표를 안 한 것"과 "원래 그런 게 없는 행사"를 구분할 수 없다.
+    // 그 둘을 갈라 적는 것이 DisclosureNote의 일인데, 적어주지 않으면 갈라줄 수가 없다.
+    countWhere('events', q => q
+      .gte('end_date', now)
+      .or('booth_info_note.is.null,stage_info_note.is.null,goods_info_note.is.null,cosplay_info_note.is.null')),
     countWhere('events', q => q.not('admin_edited_at', 'is', null)),
 
     // 검수 대기는 Worker에서 온다. 여기가 실패하면 화면 전체를 오류로 세운다 —
@@ -123,7 +131,7 @@ async function load() {
 
   return {
     events: { total, upcoming, ongoing, ended },
-    gaps: { noPoster, noCoords, noFloorPlan, goodsNoImage },
+    gaps: { noPoster, noCoords, noFloorPlan, goodsNoImage, noDisclosure },
     locked,
     pendingDrafts: drafts.length,
     openReports: reports.length,

@@ -126,7 +126,13 @@ export default function DashboardPage() {
           <Gap label="좌표 없음" value={stats.gaps.noCoords} />
           <Gap label="배치도 없음" value={stats.gaps.noFloorPlan} hint="진행 예정만" />
           <Gap label="굿즈 사진 없음" value={stats.gaps.goodsNoImage} />
+          <Gap label="공개 상태 미기재" value={stats.gaps.noDisclosure} hint="진행 예정만" />
         </dl>
+        <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+          “공개 상태 미기재”는 부스·무대·굿즈·코스어 안내가 하나라도 비어 있는 행사입니다.
+          비어 있으면 그 탭이 아예 안 생겨서, 방문자는 “아직 발표 전”인지 “원래 없는 행사”인지
+          알 수 없습니다. 발표 전이면 “미공개”라고만 적어도 그 자리가 생깁니다.
+        </p>
       </section>
 
       <section>
