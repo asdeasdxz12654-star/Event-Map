@@ -4,6 +4,11 @@ import './index.css'
 import App from './App.jsx'
 import { isSupabaseConfigured } from './supabase'
 import Icon from './components/icons'
+import { installErrorReporter } from './lib/errorReporter'
+
+// 방문자 화면에서 난 오류를 우리에게 알린다. 여기서 가장 먼저 켠다 — 아래 리스너들과
+// 앱 부팅 자체에서 나는 오류까지 잡으려면 첫 줄이어야 한다.
+installErrorReporter()
 
 // Firebase Performance SDK(web-vitals 내장)가 SPA 페이지 전환 시
 // undefined PerformanceEntry의 startTime을 읽으려다 던지는 내부 에러를 억제한다.

@@ -60,6 +60,19 @@ const REPORT_STATUSES = ['open', 'resolved', 'rejected']
 // 검수 목록도 한 화면에서 훑는 용도라 상한을 둔다(drafts와 같은 이유).
 const REPORT_LIMIT = 200
 
+// 방문자 브라우저에서 난 오류.
+const CLIENT_ERROR_KINDS = ['boundary', 'error', 'unhandledrejection']
+const CLIENT_ERROR_STATUSES = ['open', 'resolved', 'ignored']
+const CLIENT_ERROR_LIMIT = 200
+// 필드 길이. 브라우저 쪽에서도 자르지만(src/lib/errorReporter.js LIMITS) 그 코드를
+// 안 거치고 직접 두드릴 수 있으니 여기서 다시 자른다. 막지 않고 자르는 이유는,
+// 길다는 이유로 400을 주면 진짜 오류 보고가 통째로 사라지기 때문이다.
+const CLIENT_ERROR_CAPS = { message: 500, stack: 4000, path: 200, user_agent: 300, app_build: 40, fingerprint: 64 }
+// 오류 한 종류는 탭당 한 번만 올라오지만, 여러 탭·여러 화면에서 나면 그만큼 쌓인다.
+// 제보(1시간 5건)보다 넉넉하게 두되 한 사람이 표를 덮지는 못하게 한다.
+const CLIENT_ERROR_RATE_LIMIT = 30
+const CLIENT_ERROR_RATE_WINDOW_MS = 60 * 60 * 1000
+
 // 자동 작업 실행 기록. 화면은 작업별 최근 몇 건만 보면 되는데, PostgREST로는
 // "작업마다 최근 N건"을 한 번에 못 뽑는다(DISTINCT ON이 없다). 그래서 전체를
 // 최신순으로 받아 브라우저에서 작업별로 나눈다 — 작업 7종 × 하루 1회면
@@ -617,6 +630,32 @@ async function handleAdmin(request, env, pathname) {
     return json(row, env)
   }
 
+  // ── client_errors (방문자 화면에서 난 오류) ────────────────────────────────
+  // 넣는 문은 /client-errors(공개)이고, 여기는 읽고 처리하는 쪽이다.
+  // stack에 우리 코드 구조가, user_agent에 방문자 정보가 들어 있어 공개하지 않는다.
+  if (pathname === '/admin/client-errors' && request.method === 'GET') {
+    const status = new URL(request.url).searchParams.get('status') ?? 'open'
+    if (!CLIENT_ERROR_STATUSES.includes(status)) throw new HttpError(400, 'invalid_status')
+    const rows = await supabase(
+      env,
+      'GET',
+      `client_errors?status=eq.${status}&order=last_seen_at.desc&limit=${CLIENT_ERROR_LIMIT}`
+    )
+    return json(rows ?? [], env)
+  }
+
+  // PATCH /admin/client-errors/:id — 처리함 / 무시.
+  const clientErrorMatch = /^\/admin\/client-errors\/([^/]+)$/.exec(pathname)
+  if (clientErrorMatch && request.method === 'PATCH') {
+    const body = await readJsonBody(request)
+    const patch = pick(body, ['status', 'admin_note'])
+    if (patch.status != null && !CLIENT_ERROR_STATUSES.includes(patch.status)) {
+      throw new HttpError(400, 'invalid_status')
+    }
+    const row = await updateRow(env, 'client_errors', decodeURIComponent(clientErrorMatch[1]), patch)
+    return json(row, env)
+  }
+
   // ── job_runs (자동 작업 실행 기록) ─────────────────────────────────────────
   // GET /admin/job-runs — 대시보드가 "크롤러 마지막 실행 3일 전"을 말하기 위해 읽는다.
   //
@@ -881,21 +920,83 @@ async function handlePushUnsubscribe(request, env) {
 // 쓰고 있으므로 같은 것을 쓴다 — 바인딩 이름이 LOGIN_RATE_LIMIT이지만 용도는 카운터다.
 //
 // 초과했으면 남은 초, 아니면 0.
-async function reportRateExceeded(request, env) {
-  const key = `report:${clientIp(request)}`
+// 넘었으면 남은 초(Retry-After), 아니면 0. 창이 지나면 0부터 다시 센다.
+async function rateExceeded(request, env, { prefix, limit, windowMs }) {
+  const key = `${prefix}:${clientIp(request)}`
   const store = counterStore(env)
   const now = Date.now()
   const entry = await store.get(key)
 
   if (!entry || entry.resetAt <= now) {
-    await store.put(key, { count: 1, resetAt: now + REPORT_RATE_WINDOW_MS },
-      Math.ceil(REPORT_RATE_WINDOW_MS / 1000))
+    await store.put(key, { count: 1, resetAt: now + windowMs }, Math.ceil(windowMs / 1000))
     return 0
   }
 
   const next = { count: entry.count + 1, resetAt: entry.resetAt }
   await store.put(key, next, Math.max(60, Math.ceil((entry.resetAt - now) / 1000)))
-  return next.count > REPORT_RATE_LIMIT ? Math.ceil((entry.resetAt - now) / 1000) : 0
+  return next.count > limit ? Math.ceil((entry.resetAt - now) / 1000) : 0
+}
+
+function reportRateExceeded(request, env) {
+  return rateExceeded(request, env, {
+    prefix: 'report', limit: REPORT_RATE_LIMIT, windowMs: REPORT_RATE_WINDOW_MS,
+  })
+}
+
+// 오류 보고는 제보와 따로 센다. 한 사람이 오류를 많이 겪었다는 이유로 그 사람의
+// 제보까지 막히면 안 된다 — 둘은 서로 다른 일이다.
+function clientErrorRateExceeded(request, env) {
+  return rateExceeded(request, env, {
+    prefix: 'clienterr', limit: CLIENT_ERROR_RATE_LIMIT, windowMs: CLIENT_ERROR_RATE_WINDOW_MS,
+  })
+}
+
+// POST /client-errors  { fingerprint, message, stack?, kind, path?, user_agent?, app_build? }
+//
+// 방문자 화면에서 난 오류가 들어오는 문. 지금까지 이런 고장은 그 사람 브라우저
+// 콘솔에만 남고 우리는 영영 몰랐다.
+//
+// 같은 오류가 또 오면 새 줄을 만들지 않고 횟수만 올린다 — record_client_error()가
+// 그 일을 한다. PostgREST의 on_conflict로는 "기존 값에 1을 더한다"를 쓸 수 없고,
+// 읽고 더해서 쓰면 동시에 올라올 때 숫자가 어긋난다.
+async function handleClientError(request, env) {
+  if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed')
+
+  const retryAfter = await clientErrorRateExceeded(request, env)
+  if (retryAfter > 0) {
+    // 보낸 쪽은 이 응답을 읽지도 않는다(fire-and-forget). 그래도 429로 답해야
+    // 중간의 캐시·프록시가 이걸 성공으로 착각하지 않는다.
+    return json({ error: 'too_many_errors' }, env, {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    })
+  }
+
+  const body = await readJsonBody(request)
+
+  // 길이는 막지 않고 자른다. 길다는 이유로 400을 주면 진짜 오류 보고가 통째로 사라진다.
+  const cap = (value, max) => {
+    const text = typeof value === 'string' ? value.trim() : ''
+    return text ? text.slice(0, max) : null
+  }
+
+  const fingerprint = cap(body.fingerprint, CLIENT_ERROR_CAPS.fingerprint)
+  const message = cap(body.message, CLIENT_ERROR_CAPS.message)
+  // 이 둘이 없으면 줄을 묶을 수도, 무슨 고장인지 읽을 수도 없다.
+  if (!fingerprint || !message) throw new HttpError(400, 'invalid_error_report')
+  if (!CLIENT_ERROR_KINDS.includes(body.kind)) throw new HttpError(400, 'invalid_error_report')
+
+  await supabase(env, 'POST', 'rpc/record_client_error', {
+    p_fingerprint: fingerprint,
+    p_message: message,
+    p_stack: cap(body.stack, CLIENT_ERROR_CAPS.stack),
+    p_kind: body.kind,
+    p_path: cap(body.path, CLIENT_ERROR_CAPS.path),
+    p_user_agent: cap(body.user_agent, CLIENT_ERROR_CAPS.user_agent),
+    p_app_build: cap(body.app_build, CLIENT_ERROR_CAPS.app_build),
+  })
+
+  return json({ ok: true }, env, { status: 201 })
 }
 
 // POST /reports  { kind, event_id?, message, contact? }
@@ -965,6 +1066,8 @@ const routes = {
   '/push/unsubscribe': handlePushUnsubscribe,
 
   '/reports': handleReportCreate,
+
+  '/client-errors': handleClientError,
 }
 
 export default {

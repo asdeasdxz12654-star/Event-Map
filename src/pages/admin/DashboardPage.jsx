@@ -66,6 +66,14 @@ export default function DashboardPage() {
       hint: '방문자가 보낸 것',
     },
     {
+      to: '/admin/errors',
+      icon: 'warn',
+      label: '앱 오류',
+      count: stats.openErrors,
+      hint: stats.openErrors == null ? '불러오지 못했습니다' : '방문자 화면에서 난 것',
+      warn: stats.openErrors == null || stats.openErrors > 0,
+    },
+    {
       icon: 'warn',
       label: '중복 의심',
       count: stats.duplicates.length,

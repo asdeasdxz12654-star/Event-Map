@@ -85,7 +85,9 @@ async function load() {
   const [
     total, upcoming, ongoing, ended,
     noPoster, noCoords, noFloorPlan, goodsNoImage, noDisclosure, locked,
-    drafts, reports, watches, titles, jobRuns,
+    // 순서가 아래 Promise.all과 한 칸이라도 어긋나면 값이 서로 바뀐 채로 조용히 그려진다
+    // (타입이 달라도 에러가 안 난다 — 배열이 숫자 자리에 들어가면 화면에 "0"이 뜬다).
+    drafts, reports, watches, openErrors, jobRuns, titles,
   ] = await Promise.all([
     countWhere('events', q => q),
     countWhere('events', q => q.gt('start_date', now)),
@@ -118,6 +120,9 @@ async function load() {
     supabase.from('source_watches').select('*')
       .then(({ data, error }) => (error ? [] : data))
       .catch(() => []),
+    // 방문자 화면에서 난 오류. 못 읽으면 null이다(마이그레이션 전이면 Worker가 500).
+    // 0으로 적으면 "오류 없음"이라는 거짓말이 되므로 빈 배열로 대신하지 않는다.
+    adminApi.listClientErrors('open').then(rows => rows.length).catch(() => null),
     // 자동 작업 실행 기록. 못 읽으면 null이다 — 빈 배열로 넘기면 화면이 "모든 작업
     // 기록 없음"이라고 단정하는데, 실제로는 물어보지 못한 것이다. 이 화면이 없애려는
     // 바로 그 종류의 거짓말이라 여기서만 예외적으로 null을 통과시킨다.
@@ -143,6 +148,7 @@ async function load() {
     freshWatches: freshWatches.length,
     brokenWatches: brokenWatches.length,
     duplicates: findDuplicates(titles),
+    openErrors,
     // 판정은 화면 쪽(jobHealth.js)에서 한다 — 기준 시각이 필요한 계산이라,
     // 데이터를 불러온 순간이 아니라 그리는 순간을 기준으로 삼는 게 맞다.
     jobRuns,

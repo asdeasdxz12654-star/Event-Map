@@ -20,6 +20,7 @@ const MENU = [
   { to: '/admin/events', icon: 'store', label: '행사 관리' },
   { to: '/admin/drafts', icon: 'list', label: '행사 검수' },
   { to: '/admin/reports', icon: 'warn', label: '제보 · 신고' },
+  { to: '/admin/errors', icon: 'warn', label: '앱 오류' },
   { to: '/admin/sources', icon: 'bell', label: '소스 감시' },
 ]
 

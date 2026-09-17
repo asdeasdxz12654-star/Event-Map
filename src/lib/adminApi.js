@@ -135,6 +135,11 @@ export const adminApi = {
   listReports: (status = 'open') => req('GET', `/admin/reports?status=${encodeURIComponent(status)}`),
   updateReport: (id, data) => req('PATCH', `/admin/reports/${encodeURIComponent(id)}`, data),
 
+  // 방문자 화면에서 난 오류. 같은 오류는 한 줄로 묶여 오고 count가 몇 번 났는지다.
+  // 넣는 쪽은 로그인 없는 방문자의 브라우저라 여기 없다 — src/lib/errorReporter.js.
+  listClientErrors: (status = 'open') => req('GET', `/admin/client-errors?status=${encodeURIComponent(status)}`),
+  updateClientError: (id, data) => req('PATCH', `/admin/client-errors/${encodeURIComponent(id)}`, data),
+
   // 자동 작업 실행 기록. 작업별로 나누는 일은 브라우저가 한다(jobHealth.js) —
   // PostgREST에는 "작업마다 최근 1건"을 뽑는 문법이 없다.
   listJobRuns: () => req('GET', '/admin/job-runs'),

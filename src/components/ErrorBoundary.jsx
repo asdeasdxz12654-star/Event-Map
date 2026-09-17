@@ -1,6 +1,7 @@
 import { Component, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import Icon from './icons'
+import { report } from '../lib/errorReporter'
 
 // 렌더링 중 예외가 나면 React는 트리 전체를 언마운트한다 — 지금까지는 그 결과가
 // "완전한 백지 화면"이었다(데이터 한 건이 예상과 다른 모양이어도 사이트 전체가 죽는다).
@@ -37,6 +38,9 @@ export default class ErrorBoundary extends Component {
   componentDidCatch(error, info) {
     // 개발 중엔 콘솔에 남겨서 원인을 찾을 수 있게 한다.
     console.error('[ErrorBoundary]', error, info?.componentStack)
+    // 방문자 화면에서는 이 콘솔을 아무도 못 본다. 여기가 화면이 백지가 되는 종류의
+    // 고장이 반드시 지나가는 자리라, 우리에게 알리는 것도 여기서 한다.
+    report(error, { kind: 'boundary' })
   }
 
   render() {

@@ -37,8 +37,16 @@ function siteUrlPlugin() {
   }
 }
 
+// 어느 빌드인지. 오류 기록에 함께 남긴다 — 이미 고친 오류가 옛 빌드를 열어둔 탭에서
+// 계속 올라오는 것을, 아직 안 고쳐진 새 고장으로 착각하지 않기 위해서다.
+// GitHub Actions에서는 커밋 해시가, 로컬에서는 'dev'가 들어간다.
+const appBuild = (process.env.GITHUB_SHA ?? 'dev').slice(0, 7)
+
 export default defineConfig({
   base,
+  define: {
+    __APP_BUILD__: JSON.stringify(appBuild),
+  },
   plugins: [
     react(),
     tailwindcss(),
