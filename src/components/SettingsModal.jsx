@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { useModalDialog } from '../hooks/useModalDialog'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
@@ -10,6 +11,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useTheme } from '../hooks/useTheme'
 import AdminModal from './AdminModal'
 import Icon from './icons'
+import { FOCUS_RING } from './ui/focusRing'
 
 // 설정 화면.
 //
@@ -17,13 +19,14 @@ import Icon from './icons'
 // 이모지만 있는 아이콘 세 개는 무슨 기능인지 알기 어렵고, 화면이 좁을수록 탭 영역과
 // 뒤엉킨다. 설정 한 곳에 이름과 설명을 붙여 모았다.
 
-function Row({ icon, title, description, children }) {
+function Row({ icon, title, description, note, children }) {
   return (
     <div className="flex items-start gap-3 py-3.5">
       <Icon name={icon} className="w-5 h-5 mt-0.5 text-zinc-400" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-ink font-medium">{title}</p>
         {description && <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{description}</p>}
+        {note && <div className="mt-1">{note}</div>}
       </div>
       {children && <div className="shrink-0 self-center">{children}</div>}
     </div>
@@ -35,7 +38,7 @@ const actionClass =
 const quietClass =
   'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-ink/5 hover:bg-ink/10 text-zinc-300 border border-line'
 
-function NotificationRow() {
+function NotificationRow({ onCloseSettings }) {
   const { supported, permission, subscribed, loading, error, subscribe, unsubscribe } = usePushNotifications()
 
   // 지원 여부를 확인하는 동안에는 줄을 비워두지 않고 "확인 중"으로 둔다 — 줄이 나중에
@@ -49,7 +52,25 @@ function NotificationRow() {
       : '예매 오픈일과 행사 하루 전에 알림을 받습니다'
 
   return (
-    <Row icon="bell" title="행사 알림" description={description}>
+    <Row
+      icon="bell"
+      title="행사 알림"
+      description={description}
+      note={
+        // 켜면 이 기기를 가리키는 값이 저장된다. 묻는 자리에서 말하지 않으면,
+        // 처리방침에만 적어둔 것은 아무도 안 본다.
+        <p className="text-[11px] text-zinc-500">
+          켜면 이 기기를 가리키는 값이 저장됩니다.{' '}
+          <Link
+            to="/privacy"
+            onClick={onCloseSettings}
+            className={`text-zinc-400 hover:text-ink underline underline-offset-2 rounded ${FOCUS_RING}`}
+          >
+            무엇을 저장하나
+          </Link>
+        </p>
+      }
+    >
       {supported === true && permission !== 'denied' && (
         subscribed
           ? (
@@ -225,7 +246,7 @@ export default function SettingsModal({ onClose }) {
           </div>
 
           <div className="px-5 divide-y divide-ink/5">
-            <NotificationRow />
+            <NotificationRow onCloseSettings={onClose} />
             <InstallRow onShowIosGuide={() => setShowIosGuide(true)} />
             <ThemeRow />
             <ListColumnsRow />
@@ -236,6 +257,14 @@ export default function SettingsModal({ onClose }) {
           <div className="px-5 pt-4 text-[11px] leading-relaxed text-zinc-500">
             국내 게임·코스프레·게임음악·일러스트 행사를 공식 사이트와 공공 API에서 모아 보여줍니다.
             포스터는 주최 측이 공개한 공식 홍보물만 씁니다 — 아직 안 나온 행사는 &quot;공식 포스터 미정&quot;으로 표시됩니다.
+            {/* 모달을 닫고 옮겨간다 — 안 닫으면 시트가 덮인 채로 문서가 열린다. */}
+            <Link
+              to="/privacy"
+              onClick={onClose}
+              className={`block mt-2 text-zinc-400 hover:text-ink underline underline-offset-2 rounded ${FOCUS_RING}`}
+            >
+              개인정보처리방침 · 이용약관
+            </Link>
           </div>
         </div>
       </div>

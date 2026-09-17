@@ -25,6 +25,7 @@ const AdminDraftsPage = lazy(() => import('./pages/admin/DraftsPage'))
 const AdminSourcesPage = lazy(() => import('./pages/admin/SourcesPage'))
 const AdminReportsPage = lazy(() => import('./pages/admin/ReportsPage'))
 const AdminErrorsPage = lazy(() => import('./pages/admin/ErrorsPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 function PageFallback() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
               <Route path="/events/:id" element={<EventDetailPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               {/* 관리자 화면은 AdminLayout 아래로 모은다 — 로그인 문과 메뉴를
                   화면 수만큼 복제하지 않기 위해서다. /admin/drafts 주소는 그대로
                   유지한다(북마크해 둔 곳이 있다). */}

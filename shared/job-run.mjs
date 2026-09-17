@@ -84,9 +84,14 @@ async function post(path, body) {
 
 async function save(row) {
   if (!await post('job_runs', row)) return
-  // 90일이 지난 기록을 가끔 치운다. 매번 부르면 쓸데없는 쿼리가 되고, 아예 안 부르면
-  // 표가 계속 자란다. 20번에 한 번이면 하루 6개 작업 기준 사나흘에 한 번꼴이다.
-  if (Math.random() < 0.05) await post('rpc/prune_job_runs', {})
+  // 오래된 것을 가끔 치운다. 매번 부르면 쓸데없는 쿼리가 되고, 아예 안 부르면 계속 자란다.
+  // 20번에 한 번이면 하루 6개 작업 기준 사나흘에 한 번꼴이다.
+  //
+  // 실행 기록만이 아니라 보관 기간이 정해진 것을 한꺼번에 치운다(supabase/
+  // data_retention_2026-09-17.sql) — 오류 기록 90일, 처리된 제보의 연락처 1년.
+  // 정리 전용 워크플로를 따로 두지 않는 이유는, 그것이 멈췄는지 또 감시해야 하기
+  // 때문이다. 크롤·감지·알림이 매일 도니까 그 김에 치운다.
+  if (Math.random() < 0.05) await post('rpc/prune_old_data', {})
 }
 
 // fn은 { items, detail } 을 돌려준다.

@@ -24,6 +24,9 @@ const MAX_EVENTS = 1000
 const STATIC_PATHS = [
   { path: '/', changefreq: 'daily', priority: '1.0' },
   { path: '/calendar', changefreq: 'daily', priority: '0.8' },
+  // 거의 안 바뀌지만 검색 결과에는 나와야 한다. 사이트 안에서만 닿을 수 있으면
+  // "이 사이트가 뭘 모으지"를 밖에서 찾아보는 사람에게는 없는 것과 같다.
+  { path: '/privacy', changefreq: 'yearly', priority: '0.3' },
 ]
 
 export async function onRequest({ env, request }) {
