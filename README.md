@@ -69,7 +69,12 @@ npm run lint             # oxlint
 `supabase/fix_promote_trigger_2026-09-16.sql`이 복구한 이력이 있다.
 
 주요 테이블: `events` · `event_booths` · `event_booth_items` · `event_stages` ·
-`event_stage_slots` · `event_cosplayers` · `event_tabs` · `event_drafts` · `source_watches`
+`event_stage_slots` · `event_cosplayers` · `event_tabs` · `event_drafts` ·
+`event_reports` · `source_watches`
+
+`cosplayers` · `cosplayer_events`는 만들어만 두고 아직 아무 화면도 안 쓴다 —
+코스어 본인 가입 디렉토리용인데 방문자 로그인이 없다. 이유와 되살리는 방법은
+`supabase/cosplayers_dormant_2026-09-17.sql`에 적어뒀다.
 
 ## 자동 실행 (GitHub Actions)
 
@@ -90,7 +95,7 @@ Cloudflare Pages는 대시보드 깃 연동으로 자동 빌드된다(워크플�
 사이트 우상단 ⚙ → 관리자 → 코드 입력. 로그인하면 두 가지가 켜진다.
 
 - **인라인 편집** — 보고 있는 화면에서 바로 고친다(행사·부스·굿즈·무대·코스어)
-- **`/admin`** — 대시보드(빈 자리·중복 의심) · 행사 표 · 검수 · 소스 감시
+- **`/admin`** — 대시보드(빈 자리·중복 의심) · 행사 표 · 검수 · **제보 · 신고** · 소스 감시
 
 행사 편집(`/admin/events/:id`)에는 탭 구성과 **긴 배너에서 굿즈 사진 잘라내기**가 있다.
 공식이 굿즈를 1200×42,500px 같은 긴 이미지 한 장으로만 올리는 경우가 많아서다.
