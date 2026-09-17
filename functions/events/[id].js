@@ -47,7 +47,7 @@ export async function fetchEvent(env, id) {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null
   const url = `${env.SUPABASE_URL}/rest/v1/events` +
     `?id=eq.${encodeURIComponent(id)}` +
-    '&select=title,description,start_date,end_date,venue,poster_url&limit=1'
+    '&select=title,description,start_date,end_date,venue,venue_address,poster_url,category,organizer,admission_fee,ticket_url,ticket_status,website&limit=1'
   try {
     const res = await fetch(url, {
       headers: {
@@ -77,6 +77,79 @@ export function buildPreview(event, origin, pathname) {
     canonical: `${origin}${pathname}`,
     isPoster: Boolean(poster),
   }
+}
+
+// 검색엔진용 구조화 데이터(schema.org/Event).
+//
+// 왜 필요한가
+//   구글·네이버가 행사를 날짜·장소 카드로 보여주는 근거가 이것이다. 없으면 우리 페이지는
+//   그냥 텍스트 하나이고, 있으면 검색 결과에서 자리를 더 차지한다.
+//   이 앱은 SPA라 봇이 본문을 못 읽으므로, 봇이 읽을 수 있는 유일한 사실 진술이기도 하다.
+//
+// 값을 지어내지 않는다 — 비어 있는 필드는 넣지 않는다. 구조화 데이터에 틀린 값을 넣으면
+// 검색엔진이 사이트 전체를 덜 믿게 된다.
+export function buildEventJsonLd(event, canonical, image) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.title,
+    url: canonical,
+    startDate: event.start_date,
+    // 하루짜리면 종료일이 시작일과 같다. 그대로 적어도 맞다.
+    endDate: event.end_date ?? event.start_date,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    eventStatus: 'https://schema.org/EventScheduled',
+    image: [image],
+  }
+
+  const description = buildDescription(event)
+  if (description) data.description = description
+
+  if (event.venue) {
+    data.location = {
+      '@type': 'Place',
+      name: event.venue,
+      ...(event.venue_address
+        ? { address: { '@type': 'PostalAddress', streetAddress: event.venue_address, addressCountry: 'KR' } }
+        : {}),
+    }
+  }
+
+  if (event.organizer) {
+    data.organizer = { '@type': 'Organization', name: event.organizer, ...(event.website ? { url: event.website } : {}) }
+  }
+
+  // 예매 정보. 가격을 모르면 price를 쓰지 않는다 — 0으로 적으면 "무료"라는 뜻이 된다.
+  if (event.ticket_url || event.ticket_status === 'soldout') {
+    const availability = event.ticket_status === 'soldout'
+      ? 'https://schema.org/SoldOut'
+      : event.ticket_status === 'available'
+        ? 'https://schema.org/InStock'
+        : null
+    data.offers = {
+      '@type': 'Offer',
+      ...(event.ticket_url ? { url: event.ticket_url } : {}),
+      ...(availability ? { availability } : {}),
+      ...(isFree(event.admission_fee) ? { price: '0', priceCurrency: 'KRW' } : {}),
+    }
+  }
+
+  return data
+}
+
+// "무료", "무료 입장" 등만 0원으로 본다. "1일권 15,000원" 같은 값에서 숫자를 뽑아내면
+// 어느 권종의 가격인지 우리가 정하는 셈이라, 애매하면 가격을 안 적는다.
+function isFree(fee) {
+  return typeof fee === 'string' && /^\s*무료/.test(fee)
+}
+
+// JSON을 <script> 안에 넣을 때 '<'를 그대로 두면 본문 중 "</script>"가 태그를 닫아버린다.
+// 유니코드 이스케이프는 JSON 파서가 똑같이 읽으므로 내용은 안 바뀐다.
+export function jsonLdScript(data) {
+  // String.raw를 쓰는 이유: 그냥 '\u003c'라고 적으면 JS가 그걸 '<' 한 글자로
+  // 읽어서 치환이 아무 일도 안 한다 — 그리고 그 사실이 눈에 전혀 안 띈다.
+  const json = JSON.stringify(data).replaceAll('<', String.raw`\u003c`)
+  return `<script type="application/ld+json">${json}</script>`
 }
 
 // 이 함수가 실제로 돌았는지, 안 됐다면 왜인지 헤더 하나로 확인할 수 있게 표시를 남긴다.
@@ -130,6 +203,11 @@ export async function onRequestGet(context) {
     .on('meta[name="twitter:title"]', setContent(title))
     .on('meta[name="twitter:description"]', setContent(description))
     .on('meta[name="twitter:image"]', setContent(image))
+    // index.html의 canonical은 홈 주소다. 이 페이지의 정식 주소로 바꾼다 —
+    // 안 바꾸면 모든 행사 페이지가 "나는 홈페이지다"라고 말하게 된다.
+    .on('link[rel="canonical"]', { element: el => el.setAttribute('href', canonical) })
+    // 봇이 읽을 수 있는 유일한 사실 진술. head 끝에 붙인다.
+    .on('head', { element: el => el.append(jsonLdScript(buildEventJsonLd(event, canonical, image)), { html: true }) })
 
   if (isPoster) {
     // 기본 이미지(og-image.png)에 맞춰 박아둔 1200x630은 포스터에는 틀린 값이다.

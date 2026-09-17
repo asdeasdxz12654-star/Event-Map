@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ScrollToTopButton from './components/ScrollToTopButton'
 import ScrollRestoration from './components/ScrollRestoration'
+import CanonicalLink from './components/CanonicalLink'
 import ErrorBoundary from './components/ErrorBoundary'
 import Icon from './components/icons'
 import { AdminProvider } from './contexts/AdminContext'
@@ -54,6 +55,8 @@ export default function App() {
     <AdminProvider>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ScrollRestoration />
+      {/* 같은 사이트가 두 도메인에 올라가 있어서, 어느 쪽이 정식인지 경로마다 알려준다 */}
+      <CanonicalLink />
       <div className="min-h-screen bg-surface">
         <Navbar />
         <main>

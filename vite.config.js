@@ -14,12 +14,25 @@ const siteUrl =
   process.env.VITE_SITE_URL ??
   (isGithubPages ? 'https://asdeasdxz12654-star.github.io/Event-Map/' : 'https://event-map.pages.dev/')
 
+// 정식 주소(canonical) — 어느 쪽으로 빌드하든 항상 Cloudflare다.
+//
+// 같은 사이트가 두 도메인에 올라가 있어서, 검색엔진 입장에서는 같은 내용이 두 벌 있는
+// 중복 콘텐츠다. 어느 쪽이 진짜인지 말해주지 않으면 검색엔진이 알아서 하나를 고르고,
+// 그 선택이 우리 뜻과 다를 수 있다.
+//
+// Cloudflare를 정식으로 삼는 이유: 딥링크가 200을 주고(GitHub Pages는 404.html 폴백이라
+// 404 상태다), 행사별 링크 미리보기가 동작하며(functions/events/[id].js), CSP·보안 헤더가
+// 적용된다(public/_headers). GitHub Pages는 미러로 남긴다 — 이미 공유된 링크가 살아 있어야 한다.
+const canonicalUrl = process.env.VITE_CANONICAL_URL ?? 'https://event-map.pages.dev/'
+
 // index.html의 %SITE_URL% 자리를 위 값으로 바꾼다.
 function siteUrlPlugin() {
   return {
     name: 'inject-site-url',
     transformIndexHtml(html) {
-      return html.replaceAll('%SITE_URL%', siteUrl)
+      return html
+        .replaceAll('%SITE_URL%', siteUrl)
+        .replaceAll('%CANONICAL_URL%', canonicalUrl)
     },
   }
 }

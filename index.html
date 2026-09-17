@@ -44,17 +44,19 @@
     <meta property="og:site_name" content="게임이벤트허브" />
     <meta property="og:title" content="게임이벤트허브 — 국내 게임·코스프레·게임음악·일러스트 행사 정보" />
     <meta property="og:description" content="국내 게임·코스프레·게임음악·일러스트 행사 통합 정보 플랫폼" />
-    <!-- %SITE_URL%은 빌드 시 배포 대상 도메인으로 치환된다 (vite.config.js의 siteUrlPlugin).
-         GitHub Pages와 Cloudflare Pages에 같은 코드가 올라가므로 한쪽 도메인을 박아두면
-         다른 쪽에서 공유했을 때 미리보기가 엉뚱한 사이트를 가리킨다. -->
-    <meta property="og:image" content="%SITE_URL%og-image.png" />
+    <!-- %CANONICAL_URL%은 어느 쪽으로 빌드하든 Cloudflare 주소다. 같은 사이트가 두
+         도메인에 올라가 있어서, 어느 쪽이 진짜인지 검색엔진에 말해주지 않으면 중복
+         콘텐츠가 된다. 경로별 canonical은 화면에서 다시 맞춘다(src/hooks/useCanonicalUrl.js).
+         %SITE_URL%은 지금 빌드가 올라가는 도메인이다. -->
+    <link rel="canonical" href="%CANONICAL_URL%" />
+    <meta property="og:image" content="%CANONICAL_URL%og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:url" content="%SITE_URL%" />
+    <meta property="og:url" content="%CANONICAL_URL%" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="게임이벤트허브" />
     <meta name="twitter:description" content="국내 게임·코스프레·게임음악·일러스트 행사 통합 정보 플랫폼" />
-    <meta name="twitter:image" content="%SITE_URL%og-image.png" />
+    <meta name="twitter:image" content="%CANONICAL_URL%og-image.png" />
   </head>
   <body>
     <div id="root"></div>

@@ -9,6 +9,15 @@
 #   - https://*.googleapis.com 와일드카드는 뺐다. FCM 웹 SDK가 실제로 부르는 곳은
 #     fcmregistrations / firebaseinstallations 두 곳뿐이다. 만약 푸시 알림 등록이
 #     깨지면(콘솔에 CSP 위반이 찍힌다) 막힌 호스트를 확인해 여기 한 줄만 추가한다.
+#
+# Cloudflare Web Analytics 메모
+#   대시보드에서 켜면 Cloudflare가 응답에 비콘 스크립트를 자동으로 끼워 넣는다
+#   (static.cloudflareinsights.com에서 받아 cloudflareinsights.com으로 보낸다).
+#   그 두 호스트를 여기 미리 열어둔다 — 안 열어두면 켠 뒤에 조용히 아무 수치도 안 잡히고,
+#   원인은 콘솔의 CSP 위반 로그를 봐야만 알 수 있다.
+#   쿠키를 쓰지 않고 개인정보를 모으지 않아서 동의 배너가 필요 없다.
+#   (GitHub Pages 배포에는 이 파일이 적용되지 않는다 — 거기선 애널리틱스도 안 돈다.)
+#
 # img-src 메모
 #   포스터는 150KB 미만이면 주최 측 원본 주소를 그대로 쓴다(crawler/src/poster-storage.mjs) —
 #   호스트를 특정할 수 없어 https: 전체를 열어둘 수밖에 없다. 대신 poster_url에 http(s)가
@@ -20,4 +29,4 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com https://openapi.map.naver.com https://oapi.map.naver.com https://ssl.pstatic.net https://nrbe.pstatic.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://event-map-api-proxy.asdeasdxz12654.workers.dev https://openapi.map.naver.com https://oapi.map.naver.com https://naveropenapi.apigw.ntruss.com https://kr-col-ext.nelo.navercorp.com; img-src 'self' data: blob: https:; font-src 'self' data: https://cdn.jsdelivr.net; worker-src 'self' blob:; manifest-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://www.gstatic.com https://openapi.map.naver.com https://oapi.map.naver.com https://ssl.pstatic.net https://nrbe.pstatic.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://cloudflareinsights.com https://*.supabase.co wss://*.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://event-map-api-proxy.asdeasdxz12654.workers.dev https://openapi.map.naver.com https://oapi.map.naver.com https://naveropenapi.apigw.ntruss.com https://kr-col-ext.nelo.navercorp.com; img-src 'self' data: blob: https:; font-src 'self' data: https://cdn.jsdelivr.net; worker-src 'self' blob:; manifest-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'

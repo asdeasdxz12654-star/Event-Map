@@ -57,3 +57,9 @@ Disallow: /
 User-agent: *
 Disallow: /admin/
 Allow: /
+
+# 사이트맵 — 요청이 올 때 만들어진다(functions/sitemap.xml.js).
+# 이 앱은 정적 SPA라 목록이 JS로 그려진다. 봇이 첫 페이지를 받아도 행사 상세로 들어갈
+# 링크가 HTML에 없으므로, 사이트맵이 없으면 행사 페이지가 사실상 검색엔진에 존재하지 않는다.
+# 절대 주소로 적는다 — 정식 도메인은 Cloudflare 쪽이다.
+Sitemap: https://event-map.pages.dev/sitemap.xml
