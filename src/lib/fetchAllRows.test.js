@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE, fetchAllRows } from './fetchAllRows'
+import { PAGE_SIZE, REQUEST_TIMEOUT_MS, fetchAllRows } from './fetchAllRows'
 
 // PostgREST의 1000행 상한 넘기기.
 //
@@ -65,6 +65,41 @@ describe('fetchAllRows', () => {
     let built = false
     await fetchAllRows(() => q, { build: query => { built = true; return query.eq('event_id', 'e1') } })
     expect(built).toBe(true)
+  })
+
+  it('요청마다 시간 제한을 건다', async () => {
+    // 응답이 영영 안 오면 화면은 스켈레톤만 돌린다 — 실패한 줄도 모르고 기다리게 된다.
+    const { q, state } = fakeTable(5)
+    q.abortSignal = signal => { state.signal = signal; return q }
+    await fetchAllRows(() => q)
+    expect(state.signal).toBeInstanceOf(AbortSignal)
+    expect(state.signal.aborted).toBe(false)
+  })
+
+  it('abortSignal이 없는 쿼리에서도 돈다', async () => {
+    // 시간 제한이 없다고 조회가 틀리지는 않는다. 빌더가 그 메서드를 안 가진 경우
+    // (테스트 가짜, 옛 버전)에 통째로 터지면 그게 더 큰 고장이다.
+    const { q } = fakeTable(3)
+    expect(q.abortSignal).toBeUndefined()
+    await expect(fetchAllRows(() => q)).resolves.toHaveLength(3)
+  })
+
+  it('제한 시간이 사람이 기다릴 만한 값이다', () => {
+    expect(REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(5000)
+    expect(REQUEST_TIMEOUT_MS).toBeLessThanOrEqual(30000)
+  })
+
+  it('중단되면 오류로 끝난다 (조용히 빈 목록이 되지 않는다)', async () => {
+    const q = {
+      order: () => q,
+      range: () => q,
+      abortSignal: () => q,
+      then: resolve => Promise.resolve({
+        data: null,
+        error: new Error('AbortError: The operation was aborted'),
+      }).then(resolve),
+    }
+    await expect(fetchAllRows(() => q)).rejects.toThrow('AbortError')
   })
 
   it('에러가 오면 던진다 (조용히 빈 배열로 넘어가지 않는다)', async () => {

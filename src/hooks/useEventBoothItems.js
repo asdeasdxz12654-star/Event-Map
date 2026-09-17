@@ -28,11 +28,11 @@ function mapItem(row) {
 // 그래서 부스별로 나눠 조회하지 않고 행사 단위로 한 번에 받아 화면에서 묶는다.
 // 부스가 8개인 행사에서 요청이 8번 나가지 않는다.
 export function useEventBoothItems(eventId) {
-  const { items, loading } = useEventChildList({
+  const { items, loading, error, retry } = useEventChildList({
     table: 'event_booth_items',
     eventId,
     mapRow: mapItem,
     sortName: item => item.name,
   })
-  return { items, loading }
+  return { items, loading, error, retry }
 }

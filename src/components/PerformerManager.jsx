@@ -110,7 +110,7 @@ function PerformerRow({ performer, copy, isAdmin, onSaved }) {
 // performers는 상세 페이지가 받아서 내려준다 — 탭을 만들 때 "출연진이 있는지"를
 // 페이지가 먼저 알아야 하는데, 여기서 따로 조회하면 같은 테이블을 두 번 구독하게 된다
 // (useEventChildList의 실시간 채널 이름이 테이블+행사 id라 이름까지 겹친다).
-export default function PerformerManager({ eventId, category, note, performers }) {
+export default function PerformerManager({ eventId, category, note, performers, error, onRetry }) {
   const { isAdmin } = useAdmin()
   const { toast } = useUIFeedback()
   const [showAddForm, setShowAddForm] = useState(false)
@@ -152,7 +152,7 @@ export default function PerformerManager({ eventId, category, note, performers }
       )}
     >
       {performers.length === 0 && !showAddForm && (
-        <DisclosureNote note={note} subject="무대 프로그램" emptyText={copy.emptyText} />
+        <DisclosureNote note={note} subject="무대 프로그램" emptyText={copy.emptyText} error={error} onRetry={onRetry} />
       )}
 
       {performers.map(performer => (

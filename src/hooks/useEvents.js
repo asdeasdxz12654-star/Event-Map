@@ -58,9 +58,14 @@ export function useEvents() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // 다시 시도 버튼이 값을 바꿔서 아래 이펙트를 다시 돌린다. 오프라인에서 새로고침을
+  // 시키면 캐시에서 앱을 처음부터 다시 띄우게 되는데, 그건 이미 떠 있는 화면을 버리는 일이다.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setError(null)
 
     // 목록에는 "지난 1년 ~ 앞으로 1년"을 노출한다.
     //
@@ -123,7 +128,7 @@ export function useEvents() {
       cancelled = true
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [attempt])
 
-  return { events, loading, error }
+  return { events, loading, error, refetch: () => setAttempt(n => n + 1) }
 }

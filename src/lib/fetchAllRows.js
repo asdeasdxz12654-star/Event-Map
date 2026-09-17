@@ -15,6 +15,16 @@
 //   그래서 호출부가 준 정렬 뒤에 항상 기본키를 덧붙여 순서를 유일하게 만든다.
 export const PAGE_SIZE = 1000
 
+// 한 페이지 요청에 거는 상한.
+//
+// 응답이 영영 안 오는 경우가 있다 — 카페 와이파이가 로그인 페이지에 가둬 두거나,
+// 터널에 들어가 연결이 끊기는 중이거나. 그러면 브라우저는 실패로 보지 않고 계속
+// 기다리고, 화면은 스켈레톤만 돌린다. 방문자는 "느린가 보다" 하고 기다리다 닫는다.
+//
+// 15초로 잡은 이유: 행사 1000건을 받는 데 그만큼 걸릴 일은 없고(실측 1초 미만),
+// 느린 3G에서도 넉넉하다. 여기 걸리면 오류로 끝나므로 화면이 "못 불러왔다"고 말할 수 있다.
+export const REQUEST_TIMEOUT_MS = 15000
+
 // build: (query) => query — .eq()·.gte() 같은 조건을 얹어 돌려주는 함수.
 //        range/order는 여기서 붙이므로 build 안에서 붙이지 말 것.
 // order: [{ column, ascending }] — 마지막에 tiebreaker가 자동으로 붙는다.
@@ -26,6 +36,12 @@ export async function fetchAllRows(baseQuery, { build, order = [], tiebreaker = 
       q = q.order(column, { ascending })
     }
     q = q.order(tiebreaker, { ascending: true }).range(from, from + PAGE_SIZE - 1)
+
+    // abortSignal은 supabase-js 쿼리 빌더에만 있다. 테스트의 가짜 쿼리처럼 없는 경우엔
+    // 건너뛴다 — 시간 제한이 없다고 조회가 틀리지는 않는다.
+    if (typeof q.abortSignal === 'function' && typeof AbortSignal?.timeout === 'function') {
+      q = q.abortSignal(AbortSignal.timeout(REQUEST_TIMEOUT_MS))
+    }
 
     const { data, error } = await q
     if (error) throw error

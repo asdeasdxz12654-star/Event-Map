@@ -24,7 +24,7 @@ const DENSE_THRESHOLD = 40
 export default function BoothList({
   eventId, booths, items, note,
   stages = [], slots = [], cosplayers = [],
-  onJump,
+  onJump, error, onRetry,
 }) {
   const { isAdmin } = useAdmin()
   const { toast } = useUIFeedback()
@@ -110,6 +110,8 @@ export default function BoothList({
           note={note}
           subject="참가업체/부스"
           emptyText="아직 등록된 참가 업체/부스 정보가 없습니다."
+          error={error}
+          onRetry={onRetry}
         />
       ) : (
         <>

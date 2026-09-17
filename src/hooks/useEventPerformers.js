@@ -13,11 +13,11 @@ function mapPerformer(row) {
 
 // 특정 행사의 출연진·세트리스트(콘서트) / 무대 프로그램(그 외)을 실시간 구독한다.
 export function useEventPerformers(eventId) {
-  const { items, loading } = useEventChildList({
+  const { items, loading, error, retry } = useEventChildList({
     table: 'event_performers',
     eventId,
     mapRow: mapPerformer,
     sortName: performer => performer.artistName,
   })
-  return { performers: items, loading }
+  return { performers: items, loading, error, retry }
 }

@@ -23,7 +23,7 @@ const STATUS_LABEL = { soldout: '품절', limited: '한정', preorder: '예약' 
 // 그래서 공식 굿즈든 참가 업체 굿즈든 예외 없이 한 격자에 담고, 출처는 배지로 밝힌다.
 // 예전 GoodsList는 부스별로 묶어 세로 목록으로 보여줬는데, 그러면 "3만원 이하 뭐 있나"
 // 같은 질문에 답할 수 없고 사진도 못 쓴다.
-export default function GoodsGrid({ items, booths, note, focusBoothId, onJump }) {
+export default function GoodsGrid({ items, booths, note, focusBoothId, onJump, error, onRetry }) {
   const goods = useMemo(() => items.filter(i => i.kind === 'goods'), [items])
   const boothById = useMemo(() => new Map(booths.map(b => [b.id, b])), [booths])
 
@@ -103,7 +103,7 @@ export default function GoodsGrid({ items, booths, note, focusBoothId, onJump })
   if (goods.length === 0) {
     return (
       <div className="mb-4">
-        <DisclosureNote note={note} subject="굿즈" emptyText="아직 등록된 굿즈 정보가 없습니다." />
+        <DisclosureNote note={note} subject="굿즈" emptyText="아직 등록된 굿즈 정보가 없습니다." error={error} onRetry={onRetry} />
       </div>
     )
   }

@@ -24,7 +24,7 @@ const hhmm = t => (t ? t.slice(0, 5) : null)
 //                                무대 칩이 생기고, 각 줄에 무대 배지가 붙는다.
 //
 // 정렬은 useEventStages.sortSlots가 잡는다(날짜 → 시각 → sort_order).
-export default function StageTimeline({ eventId, stages, slots, booths = [], cosplayers = [], note, onJump }) {
+export default function StageTimeline({ eventId, stages, slots, booths = [], cosplayers = [], note, onJump, error, onRetry }) {
   const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
   const days = useMemo(() => [...new Set(slots.map(s => s.day))].sort(), [slots])
@@ -92,7 +92,7 @@ export default function StageTimeline({ eventId, stages, slots, booths = [], cos
     return (
       <div className="mb-4">
         {isAdmin && <StageAdmin eventId={eventId} stages={stages} booths={booths} />}
-        <DisclosureNote note={note} subject="무대 프로그램" emptyText="아직 등록된 무대 일정이 없습니다." />
+        <DisclosureNote note={note} subject="무대 프로그램" emptyText="아직 등록된 무대 일정이 없습니다." error={error} onRetry={onRetry} />
       </div>
     )
   }

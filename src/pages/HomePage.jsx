@@ -8,6 +8,8 @@ import Icon from '../components/icons'
 import { FOCUS_RING } from '../components/ui/focusRing'
 import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
+import { useOnline } from '../hooks/useOnline'
+import LoadError from '../components/LoadError'
 import { useHomeFilters } from '../hooks/useHomeFilters'
 import { useListColumns, eventGridClass } from '../hooks/useListColumns'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -17,7 +19,18 @@ import AdminEventForm from '../components/AdminEventForm'
 
 export default function HomePage() {
   useDocumentTitle(null)
-  const { events, loading, error } = useEvents()
+  const { events, loading, error, refetch } = useEvents()
+  const online = useOnline()
+
+  // 못 불러온 것으로 볼 상황.
+  //
+  // error만 보면 오프라인에서 8초를 기다린다 — supabase-js가 네 번 재시도하는 동안
+  // 화면은 스켈레톤만 돌리고, 방문자는 "느린가 보다" 하고 기다린다. 연결이 끊긴 것은
+  // 브라우저가 이미 알고 있으니 그때는 기다리지 않고 바로 말한다.
+  //
+  // 이미 목록을 받아둔 뒤에 끊긴 경우(loading이 false)는 건드리지 않는다 —
+  // 보고 있던 목록을 오류 화면으로 덮을 이유가 없다.
+  const loadFailed = !!error || (loading && !online)
   const { isAdmin } = useAdmin()
   const [columns, setColumns] = useListColumns()
   const [showAddForm, setShowAddForm] = useState(false)
@@ -151,7 +164,7 @@ export default function HomePage() {
         />
       )}
 
-      {!loading && !error && (
+      {!loading && !loadFailed && (
         <ActiveFilters
           items={activeItems}
           onClearAll={resetAll}
@@ -162,14 +175,11 @@ export default function HomePage() {
       )}
 
       {/* 이벤트 그리드 */}
-      {loading ? (
+      {loadFailed ? (
+        <LoadError offline={!online} onRetry={refetch} />
+      ) : loading ? (
         <div className={eventGridClass(columns)}>
           {Array.from({ length: columns === 1 ? 3 : 6 }).map((_, i) => <EventCardSkeleton key={i} />)}
-        </div>
-      ) : error ? (
-        <div className="text-center py-16 text-danger">
-          <Icon name="warn" className="w-9 h-9 mx-auto mb-3" />
-          <p>행사 정보를 불러오지 못했습니다</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-zinc-400">

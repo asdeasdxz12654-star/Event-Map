@@ -23,7 +23,7 @@ const hhmm = t => (t ? t.slice(0, 5) : null)
 //
 // 사진은 공식 공지에 실린 것만 쓴다. 없으면 색 타일 + 이름으로 두고, 현장 사진을
 // 임의로 모아 넣지 않는다 — 초상권은 우리가 판단할 문제가 아니다.
-export default function CosplayerGrid({ eventId, cosplayers, booths, note, focusBoothId, onJump }) {
+export default function CosplayerGrid({ eventId, cosplayers, booths, note, focusBoothId, onJump, error, onRetry }) {
   const { isAdmin } = useAdmin()
   const { toast, confirm } = useUIFeedback()
   const boothById = useMemo(() => new Map(booths.map(b => [b.id, b])), [booths])
@@ -56,7 +56,7 @@ export default function CosplayerGrid({ eventId, cosplayers, booths, note, focus
     return (
       <div className="mb-4">
         {isAdmin && <CosplayerAdmin eventId={eventId} booths={booths} count={0} />}
-        <DisclosureNote note={note} subject="코스어 라인업" emptyText="아직 등록된 코스어 정보가 없습니다." />
+        <DisclosureNote note={note} subject="코스어 라인업" emptyText="아직 등록된 코스어 정보가 없습니다." error={error} onRetry={onRetry} />
       </div>
     )
   }

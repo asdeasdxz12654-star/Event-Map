@@ -23,11 +23,11 @@ function mapBooth(row) {
 
 // 특정 행사의 참가 업체·부스 목록을 초기 로드 + 실시간 구독한다.
 export function useEventBooths(eventId) {
-  const { items, loading } = useEventChildList({
+  const { items, loading, error, retry } = useEventChildList({
     table: 'event_booths',
     eventId,
     mapRow: mapBooth,
     sortName: booth => booth.name,
   })
-  return { booths: items, loading }
+  return { booths: items, loading, error, retry }
 }

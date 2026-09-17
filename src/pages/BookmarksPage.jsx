@@ -4,13 +4,19 @@ import EventCardSkeleton from '../components/EventCardSkeleton'
 import Icon from '../components/icons'
 import { FOCUS_RING } from '../components/ui/focusRing'
 import { useEvents } from '../hooks/useEvents'
+import { useOnline } from '../hooks/useOnline'
+import LoadError from '../components/LoadError'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useListColumns, eventGridClass } from '../hooks/useListColumns'
 
 export default function BookmarksPage() {
   useDocumentTitle('북마크')
-  const { events, loading, error } = useEvents()
+  const { events, loading, error, refetch } = useEvents()
+  const online = useOnline()
+
+  // 판단 기준은 홈과 같다 (HomePage의 loadFailed 주석 참고).
+  const loadFailed = !!error || (loading && !online)
   const { bookmarkIds } = useBookmarks()
   const [columns] = useListColumns() // 열 수는 홈에서 고른 설정을 그대로 따른다
 
@@ -26,20 +32,15 @@ export default function BookmarksPage() {
       </div>
 
       {/* 기다리는 모습은 홈과 같아야 한다 — 홈에서 북마크로 넘어올 때 화면이 튀지 않게 */}
-      {loading && (
+      {loading && !loadFailed && (
         <div className={eventGridClass(columns)}>
           {Array.from({ length: columns === 1 ? 2 : 4 }).map((_, i) => <EventCardSkeleton key={i} />)}
         </div>
       )}
 
-      {error && (
-        <div className="text-center py-16 text-danger">
-          <Icon name="warn" className="w-9 h-9 mx-auto mb-3" />
-          <p>행사 정보를 불러오지 못했습니다</p>
-        </div>
-      )}
+      {loadFailed && <LoadError offline={!online} onRetry={refetch} />}
 
-      {!loading && !error && bookmarked.length === 0 && (
+      {!loading && !loadFailed && bookmarked.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <Icon name="star" className="w-9 h-9 mx-auto mb-3 text-zinc-500" />
           <p className="mb-4">북마크한 행사가 없습니다</p>

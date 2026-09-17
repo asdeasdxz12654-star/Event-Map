@@ -16,6 +16,7 @@ export function useEvent(id) {
   const [event, setEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!id) {
@@ -40,6 +41,13 @@ export function useEvent(id) {
         else setEvent(data ? mapEvent(data) : null)
         setLoading(false)
       })
+      // maybeSingle()의 프라미스가 거부되는 경우도 있다(네트워크 실패). 안 잡으면
+      // loading이 계속 true로 남아서 스켈레톤이 멈추지 않는다.
+      .catch(fetchError => {
+        if (cancelled) return
+        setError(fetchError)
+        setLoading(false)
+      })
 
     // 관리자가 수정하거나 크롤러가 포스터를 채우면 새로고침 없이 반영되게 한다
     // (목록과 달리 이 행 하나만 구독한다).
@@ -55,7 +63,7 @@ export function useEvent(id) {
       cancelled = true
       supabase.removeChannel(channel)
     }
-  }, [id])
+  }, [id, attempt])
 
-  return { event, loading, error }
+  return { event, loading, error, refetch: () => setAttempt(n => n + 1) }
 }

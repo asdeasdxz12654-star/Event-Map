@@ -11,6 +11,8 @@ import NaverMap from '../components/NaverMap'
 import Icon from '../components/icons'
 import { FOCUS_RING } from '../components/ui/focusRing'
 import { useEvent } from '../hooks/useEvent'
+import { useOnline } from '../hooks/useOnline'
+import LoadError from '../components/LoadError'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { adminApi } from '../lib/adminApi'
@@ -48,16 +50,19 @@ export default function EventDetailPage() {
   const navigate = useNavigate()
   // 목록(useEvents)이 아니라 id로 이 행사만 받아온다 — 목록은 "올해 + 90일"만 담아서
   // 그 범위 밖 행사는 링크로 들어와도 못 찾는 상태였다 (useEvent.js 주석 참고).
-  const { event, loading, error } = useEvent(id)
+  const { event, loading, error, refetch } = useEvent(id)
+  const online = useOnline()
   useDocumentTitle(event?.title)
   // 하위 목록은 여기서 한 번만 받아 아래로 내려준다 — 어떤 탭을 띄울지는 "내용이 있는가"로
   // 정해지므로 페이지가 개수를 먼저 알아야 하고, 컴포넌트마다 따로 조회하면 같은 테이블에
   // 같은 이름의 실시간 채널이 두 번 열린다.
-  const { booths } = useEventBooths(id)
-  const { items: boothItems } = useEventBoothItems(id)
-  const { performers } = useEventPerformers(id)
-  const { stages, slots } = useEventStages(id)
-  const { cosplayers } = useEventCosplayers(id)
+  // 하위 목록은 각자 실패할 수 있다. 실패를 조용히 넘기면 화면이 "공식이 아직 발표
+  // 안 함"이라고 말하는데(DisclosureNote), 그건 정반대의 뜻이다. 탭 안에만 알린다.
+  const { booths, error: boothsError, retry: retryBooths } = useEventBooths(id)
+  const { items: boothItems, error: itemsError, retry: retryItems } = useEventBoothItems(id)
+  const { performers, error: performersError, retry: retryPerformers } = useEventPerformers(id)
+  const { stages, slots, error: stagesError, retry: retryStages } = useEventStages(id)
+  const { cosplayers, error: cosplayersError, retry: retryCosplayers } = useEventCosplayers(id)
   // 관리자가 정한 탭 구성. 행이 없으면 빈 배열이고, 화면은 지금까지와 똑같이 그려진다.
   const { tabs: tabConfig } = useEventTabs(id)
   const { toast, confirm } = useUIFeedback()
@@ -96,9 +101,28 @@ export default function EventDetailPage() {
     }
   }
 
+  // 오프라인이면 스켈레톤을 돌리지 않고 바로 말한다 (HomePage의 loadFailed와 같은 이유).
+  if (loading && !online) {
+    return (
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8">
+        <LoadError offline onRetry={refetch} />
+      </div>
+    )
+  }
+
   if (loading) return <DetailSkeleton />
 
-  if (error || !event) {
+  // 못 불러온 것과 그런 행사가 없는 것은 다르다. 예전엔 둘 다 "찾을 수 없습니다"였는데,
+  // 지하철에서 북마크를 열면 행사가 지워진 것처럼 보였다.
+  if (error) {
+    return (
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8">
+        <LoadError offline={!online} onRetry={refetch} />
+      </div>
+    )
+  }
+
+  if (!event) {
     return (
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-16 text-center">
         <Icon name="search" className="w-10 h-10 mx-auto mb-4 text-zinc-500" />
@@ -189,10 +213,12 @@ export default function EventDetailPage() {
   // 관리자가 명시적으로 끈 탭. "데이터가 없어서 탭이 안 생긴 것"과 구분해야 한다 —
   // 전자는 개요 아래에도 넣지 않고, 후자는 넣는다.
   const hiddenTabKeys = hiddenBuiltinKeys(tabConfig)
-  const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl || !!event.floorPlanNote
-  const hasStageTab = isConcert ? performers.length > 0 : slots.length > 0
-  const hasGoodsTab = goodsItems.length > 0 || !!event.goodsInfoNote
-  const hasCosplayTab = cosplayers.length > 0 || !!event.cosplayInfoNote
+  // 못 불러왔을 때도 탭을 남긴다. 탭이 사라지면 "못 불러왔다"고 알릴 자리까지 같이
+  // 사라져서, 방문자에게는 원래 그런 게 없는 행사와 똑같이 보인다.
+  const hasBoothTab = booths.length > 0 || !!event.floorPlanUrl || !!event.floorPlanNote || !!boothsError
+  const hasStageTab = (isConcert ? performers.length > 0 : slots.length > 0) || !!stagesError || !!performersError
+  const hasGoodsTab = goodsItems.length > 0 || !!event.goodsInfoNote || !!itemsError
+  const hasCosplayTab = cosplayers.length > 0 || !!event.cosplayInfoNote || !!cosplayersError
 
   const boothSection = (
     <>
@@ -208,6 +234,8 @@ export default function EventDetailPage() {
         slots={slots}
         cosplayers={cosplayers}
         onJump={jumpTo}
+        error={boothsError}
+        onRetry={retryBooths}
       />
     </>
   )
@@ -217,6 +245,8 @@ export default function EventDetailPage() {
       category={event.category}
       note={event.stageInfoNote}
       performers={performers}
+      error={performersError}
+      onRetry={retryPerformers}
     />
   ) : (
     <StageTimeline
@@ -227,6 +257,8 @@ export default function EventDetailPage() {
       cosplayers={cosplayers}
       note={event.stageInfoNote}
       onJump={jumpTo}
+      error={stagesError}
+      onRetry={retryStages}
     />
   )
   const goodsSection = (
@@ -236,6 +268,8 @@ export default function EventDetailPage() {
       note={event.goodsInfoNote}
       focusBoothId={focusBoothId}
       onJump={jumpTo}
+      error={itemsError}
+      onRetry={retryItems}
     />
   )
   const cosplaySection = (
@@ -246,6 +280,8 @@ export default function EventDetailPage() {
       note={event.cosplayInfoNote}
       focusBoothId={focusBoothId}
       onJump={jumpTo}
+      error={cosplayersError}
+      onRetry={retryCosplayers}
     />
   )
 

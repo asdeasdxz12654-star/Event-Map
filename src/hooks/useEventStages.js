@@ -38,13 +38,13 @@ function mapSlot(row) {
 }
 
 export function useEventStages(eventId) {
-  const { items: stages, loading: stagesLoading } = useEventChildList({
+  const { items: stages, loading: stagesLoading, error: stagesError, retry: retryStages } = useEventChildList({
     table: 'event_stages',
     eventId,
     mapRow: mapStage,
     sortName: stage => stage.name,
   })
-  const { items: rawSlots, loading: slotsLoading } = useEventChildList({
+  const { items: rawSlots, loading: slotsLoading, error: slotsError, retry: retrySlots } = useEventChildList({
     table: 'event_stage_slots',
     eventId,
     mapRow: mapSlot,
@@ -53,7 +53,15 @@ export function useEventStages(eventId) {
     sortName: slot => `${slot.day} ${slot.startTime ?? '99:99'}`,
   })
 
-  return { stages, slots: sortSlots(rawSlots), loading: stagesLoading || slotsLoading }
+  // 무대는 장소와 시간표 두 조회로 이뤄진다. 둘 중 하나만 실패해도 시간표는 못 그리므로
+  // 하나로 합쳐서 알린다 — "장소는 받았는데 시간표를 못 받았다"를 방문자가 구분할 일이 없다.
+  return {
+    stages,
+    slots: sortSlots(rawSlots),
+    loading: stagesLoading || slotsLoading,
+    error: stagesError ?? slotsError,
+    retry: () => { retryStages(); retrySlots() },
+  }
 }
 
 // 날짜 → 시작 시각 → sort_order 순.

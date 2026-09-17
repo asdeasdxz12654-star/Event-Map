@@ -5,6 +5,8 @@ import { ko } from 'date-fns/locale'
 import CategoryBadge from '../components/CategoryBadge'
 import { categoryMeta, CATEGORIES } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
+import { useOnline } from '../hooks/useOnline'
+import LoadError from '../components/LoadError'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -35,7 +37,11 @@ function EventRow({ event, showDate = false }) {
 
 export default function CalendarPage() {
   useDocumentTitle('캘린더')
-  const { events, loading, error } = useEvents()
+  const { events, loading, error, refetch } = useEvents()
+  const online = useOnline()
+
+  // 판단 기준은 홈과 같다 (HomePage의 loadFailed 주석 참고).
+  const loadFailed = !!error || (loading && !online)
   const [viewDate, setViewDate] = useState(new Date())
 
   function getEventsForDay(date) {
@@ -127,12 +133,10 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {loading && (
+          {loading && !loadFailed && (
             <p className="text-center text-sm text-zinc-400 py-4">행사 정보를 불러오는 중...</p>
           )}
-          {error && (
-            <p className="text-center text-sm text-red-400 py-4">행사 정보를 불러오지 못했습니다</p>
-          )}
+          {loadFailed && <LoadError offline={!online} onRetry={refetch} className="!py-6" />}
 
           {/* 달력 그리드 */}
           <div className="bg-surface-1 border border-line rounded-2xl overflow-hidden mb-4">

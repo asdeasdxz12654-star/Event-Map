@@ -11,14 +11,32 @@ import { fetchAllRows } from '../lib/fetchAllRows'
 //   eventId  : 대상 행사 id (없으면 빈 목록)
 //   mapRow   : DB 행(snake_case) -> 컴포넌트용 객체(camelCase) 변환
 //   sortName : sort_order가 같을 때 2차 정렬에 쓸 문자열 접근자
+// 이 테이블이 아직 DB에 없다는 뜻인가.
+//
+// 마이그레이션 전에는 조회가 실패하는 게 정상이다. 그건 고장이 아니라 "아직"이라서,
+// 화면에 오류를 띄우면 안 된다. 반대로 네트워크가 끊겨서 못 받은 것은 고장이고,
+// 그걸 조용히 넘기면 "공식이 아직 발표 안 함"으로 읽힌다 — 정반대의 뜻이다.
+//
+//   42P01   undefined_table (PostgreSQL)
+//   PGRST205 PostgREST가 스키마 캐시에서 테이블을 못 찾음
+function isMissingTable(error) {
+  const code = error?.code ?? ''
+  if (code === '42P01' || code === 'PGRST205') return true
+  return /does not exist|Could not find the table/i.test(error?.message ?? '')
+}
+
 export function useEventChildList({ table, eventId, mapRow, sortName }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  // 다시 시도 버튼이 값을 바꿔서 아래 이펙트를 다시 돌린다.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!eventId) {
       setItems([])
       setLoading(false)
+      setError(null)
       return
     }
 
@@ -27,6 +45,7 @@ export function useEventChildList({ table, eventId, mapRow, sortName }) {
 
     let cancelled = false
     setLoading(true)
+    setError(null)
 
     // 1000행 상한을 넘겨 전부 받는다.
     //
@@ -42,10 +61,16 @@ export function useEventChildList({ table, eventId, mapRow, sortName }) {
         setItems(sortItems(rows.map(mapRow)))
         setLoading(false)
       })
-      .catch(() => {
-        // 마이그레이션 전이라 테이블이 없는 경우가 있다(예전 단발 조회도 조용히 넘어갔다).
-        // 여기서 화면을 오류로 덮으면 나머지 탭까지 같이 못 쓰게 된다.
-        if (!cancelled) setLoading(false)
+      .catch(fetchError => {
+        if (cancelled) return
+        // 화면 전체를 오류로 덮지는 않는다 — 부스를 못 받았다고 무대·굿즈 탭까지
+        // 못 쓰게 할 이유는 없다. 오류는 그 탭 안에만 그린다(DisclosureNote).
+        //
+        // 예전엔 여기서 아무것도 안 하고 넘어갔다. 그러면 호출부는 빈 목록을 받고,
+        // 화면은 "아직 등록된 부스 정보가 없습니다"를 그린다 — 못 불러온 것이
+        // "공식이 아직 발표 안 함"으로 둔갑한다. 방문자는 부스가 없는 줄 알고 나간다.
+        setError(isMissingTable(fetchError) ? null : fetchError)
+        setLoading(false)
       })
 
     const channel = supabase
@@ -72,7 +97,7 @@ export function useEventChildList({ table, eventId, mapRow, sortName }) {
     // mapRow/sortName은 모듈 스코프의 고정 함수라 의존성에 넣지 않아도 안전하다
     // (매 렌더 새 함수가 들어오면 구독이 계속 끊겼다 붙었다 하므로 오히려 위험).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, eventId])
+  }, [table, eventId, attempt])
 
-  return { items, loading }
+  return { items, loading, error, retry: () => setAttempt(n => n + 1) }
 }

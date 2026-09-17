@@ -26,11 +26,11 @@ function mapCosplayer(row) {
 }
 
 export function useEventCosplayers(eventId) {
-  const { items, loading } = useEventChildList({
+  const { items, loading, error, retry } = useEventChildList({
     table: 'event_cosplayers',
     eventId,
     mapRow: mapCosplayer,
     sortName: c => c.name,
   })
-  return { cosplayers: items, loading }
+  return { cosplayers: items, loading, error, retry }
 }
