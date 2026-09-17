@@ -135,6 +135,10 @@ export const adminApi = {
   listReports: (status = 'open') => req('GET', `/admin/reports?status=${encodeURIComponent(status)}`),
   updateReport: (id, data) => req('PATCH', `/admin/reports/${encodeURIComponent(id)}`, data),
 
+  // 자동 작업 실행 기록. 작업별로 나누는 일은 브라우저가 한다(jobHealth.js) —
+  // PostgREST에는 "작업마다 최근 1건"을 뽑는 문법이 없다.
+  listJobRuns: () => req('GET', '/admin/job-runs'),
+
   // 감지 알림 확인 처리. "봤다"만 기록하므로 body가 없다.
   ackWatch: (key) => req('POST', `/admin/watches/${encodeURIComponent(key)}/ack`),
 

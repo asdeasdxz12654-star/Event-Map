@@ -23,6 +23,7 @@ import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
 import { isOurStorage, mirrorImage } from './image-mirror.mjs'
 import { sleep } from './util.mjs'
+import { runJob } from '../../shared/job-run.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -172,6 +173,8 @@ async function main() {
     console.log('실패한 건은 원본 주소를 그대로 두었습니다. 위 로그의 주소를 열어보고,')
     console.log('정말 사라졌다면 관리자 화면에서 새 주소로 바꾸거나 비워 주세요.')
   }
+
+  return { items: totals.moved, detail: { 옮김: totals.moved, 실패: totals.failed, 이미사본: totals.kept } }
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+runJob('mirror-images', main, { record: !DRY_RUN })

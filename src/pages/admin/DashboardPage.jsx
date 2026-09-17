@@ -4,6 +4,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { FOCUS_RING } from '../../components/ui/focusRing'
+import { jobsNeedingAttention, relativeAge, summarizeJobs } from '../../lib/jobHealth'
 
 // 관리자 첫 화면.
 //
@@ -36,6 +37,11 @@ export default function DashboardPage() {
     )
   }
 
+  // 자동 작업이 아직 돌고 있는가. 못 읽었으면 null이고, 화면은 "—"로 적는다 —
+  // 0으로 적으면 "멈춘 작업 없음"이라는 거짓말이 된다.
+  const jobs = stats.jobRuns ? summarizeJobs(stats.jobRuns) : null
+  const stalled = jobs ? jobsNeedingAttention(jobs) : null
+
   const todo = [
     {
       to: '/admin/drafts',
@@ -64,6 +70,15 @@ export default function DashboardPage() {
       label: '중복 의심',
       count: stats.duplicates.length,
       hint: '제목·시작일이 같은 행사',
+    },
+    {
+      icon: 'warn',
+      label: '자동 작업 멈춤',
+      count: stalled ? stalled.length : null,
+      hint: stalled === null
+        ? '실행 기록을 못 읽었습니다'
+        : stalled.length > 0 ? stalled.map(s => s.label).join(' · ') : '크롤·감지·알림',
+      warn: stalled === null || stalled.length > 0,
     },
   ]
 
@@ -145,6 +160,25 @@ export default function DashboardPage() {
         </dl>
       </section>
 
+      <section>
+        <SectionTitle hint="GitHub Actions가 정해진 시각에 돌리는 것들입니다. 워크플로가 초록불이어도 아무것도 못 가져오는 경우가 있어서, 실행 시각과 건수를 함께 적습니다.">
+          자동 작업
+        </SectionTitle>
+        {jobs === null ? (
+          <p className="text-sm text-zinc-400 bg-surface-1 border border-line rounded-2xl px-4 py-3.5 leading-relaxed">
+            실행 기록을 불러오지 못했습니다.
+            <span className="block text-xs text-zinc-500 mt-1">
+              <code className="text-zinc-400">supabase/job_runs_2026-09-17.sql</code>을 아직 실행하지 않았다면
+              그것부터 돌려주세요. 그 전까지는 이 자리가 비어 있습니다.
+            </span>
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-px bg-line border border-line rounded-2xl overflow-hidden">
+            {jobs.map(job => <JobRow key={job.key} job={job} />)}
+          </ul>
+        )}
+      </section>
+
       {stats.locked > 0 && (
         <section>
           <SectionTitle>크롤러 자동 갱신 꺼짐</SectionTitle>
@@ -188,6 +222,64 @@ function TodoCard({ to, icon, label, count, hint, warn }) {
   return to
     ? <Link to={to} className={`${cls} hover:border-line-strong transition-colors ${FOCUS_RING}`}>{body}</Link>
     : <div className={cls}>{body}</div>
+}
+
+// 자동 작업 한 줄.
+//
+// 여기서 가장 중요한 글자는 상태가 아니라 "며칠 전"이다. 상태는 우리가 정한 규칙의
+// 결과지만 시각은 사실이고, 규칙이 틀렸을 때 사람이 알아챌 수 있는 건 시각 쪽이다.
+const JOB_STATE = {
+  ok: { label: '정상', cls: 'text-live bg-live/10' },
+  late: { label: '늦음', cls: 'text-warn bg-warn/10' },
+  failed: { label: '실패', cls: 'text-danger bg-danger/10' },
+  never: { label: '기록 없음', cls: 'text-zinc-500 bg-surface-2' },
+}
+
+// 며칠씩 0건이면 대개 고장이다 — 파서가 깨졌거나 키가 만료됐거나. 다만 0건이 정상인
+// 날도 많아서(그날 오픈하는 행사가 없으면 알림은 0건이다) 상태를 바꾸지는 않고,
+// 한동안 이어졌을 때만 한 줄 적어 사람이 보게 한다.
+const ZERO_STREAK_NOTE = 5
+
+function JobRow({ job }) {
+  const state = JOB_STATE[job.state]
+  const items = job.last?.items
+
+  return (
+    <li className="bg-surface-1 px-3.5 py-3 min-w-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-sm text-ink">{job.label}</span>
+        <span className={`text-[11px] px-1.5 py-0.5 rounded-md ${state.cls}`}>{state.label}</span>
+        <span className="ml-auto text-xs text-zinc-400 tabular-nums">
+          {relativeAge(job.ageHours)}
+          {items != null && <span className="text-zinc-500"> · {items}건</span>}
+        </span>
+      </div>
+
+      {job.state === 'failed' && job.last?.error && (
+        <p className="text-[11px] text-danger mt-1 break-words line-clamp-2" title={job.last.error}>
+          {job.last.error.split('\n')[0]}
+        </p>
+      )}
+
+      {job.state === 'late' && (
+        <p className="text-[11px] text-warn mt-1">
+          {job.everyHours >= 24 * 7 ? '매주' : '매일'} 도는 작업입니다 — Actions 탭의 {job.workflow}를 확인해주세요.
+        </p>
+      )}
+
+      {job.state === 'never' && (
+        <p className="text-[11px] text-zinc-500 mt-1">
+          아직 한 번도 기록되지 않았습니다. 다음 실행부터 여기에 남습니다.
+        </p>
+      )}
+
+      {job.state === 'ok' && job.zeroStreak >= ZERO_STREAK_NOTE && (
+        <p className="text-[11px] text-warn mt-1">
+          {job.zeroStreak}회 연속 0건입니다 — 돌기는 도는데 아무것도 못 가져오고 있습니다.
+        </p>
+      )}
+    </li>
+  )
 }
 
 function Gap({ label, value, hint, tone = 'auto' }) {

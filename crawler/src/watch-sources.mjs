@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { WATCHES, checkWatch } from './source-watches.mjs'
 import { sleep } from './util.mjs'
+import { runJob } from '../../shared/job-run.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -88,6 +89,8 @@ async function main() {
   if (changed > 0) {
     console.log('바뀐 곳은 /admin/drafts 화면의 "공식 소스 감지"에 뜹니다.')
   }
+
+  return { items: changed, detail: { 확인: WATCHES.length, 바뀜: changed, 실패: failed } }
 }
 
 async function upsert(watch, patch) {
@@ -101,4 +104,4 @@ async function upsert(watch, patch) {
   if (error) console.error(`  -> 상태 저장 실패: ${error.message}`)
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+runJob('watch-sources', main, { record: !DRY_RUN })

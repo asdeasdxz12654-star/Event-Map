@@ -24,6 +24,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { fetchAllRows } from './db.mjs'
 import { decodeEntities, fetchHtml, sleep } from './util.mjs'
+import { runJob } from '../../shared/job-run.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -101,16 +102,14 @@ async function main() {
   try {
     html = await fetchHtml(LIST_URL)
   } catch (err) {
-    console.error(`목록을 못 받았습니다: ${err.message}`)
-    process.exit(1)
+    throw new Error(`목록을 못 받았습니다: ${err.message}`)
   }
 
   const fares = parseFares(html).filter(f => roundOf(f.label))
   if (fares.length === 0) {
     // 형식이 바뀌면 여기서 0건이 된다. 조용히 넘어가지 않고 실패로 알린다 —
     // 파서가 죽은 걸 모르고 몇 달 지나면 그동안 부스가 하나도 안 들어온다.
-    console.error('회차 목록을 못 읽었습니다 — 페이지 구조가 바뀌었을 수 있습니다.')
-    process.exit(1)
+    throw new Error('회차 목록을 못 읽었습니다 — 페이지 구조가 바뀌었을 수 있습니다.')
   }
   console.log(`회차 ${fares.length}개: ${fares.map(f => f.label).join(' · ')}\n`)
 
@@ -123,8 +122,7 @@ async function main() {
       .like('title', '%코믹월드%')
       .order('id'))
   } catch (err) {
-    console.error(`행사 조회 실패: ${err.message}`)
-    process.exit(1)
+    throw new Error(`행사 조회 실패: ${err.message}`)
   }
 
   let total = 0
@@ -156,6 +154,8 @@ async function main() {
   }
 
   console.log(`\n완료: ${total}곳 반영`)
+
+  return { items: total, detail: { 회차: fares.length, 반영: total } }
 }
 
 // 이름을 키로 맞춘다.
@@ -219,4 +219,4 @@ async function syncBooths(event, booths) {
   return toInsert.length + toUpdate.length
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+runJob('comicworld-booths', main, { record: !DRY_RUN })

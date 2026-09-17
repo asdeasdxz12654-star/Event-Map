@@ -22,6 +22,7 @@ import { findOfficialSiteUrl } from './official-site-lookup.mjs'
 import { isQuotaExhausted } from './serpapi.mjs'
 import { todayKST } from './date-kst.mjs'
 import { sleep } from './util.mjs'
+import { runJob } from '../../shared/job-run.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -74,6 +75,8 @@ async function main() {
   }
 
   console.log(`\n완료: ${updated}건 ${DRY_RUN ? '찾음(저장 안 함)' : '업데이트'}, ${skipped}건 스킵`)
+
+  return { items: updated, detail: { 채움: updated, 스킵: skipped } }
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+runJob('fill-official-sites', main, { record: !DRY_RUN })

@@ -35,6 +35,19 @@ import { fetchSubcultureCalendarCandidates, buildSubcultureCalendarDraft } from 
 import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-calendar.mjs'
 import { todayKST } from './date-kst.mjs'
 import { sleep, htmlToText, httpUrl } from './util.mjs'
+import { runJob } from '../../shared/job-run.mjs'
+
+// 이번 실행이 무엇을 가져왔는지. job_runs에 남겨서 대시보드가 "마지막 실행 3일 전 ·
+// 12건"이라고 말할 수 있게 한다. 소스별로 나눠 세는 이유는, 전체 합만 보면 한 소스가
+// 죽어도 다른 소스가 그 자리를 메워서 티가 안 나기 때문이다 — 네이버가 몇 주째 0건인
+// 것과 원래 뉴스가 없는 것은 다른 일이다.
+const RUN_TOTALS = { scanned: 0, saved: 0, bySource: {} }
+
+function tally(label, scanned, saved) {
+  RUN_TOTALS.scanned += scanned
+  RUN_TOTALS.saved += saved
+  RUN_TOTALS.bySource[label] = (RUN_TOTALS.bySource[label] ?? 0) + saved
+}
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // gpt-oss-20b: Groq 무료 티어에서 구조화 추출 품질/속도 확인함. reasoning_effort를 낮게 줘서
@@ -287,6 +300,7 @@ async function processStructuredSource({ label, envVar, fetchFn, buildFn }) {
     if (ok) saved++
   }
 
+  tally(label, scanned, saved)
   console.log(`[${label}] 조회 ${scanned}건 / 새로 저장 ${saved}건`)
 }
 
@@ -331,6 +345,7 @@ async function processTextCandidates(label, sourceName, items) {
     if (ok) saved++
   }
 
+  tally(label, scanned, saved)
   console.log(`[${label}] 조회 ${scanned}건 / 새로 저장 ${saved}건`)
 }
 
@@ -431,7 +446,10 @@ async function main() {
   // 되살릴 일이 생기면 git에 남아 있다: git show cf5a94b^:crawler/src/official-sites.mjs
 }
 
-main().catch(err => {
-  console.error(err)
-  process.exit(1)
+runJob('crawl-news', async () => {
+  await main()
+  return {
+    items: RUN_TOTALS.saved,
+    detail: { 조회: RUN_TOTALS.scanned, ...RUN_TOTALS.bySource },
+  }
 })

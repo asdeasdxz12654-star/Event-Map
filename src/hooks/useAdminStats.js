@@ -85,7 +85,7 @@ async function load() {
   const [
     total, upcoming, ongoing, ended,
     noPoster, noCoords, noFloorPlan, goodsNoImage, noDisclosure, locked,
-    drafts, reports, watches, titles,
+    drafts, reports, watches, titles, jobRuns,
   ] = await Promise.all([
     countWhere('events', q => q),
     countWhere('events', q => q.gt('start_date', now)),
@@ -118,6 +118,11 @@ async function load() {
     supabase.from('source_watches').select('*')
       .then(({ data, error }) => (error ? [] : data))
       .catch(() => []),
+    // 자동 작업 실행 기록. 못 읽으면 null이다 — 빈 배열로 넘기면 화면이 "모든 작업
+    // 기록 없음"이라고 단정하는데, 실제로는 물어보지 못한 것이다. 이 화면이 없애려는
+    // 바로 그 종류의 거짓말이라 여기서만 예외적으로 null을 통과시킨다.
+    // (job_runs 마이그레이션 전이면 Worker가 500을 주므로 여기로 온다.)
+    adminApi.listJobRuns().catch(() => null),
     // 중복 판정만 목록이 필요하다. 여기에도 1000행 상한이 걸리므로 페이징으로 받는다 —
     // 잘리면 "중복 없음"으로 보이는데, 그게 바로 이 화면이 막으려는 상황이다.
     fetchAllRows(() => supabase.from('events').select('id, title, start_date')).catch(() => []),
@@ -138,6 +143,9 @@ async function load() {
     freshWatches: freshWatches.length,
     brokenWatches: brokenWatches.length,
     duplicates: findDuplicates(titles),
+    // 판정은 화면 쪽(jobHealth.js)에서 한다 — 기준 시각이 필요한 계산이라,
+    // 데이터를 불러온 순간이 아니라 그리는 순간을 기준으로 삼는 게 맞다.
+    jobRuns,
   }
 }
 

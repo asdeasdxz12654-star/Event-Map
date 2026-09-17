@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getMessaging } from 'firebase-admin/messaging'
+import { runJob } from '../../shared/job-run.mjs'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
@@ -155,6 +156,12 @@ async function main() {
   const tokens = await getAllTokens()
   console.log(`구독 토큰 ${tokens.length}개`)
 
+  // 몇 건을 실제로 보냈는지. 0건이 정상인 날이 많은 작업이라(그날 오픈·임박 행사가
+  // 없으면 아무것도 안 보낸다) 이 숫자만으로 고장을 판정하지 않는다 — 대시보드는
+  // "마지막 실행 시각"을 먼저 본다.
+  let ticketOpenSent = 0
+  let startingSoonSent = 0
+
   const { data: ticketOpenEvents, error: e1 } = await supabase
     .from('events')
     .select('id, title')
@@ -170,6 +177,7 @@ async function main() {
       url: `/events/${event.id}`,
     })
     await markNotified(event.id, 'ticket_open')
+    ticketOpenSent++
   }
 
   const { data: startingSoonEvents, error: e2 } = await supabase
@@ -187,6 +195,7 @@ async function main() {
       url: `/events/${event.id}`,
     })
     await markNotified(event.id, 'starting_soon')
+    startingSoonSent++
   }
 
   await touchTokens([...deliveredTokens])
@@ -198,9 +207,11 @@ async function main() {
   else if (deleted) console.log(`오래된 토큰 ${deleted}개 삭제`)
 
   console.log('완료')
+
+  return {
+    items: ticketOpenSent + startingSoonSent,
+    detail: { 구독토큰: tokens.length, 예매오픈: ticketOpenSent, 행사임박: startingSoonSent },
+  }
 }
 
-main().catch(err => {
-  console.error(err)
-  process.exit(1)
-})
+runJob('send-notifications', main)

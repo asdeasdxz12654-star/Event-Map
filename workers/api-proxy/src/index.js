@@ -60,6 +60,12 @@ const REPORT_STATUSES = ['open', 'resolved', 'rejected']
 // 검수 목록도 한 화면에서 훑는 용도라 상한을 둔다(drafts와 같은 이유).
 const REPORT_LIMIT = 200
 
+// 자동 작업 실행 기록. 화면은 작업별 최근 몇 건만 보면 되는데, PostgREST로는
+// "작업마다 최근 N건"을 한 번에 못 뽑는다(DISTINCT ON이 없다). 그래서 전체를
+// 최신순으로 받아 브라우저에서 작업별로 나눈다 — 작업 7종 × 하루 1회면
+// 200건이 3주치라, "며칠째 0건인가"를 세기에 넉넉하다.
+const JOB_RUN_LIMIT = 200
+
 // /seoul-congestion 보호 값. 이 라우트는 우리 인증키로 서울시 원본을 대신 호출하므로
 // 인증 없는 공개 프록시가 되지 않게 두 겹으로 막는다(자세한 설명은 handleSeoulCongestion).
 const SEOUL_PLACES_TTL_MS = 10 * 60 * 1000 // 허용 장소 목록 캐시 수명
@@ -609,6 +615,21 @@ async function handleAdmin(request, env, pathname) {
     if (patch.status && patch.status !== 'open') patch.reviewed_at = new Date().toISOString()
     const row = await updateRow(env, 'event_reports', decodeURIComponent(reportMatch[1]), patch)
     return json(row, env)
+  }
+
+  // ── job_runs (자동 작업 실행 기록) ─────────────────────────────────────────
+  // GET /admin/job-runs — 대시보드가 "크롤러 마지막 실행 3일 전"을 말하기 위해 읽는다.
+  //
+  // 공개 읽기를 열지 않고 여기로 온 이유: error 컬럼에 외부 API 응답이 그대로 들어올
+  // 수 있고, 그 안에 요청 URL이 섞이면 키가 딸려 온다. 쓰는 쪽에서 한 번 지우지만
+  // (shared/job-run.mjs redactSecrets) 그 규칙이 완벽하다고 가정하지 않는다.
+  if (pathname === '/admin/job-runs' && request.method === 'GET') {
+    const rows = await supabase(
+      env,
+      'GET',
+      `job_runs?order=started_at.desc&limit=${JOB_RUN_LIMIT}`
+    )
+    return json(rows ?? [], env)
   }
 
   const idMatch = ID_RE.exec(pathname)
