@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { adminApi } from '../lib/adminApi'
 import { fetchAllRows } from '../lib/fetchAllRows'
+import { findDuplicates } from '../lib/duplicates'
 
 // 대시보드가 쓰는 집계.
 //
@@ -42,19 +43,6 @@ async function countWhere(table, build) {
   } catch {
     return null
   }
-}
-
-// SQL의 public.normalized_title()을 그대로 옮긴 것.
-//
-// 왜 JS로 다시 쓰나: 중복 판정은 "제목끼리 비교"라 PostgREST 필터로 표현할 수 없다.
-// DB 함수를 부르려면 RPC를 새로 만들어야 하는데, 행사 수가 수백 단위라 목록을 받아
-// 여기서 묶는 편이 단순하다. 규칙이 갈라지지 않게 원본 SQL을 함께 적어둔다.
-//   lower(regexp_replace(regexp_replace(t, '[[:space:]]+', ''), '[[:punct:]·∙‧・]+', ''))
-function normalizedTitle(t) {
-  return (t ?? '')
-    .replace(/\s+/g, '')
-    .replace(/[!-/:-@[-`{-~·∙‧・]+/g, '')
-    .toLowerCase()
 }
 
 export function useAdminStats() {
@@ -130,7 +118,7 @@ async function load() {
     adminApi.listJobRuns().catch(() => null),
     // 중복 판정만 목록이 필요하다. 여기에도 1000행 상한이 걸리므로 페이징으로 받는다 —
     // 잘리면 "중복 없음"으로 보이는데, 그게 바로 이 화면이 막으려는 상황이다.
-    fetchAllRows(() => supabase.from('events').select('id, title, start_date')).catch(() => []),
+    fetchAllRows(() => supabase.from('events').select('id, title, start_date, end_date')).catch(() => []),
   ])
 
   // 바뀐 뒤 아직 확인하지 않은 것만 "새 것"이다 (SourceWatchPanel과 같은 규칙).
@@ -153,21 +141,4 @@ async function load() {
     // 데이터를 불러온 순간이 아니라 그리는 순간을 기준으로 삼는 게 맞다.
     jobRuns,
   }
-}
-
-// 제목(띄어쓰기·문장부호 제거)과 시작일이 같은 행사 묶음.
-//
-// promote_event_draft() 트리거가 승인 시점에 쓰는 것과 같은 규칙이다. 그런데 트리거를
-// 거치지 않고 들어온 행(크롤러 직접 insert, 관리자 수동 추가)은 이 검사를 안 지난다.
-// 그래서 화면에서 한 번 더 본다 — 실제로 호요랜드 2026이 그렇게 두 개가 됐다.
-function findDuplicates(rows) {
-  const groups = new Map()
-  for (const row of rows) {
-    const key = `${normalizedTitle(row.title)}|${row.start_date}`
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(row)
-  }
-  return [...groups.values()]
-    .filter(group => group.length > 1)
-    .map(group => ({ title: group[0].title, startDate: group[0].start_date, ids: group.map(r => r.id) }))
 }

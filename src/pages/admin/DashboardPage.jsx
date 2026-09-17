@@ -77,7 +77,7 @@ export default function DashboardPage() {
       icon: 'warn',
       label: '중복 의심',
       count: stats.duplicates.length,
-      hint: '제목·시작일이 같은 행사',
+      hint: '제목이 같거나 사실상 같은 행사',
     },
     {
       icon: 'warn',
@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
       {stats.duplicates.length > 0 && (
         <section>
-          <SectionTitle hint="같은 행사를 두 번 등록했을 수 있습니다. 하위 데이터가 있는 쪽을 남기세요.">
+          <SectionTitle hint="같은 행사를 두 번 등록했을 수 있습니다. 하위 데이터가 있는 쪽을 남기세요. 제목이 조금 달라 '기간이 겹침'으로 잡힌 것은 확실하지 않으니, id를 눌러 양쪽을 보고 판단하세요.">
             중복 의심 행사
           </SectionTitle>
           <ul className="flex flex-col gap-1.5">
@@ -123,6 +123,9 @@ export default function DashboardPage() {
                 <span className="text-sm text-ink font-medium">{dup.title}</span>
                 <span className="text-xs text-zinc-500 tabular-nums">{dup.startDate}</span>
                 <span className="text-xs text-danger">{dup.ids.length}건</span>
+                {/* 왜 걸렸는지. 느슨한 쪽은 제목이 눈에 띄게 다를 수 있어서,
+                    이유가 없으면 "이게 왜 여기 있지"를 매번 다시 판단해야 한다. */}
+                <span className="text-[11px] text-zinc-500">{dup.reason}</span>
                 <span className="basis-full sm:basis-auto sm:ml-auto flex flex-wrap gap-1.5">
                   {dup.ids.map(id => (
                     <Link
