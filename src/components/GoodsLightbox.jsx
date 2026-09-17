@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './icons'
 import { FOCUS_RING } from './ui/focusRing'
+import { useModalDialog } from '../hooks/useModalDialog'
 import { boothHue, formatPrice, splitBoothName } from '../lib/boothKinds'
 
 const STATUS_LABEL = { soldout: '품절', limited: '수량 한정', preorder: '예약 판매' }
@@ -16,26 +17,23 @@ export default function GoodsLightbox({ items, index, booths, onIndexChange, onC
   // 호출부가 인라인 화살표로 넘기는 콜백이라, 의존성에 넣으면 부모가 다시 그릴 때마다
   // 이펙트가 통째로 다시 돈다(배경 스크롤 잠금을 풀었다 걸었다 한다).
   // 최신 값은 ref로 읽고 이펙트는 열릴 때 한 번만 돌린다. Sheet와 같은 이유다.
-  const handlers = useRef({ onClose, onIndexChange, index, count: items.length })
-  handlers.current = { onClose, onIndexChange, index, count: items.length }
+  const handlers = useRef({ onIndexChange, index, count: items.length })
+  handlers.current = { onIndexChange, index, count: items.length }
+
+  // 스크롤 잠금·Esc·포커스 트랩·포커스 복귀. 좌우 넘김은 이 화면만의 것이라 아래에 남긴다.
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, onClose)
 
   useEffect(() => {
     const onKey = e => {
-      const { onClose: close, onIndexChange: move, index: i, count } = handlers.current
-      if (e.key === 'Escape') close()
+      const { onIndexChange: move, index: i, count } = handlers.current
       // 목록이 비면(실시간으로 전부 삭제) 나눗셈이 NaN이 된다 — 그땐 넘길 곳도 없다.
-      else if (count === 0) return
-      else if (e.key === 'ArrowRight') move((i + 1) % count)
+      if (count === 0) return
+      if (e.key === 'ArrowRight') move((i + 1) % count)
       else if (e.key === 'ArrowLeft') move((i - 1 + count) % count)
     }
-    const { overflow } = document.body.style
-    document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => document.removeEventListener('keydown', onKey)
   }, [])
 
   if (!item) return null
@@ -46,6 +44,7 @@ export default function GoodsLightbox({ items, index, booths, onIndexChange, onC
 
   return createPortal(
     <div
+      ref={panelRef}
       className="fixed inset-0 z-[80] bg-black/90 flex flex-col animate-fade-in"
       role="dialog"
       aria-modal="true"

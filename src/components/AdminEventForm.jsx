@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import { useModalDialog } from '../hooks/useModalDialog'
 import ImageField from './ImageField'
 import { ADMIN_FIELD as cls } from './ui/formStyles'
 import { useFormFields } from '../hooks/useFormFields'
@@ -132,21 +133,10 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
     onClose()
   }
 
-  // Esc로 닫기 + 열려 있는 동안 뒤 화면 스크롤 잠금 (설정 모달과 같은 동작).
-  useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') requestClose() }
-    document.addEventListener('keydown', onKey)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-    }
-    // requestClose는 매 렌더 새로 만들어지지만 form을 읽어야 해서 의존성에 넣지 않는다
-    // (넣으면 타이핑할 때마다 리스너가 붙었다 떨어진다).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
+  // Esc·스크롤 잠금·포커스 트랩·포커스 복귀. requestClose는 매 렌더 새로 만들어지지만
+  // 훅이 ref로 최신 값을 읽으므로 타이핑할 때마다 리스너가 붙었다 떨어지지 않는다.
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, requestClose)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -184,6 +174,7 @@ export default function AdminEventForm({ event, onClose, onSaved }) {
       onClick={requestClose}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={isEdit ? '행사 수정' : '행사 추가'}

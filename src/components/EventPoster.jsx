@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalDialog } from '../hooks/useModalDialog'
 import Icon from './icons'
 import PosterImage from './PosterImage'
 import { FOCUS_RING } from './ui/focusRing'
@@ -24,18 +25,6 @@ export default function EventPoster({ event, className = '' }) {
     setImgError(false)
     setZoomed(false)
   }, [event.id])
-
-  useEffect(() => {
-    if (!zoomed) return
-    const onKey = e => { if (e.key === 'Escape') setZoomed(false) }
-    const { overflow } = document.body.style
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
-    }
-  }, [zoomed])
 
   if (!showPoster) {
     return (
@@ -66,32 +55,41 @@ export default function EventPoster({ event, className = '' }) {
         </span>
       </button>
 
-      {zoomed && createPortal(
-        <div
-          className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setZoomed(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${event.title} 포스터`}
-        >
-          <img
-            src={event.posterUrl}
-            alt={`${event.title} 포스터`}
-            className="max-w-full max-h-full object-contain rounded-lg"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            type="button"
-            onClick={() => setZoomed(false)}
-            aria-label="닫기"
-            autoFocus
-            className={`absolute top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors ${FOCUS_RING}`}
-          >
-            <Icon name="x" className="w-5 h-5" />
-          </button>
-        </div>,
-        document.body
-      )}
+      {zoomed && <PosterZoom event={event} onClose={() => setZoomed(false)} />}
     </>
+  )
+}
+
+// 전체 보기. 별도 컴포넌트인 이유는 useModalDialog이 "열려 있는 동안"만 살아 있어야
+// 하기 때문이다 — 훅은 조건부로 부를 수 없으니, 열릴 때 마운트되는 자리를 따로 만든다.
+function PosterZoom({ event, onClose }) {
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, onClose)
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${event.title} 포스터`}
+    >
+      <img
+        src={event.posterUrl}
+        alt={`${event.title} 포스터`}
+        className="max-w-full max-h-full object-contain rounded-lg"
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="닫기"
+        className={`absolute top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors ${FOCUS_RING}`}
+      >
+        <Icon name="x" className="w-5 h-5" />
+      </button>
+    </div>,
+    document.body
   )
 }

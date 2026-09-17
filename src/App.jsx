@@ -59,8 +59,23 @@ export default function App() {
       {/* 같은 사이트가 두 도메인에 올라가 있어서, 어느 쪽이 정식인지 경로마다 알려준다 */}
       <CanonicalLink />
       <div className="min-h-screen bg-surface">
+        {/* 본문 바로가기.
+            헤더에는 로고·검색·탭·설정이 줄지어 있어서, 키보드나 스크린리더로 들어오면
+            페이지를 옮길 때마다 그 줄을 처음부터 다시 지나야 본문에 닿는다.
+            평소에는 화면에 없고 탭을 처음 눌렀을 때만 나타난다 —
+            sr-only가 포커스를 받으면 풀리도록 focus:not-sr-only로 되돌린다. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100]
+            focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-panel focus:border focus:border-line-strong
+            focus:text-ink focus:text-sm focus:shadow-2xl"
+        >
+          본문 바로가기
+        </a>
         <Navbar />
-        <main>
+        {/* tabIndex={-1}: 바로가기로 건너뛰었을 때 포커스가 실제로 여기에 놓이게 한다.
+            없으면 스크롤만 옮겨 가고 다음 탭은 여전히 헤더에서 이어진다. */}
+        <main id="main" tabIndex={-1} className="focus:outline-none">
           {/* 라우트 안에서 예외가 나도 네비게이션은 남기고 본문만 오류 화면으로 바꾼다 */}
           <ErrorBoundary>
           <Suspense fallback={<PageFallback />}>

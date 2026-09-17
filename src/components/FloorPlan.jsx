@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './icons'
 import SectionCard from './SectionCard'
 import DisclosureNote from './DisclosureNote'
 import { FOCUS_RING } from './ui/focusRing'
+import { useModalDialog } from '../hooks/useModalDialog'
 
 // 부스 배치도.
 //
@@ -28,18 +29,6 @@ export default function FloorPlan({ event }) {
     setImgError(false)
     setZoomed(false)
   }, [event.id])
-
-  useEffect(() => {
-    if (!zoomed) return
-    const onKey = e => { if (e.key === 'Escape') setZoomed(false) }
-    const { overflow } = document.body.style
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
-    }
-  }, [zoomed])
 
   if (!showImage) {
     // 이미지를 못 불러온 경우에도 메모가 있으면 그걸 보여준다 — 빈 카드보다는 낫다.
@@ -78,34 +67,43 @@ export default function FloorPlan({ event }) {
         </button>
       </SectionCard>
 
-      {zoomed && createPortal(
-        <div
-          className="fixed inset-0 z-[80] bg-black/90 overflow-auto animate-fade-in"
-          onClick={() => setZoomed(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${event.title} 부스 배치도`}
-        >
-          {/* 원본 크기로 띄우고 확대·스크롤은 브라우저에 맡긴다 — 배치도는 부스 번호를
-              읽어야 하는 그림이라 화면에 맞춰 줄이면 쓸모가 없다. */}
-          <img
-            src={url}
-            alt={`${event.title} 부스 배치도`}
-            className="max-w-none mx-auto"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            type="button"
-            onClick={() => setZoomed(false)}
-            aria-label="닫기"
-            autoFocus
-            className={`fixed top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors ${FOCUS_RING}`}
-          >
-            <Icon name="x" className="w-5 h-5" />
-          </button>
-        </div>,
-        document.body
-      )}
+      {zoomed && <FloorPlanZoom event={event} url={url} onClose={() => setZoomed(false)} />}
     </>
+  )
+}
+
+// 크게 보기. 별도 컴포넌트인 이유는 useModalDialog이 "열려 있는 동안"만 살아 있어야
+// 하기 때문이다 — 훅은 조건부로 부를 수 없으니, 열릴 때 마운트되는 자리를 따로 만든다.
+function FloorPlanZoom({ event, url, onClose }) {
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, onClose)
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className="fixed inset-0 z-[80] bg-black/90 overflow-auto animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${event.title} 부스 배치도`}
+    >
+      {/* 원본 크기로 띄우고 확대·스크롤은 브라우저에 맡긴다 — 배치도는 부스 번호를
+          읽어야 하는 그림이라 화면에 맞춰 줄이면 쓸모가 없다. */}
+      <img
+        src={url}
+        alt={`${event.title} 부스 배치도`}
+        className="max-w-none mx-auto"
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="닫기"
+        className={`fixed top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors ${FOCUS_RING}`}
+      >
+        <Icon name="x" className="w-5 h-5" />
+      </button>
+    </div>,
+    document.body
   )
 }

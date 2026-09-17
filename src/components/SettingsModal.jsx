@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalDialog } from '../hooks/useModalDialog'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
 import { useBookmarks } from '../hooks/useBookmarks'
@@ -189,18 +190,15 @@ export default function SettingsModal({ onClose }) {
   const [showAdmin, setShowAdmin] = useState(false)
   const [showIosGuide, setShowIosGuide] = useState(false)
 
-  // Esc로 닫기 + 열려 있는 동안 뒤 화면 스크롤 잠금. 시트가 떠 있는데 뒤가 같이 굴러가면
-  // 모바일에서 뭘 만지고 있는지 헷갈린다.
-  useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [onClose])
+  // Esc·스크롤 잠금·포커스 트랩·포커스 복귀. 시트가 떠 있는데 뒤가 같이 굴러가면
+  // 모바일에서 뭘 만지고 있는지 헷갈리고, 탭이 뒤로 새면 키보드로는 지금 어디를
+  // 짚고 있는지 알 수 없다.
+  //
+  // 이 모달 위에 또 모달이 뜬다(관리자 로그인, 홈 화면 추가 안내). useModalDialog이
+  // 맨 위 것만 Esc를 받게 해준다 — 예전엔 관리자 코드를 잘못 치고 Esc를 누르면
+  // 설정까지 통째로 닫혔다.
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, onClose)
 
   // 이 모달은 Navbar 안에서 열리는데, 그 헤더에 backdrop-blur가 걸려 있다.
   // backdrop-filter가 있는 요소는 fixed 자식의 기준 상자가 되기 때문에, 그냥 두면
@@ -214,6 +212,7 @@ export default function SettingsModal({ onClose }) {
         onClick={onClose}
       >
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="설정"
@@ -243,32 +242,42 @@ export default function SettingsModal({ onClose }) {
 
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
 
-      {showIosGuide && (
-        <div
-          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowIosGuide(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="홈 화면에 추가하는 방법"
-            className="bg-panel border border-line rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-ink font-semibold text-sm">홈 화면에 추가</h2>
-              <button onClick={() => setShowIosGuide(false)} aria-label="닫기" className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
-            </div>
-            <ol className="text-sm text-zinc-300 space-y-2.5">
-              <li>1. 사파리 아래쪽 <span className="text-ink">공유 버튼(⬆)</span>을 누르세요</li>
-              <li>2. 메뉴를 내려서 <span className="text-ink">&quot;홈 화면에 추가&quot;</span>를 선택하세요</li>
-              <li>3. 오른쪽 위 <span className="text-ink">&quot;추가&quot;</span>를 누르면 끝입니다</li>
-            </ol>
-            <p className="text-xs text-zinc-400 mt-4">앱처럼 전체 화면으로 열리고, 알림도 받을 수 있습니다.</p>
-          </div>
-        </div>
-      )}
+      {showIosGuide && <IosGuide onClose={() => setShowIosGuide(false)} />}
     </>,
     document.body,
+  )
+}
+
+// 홈 화면에 추가하는 방법. 설정 위에 또 뜨는 모달이라 자기 몫의 트랩을 갖는다 —
+// 훅은 조건부로 부를 수 없으니 열릴 때 마운트되는 자리를 따로 만든다.
+function IosGuide({ onClose }) {
+  const panelRef = useRef(null)
+  useModalDialog(panelRef, onClose)
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="홈 화면에 추가하는 방법"
+        className="bg-panel border border-line rounded-t-2xl sm:rounded-2xl p-6 w-full sm:w-80 shadow-2xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-ink font-semibold text-sm">홈 화면에 추가</h2>
+          <button onClick={onClose} aria-label="닫기" className="text-zinc-400 hover:text-ink text-xl leading-none">×</button>
+        </div>
+        <ol className="text-sm text-zinc-300 space-y-2.5">
+          <li>1. 사파리 아래쪽 <span className="text-ink">공유 버튼(⬆)</span>을 누르세요</li>
+          <li>2. 메뉴를 내려서 <span className="text-ink">&quot;홈 화면에 추가&quot;</span>를 선택하세요</li>
+          <li>3. 오른쪽 위 <span className="text-ink">&quot;추가&quot;</span>를 누르면 끝입니다</li>
+        </ol>
+        <p className="text-xs text-zinc-400 mt-4">앱처럼 전체 화면으로 열리고, 알림도 받을 수 있습니다.</p>
+      </div>
+    </div>
   )
 }
