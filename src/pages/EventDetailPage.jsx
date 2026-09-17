@@ -331,10 +331,17 @@ export default function EventDetailPage() {
               </dl>
               {event.tags?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
+                  {/* 태그는 지금까지 장식이었다. 누르면 그 태그가 붙은 행사를 찾아준다 —
+                      filterBySearch가 이미 태그까지 훑고 있어서(data/events.js) 검색어로
+                      넘기기만 하면 된다. 목록은 기본 상태(예정)로 열린다. */}
                   {event.tags.map(tag => (
-                    <span key={tag} className="text-xs px-2.5 py-1 bg-surface-2 text-zinc-400 rounded-full">
+                    <Link
+                      key={tag}
+                      to={{ pathname: '/', search: `?q=${encodeURIComponent(tag)}` }}
+                      className={`text-xs px-2.5 py-1 bg-surface-2 text-zinc-400 hover:text-ink rounded-full transition-colors ${FOCUS_RING}`}
+                    >
                       #{tag}
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}
