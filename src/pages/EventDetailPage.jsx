@@ -48,8 +48,8 @@ import { operatorLabel, priceRangeLabel } from '../lib/boothKinds'
 export default function EventDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  // 목록(useEvents)이 아니라 id로 이 행사만 받아온다 — 목록은 "올해 + 90일"만 담아서
-  // 그 범위 밖 행사는 링크로 들어와도 못 찾는 상태였다 (useEvent.js 주석 참고).
+  // 목록(useEvents)이 아니라 id로 이 행사만 받아온다 — 목록은 범위가 한정돼 있어서
+  // 그 밖 행사는 링크로 들어와도 못 찾는 상태였다 (useEvent.js 주석 참고).
   const { event, loading, error, refetch } = useEvent(id)
   const online = useOnline()
   useDocumentTitle(event?.title)

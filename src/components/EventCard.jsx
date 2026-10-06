@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { eventDateLabel } from '../lib/eventDateLabel'
 import Icon, { StarFilled } from './icons'
 import { FOCUS_RING } from './ui/focusRing'
-import { getEventStatus, getDaysUntil, categoryMeta, parseLocalDate, STATUS } from '../data/events'
+import { getEventStatus, getDaysUntil, categoryMeta, STATUS } from '../data/events'
 import { useBookmarks } from '../hooks/useBookmarks'
 import { useAdmin } from '../contexts/AdminContext'
 import { useUIFeedback } from '../contexts/UIFeedbackContext'
@@ -42,18 +43,9 @@ export default function EventCard({ event, compact = false }) {
     }
   }
 
-  const start = parseLocalDate(event.startDate)
-  const end = parseLocalDate(event.endDate)
-  const isSameDay = event.startDate === event.endDate
-
-  // 요일이 실제 계획에 쓰이는 정보라 두 형식 모두에 남긴다. 2열에서도 잘리지 않도록
-  // "11.14 금 – 11.17 월"처럼 짧게 쓴다 (예전 "11월 14일 ~ 11월 1…"은 끝이 잘렸다).
-  const dateStr = isSameDay
-    ? format(start, 'M.d (eee)', { locale: ko })
-    : `${format(start, 'M.d', { locale: ko })} – ${format(end, 'M.d (eee)', { locale: ko })}`
-  const longDateStr = isSameDay
-    ? format(start, 'M월 d일 (eee)', { locale: ko })
-    : `${format(start, 'M월 d일', { locale: ko })} ~ ${format(end, 'M월 d일 (eee)', { locale: ko })}`
+  // 기간 문자열은 src/lib/eventDateLabel.js에 있다 — 올해가 아니면 연도를 붙이는 규칙이
+  // 거기 적혀 있고, 그 경계가 검사로 지켜진다.
+  const dateLabel = eventDateLabel(event, { compact })
 
   // D-Day (예정 행사만)
   const daysUntil = status === STATUS.UPCOMING ? getDaysUntil(event) : null
@@ -176,7 +168,7 @@ export default function EventCard({ event, compact = false }) {
         <div className="flex items-center gap-1.5 tabular-nums">
           {/* 카테고리는 여기 색점 하나로 남는다 — 예전엔 본문에 색 알약이 따로 있었다 */}
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${categoryMeta(event.category).dotClass}`} aria-hidden="true" />
-          <span className="truncate">{compact ? dateStr : longDateStr}</span>
+          <span className="truncate">{dateLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Icon name="pin" className="w-3.5 h-3.5 text-zinc-500" />
