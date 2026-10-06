@@ -16,6 +16,8 @@
 // 전시장(벡스코·SETEC·수원메쎄) 행사일정도 훑는다 (venue-calendar.mjs) — 행사를 실제로
 // 유치한 주체라 기사보다 먼저 일정이 뜬다. 킨텍스는 kintex.mjs가 공식 API로 이미 받고 있다.
 // confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
+// 단, 지평선(앞으로 6개월) 밖 행사는 confidence와 무관하게 검수 대기로 남는다
+// (shouldAutoApprove 참고).
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //         KOPIS_API_KEY(선택), NAVER_CLIENT_ID/NAVER_CLIENT_SECRET(선택), KINTEX_API_KEY(선택),
@@ -36,6 +38,7 @@ import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-c
 import { todayKST } from './date-kst.mjs'
 import { sleep, htmlToText, httpUrl } from './util.mjs'
 import { runJob } from '../../shared/job-run.mjs'
+import { isBeyondHorizon, UPCOMING_HORIZON_MONTHS } from '../../shared/event-horizon.mjs'
 
 // 이번 실행이 무엇을 가져왔는지. job_runs에 남겨서 대시보드가 "마지막 실행 3일 전 ·
 // 12건"이라고 말할 수 있게 한다. 소스별로 나눠 세는 이유는, 전체 합만 보면 한 소스가
@@ -196,11 +199,40 @@ async function attachPosterImage(eventId, title, officialUrls = [], startDate = 
 //   2) confidence:medium이어도 start_date·venue 둘 다 null이 아닌 경우
 //      (티켓·입장료 등 부가 정보가 없어서 medium이 된 케이스를 구제)
 // 잘못 승인된 경우 events에서 직접 삭제하면 된다.
-function shouldAutoApprove(extracted) {
+//
+// 어느 쪽이든 지평선(앞으로 6개월, shared/event-horizon.mjs) 밖이면 승인하지 않는다.
+//
+//   왜
+//     자동 승인은 곧 사이트 노출이다. 그런데 기본 목록은 지평선 안만 보여주므로,
+//     지평선 밖 행사를 자동 승인하면 아무도 보지 않는 자리에 올리는 셈이다. 그리고
+//     목록에 보이는 쪽을 넓히면 이번엔 내년 행사가 사람 손을 안 거치고 끼어든다.
+//
+//   어디가 이렇게 되어 있었나
+//     KINTEX API는 조회 기간 파라미터가 없어서 등록된 행사를 연 단위로 통째로 준다.
+//     kintex.mjs는 isFinished()로 **지난** 행사만 막고 앞쪽은 열려 있었다. 전시장이
+//     이듬해 일정을 미리 등록해 두면, 프랜차이즈 키워드에 걸린 내년 행사가
+//     confidence:high로 검수 없이 올라갔다.
+//
+//   왜 버리지 않고 남기나
+//     버리면 "킨텍스가 내년 일정을 발표했다"는 사실 자체가 사라진다. 검수 대기로
+//     남기면 어드민이 때가 됐을 때 올릴 수 있다 — 숨기는 것과 없애는 것은 다르다.
+//     (crawler/src/known-events.mjs가 정기 행사에 대해 같은 선을 이미 지키고 있다.)
+// 지평선을 빼고 본 승인 조건. 따로 둔 이유는 아래 로그 때문이다 — "지평선 때문에
+// 보류"라고 적을 수 있는 건은 그것만 아니었으면 승인됐을 건뿐이다.
+function meetsConfidenceBar(extracted) {
   if (!extracted.category) return false // events.category NOT NULL — category 없으면 승인 불가
   if (extracted.confidence === 'high') return true
   if (extracted.confidence === 'medium' && extracted.start_date && extracted.venue) return true
   return false
+}
+
+// 지평선 때문에 보류된 건인가 (= 날짜만 가까웠으면 올라갔을 건).
+function heldByHorizon(extracted) {
+  return meetsConfidenceBar(extracted) && isBeyondHorizon(extracted.start_date, todayKST())
+}
+
+function shouldAutoApprove(extracted) {
+  return meetsConfidenceBar(extracted) && !isBeyondHorizon(extracted.start_date, todayKST())
 }
 
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
@@ -233,6 +265,12 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     return false
   }
   console.log(`  -> event_drafts에 저장 (신뢰도: ${extracted.confidence})`)
+
+  // 보류 이유를 적는다. 안 적으면 confidence:high인데 승인이 안 된 건이 로그에서
+  // "조용히 검수 대기"로만 보여서 버그와 구별되지 않는다.
+  if (heldByHorizon(extracted)) {
+    console.log(`  -> ${extracted.start_date}는 앞으로 ${UPCOMING_HORIZON_MONTHS}개월 밖 -> 자동 승인 보류(검수 대기)`)
+  }
 
   if (shouldAutoApprove(extracted)) {
     const { data: approved, error: approveError } = await supabase

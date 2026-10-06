@@ -1,4 +1,6 @@
 // 이벤트 데이터는 Supabase 'events' 테이블에서 가져온다. (src/hooks/useEvents.js, src/supabase.js)
+import { horizonFrom } from '../../shared/event-horizon.mjs'
+
 export const CATEGORIES = {
   GAME: '게임전시',
   COSPLAY: '코스프레',
@@ -64,6 +66,42 @@ export function getDaysUntil(event) {
 
 export function filterByStatus(eventList, status) {
   return eventList.filter(e => getEventStatus(e) === status)
+}
+
+// 예정 탭이 한눈에 담는 기간.
+//
+// 목록은 "지난 1년 ~ 앞으로 1년"을 통째로 받아온다(useEvents.js — 1월 1일에 작년 행사가
+// 한꺼번에 사라지는 걸 막기 위해서다). 그 범위를 예정 탭에 그대로 쏟으면 이번 달 행사와
+// 열 달 뒤 행사가 같은 목록에 섞인다.
+//
+// 선 자체는 shared/event-horizon.mjs에 있다 — 크롤러도 같은 선을 쓴다. 자동 승인된
+// 행사가 이 선 밖이면 아무도 못 보는 자리에 올리는 셈이라, 두 값은 같아야 한다.
+export { UPCOMING_HORIZON_MONTHS } from '../../shared/event-horizon.mjs'
+
+// 오늘부터 지평선까지의 'YYYY-MM-DD'.
+//
+// 여기서 "오늘"은 브라우저 지역 시간이다. 크롤러는 KST로 오늘을 구해서 같은 함수에
+// 넣는다(crawler/src/date-kst.mjs) — 시간대는 부르는 쪽이 정하고, 달 계산은 공용이다.
+export function upcomingHorizon(today = new Date()) {
+  const pad = n => String(n).padStart(2, '0')
+  const ymd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  return horizonFrom(ymd)
+}
+
+// 목록을 "지평선 안"과 "그 뒤"로 가른다.
+//
+// far를 버리지 않고 돌려주는 게 핵심이다. 지스타 2027처럼 날짜가 공식으로 확정된 행사를
+// 목록에서 영구히 지우면 찾아갈 길이 사라진다 — 숨기는 것과 없애는 것은 다르다.
+// 호출부(HomePage)는 far를 접힌 줄 뒤에 두고, 사용자가 달을 고르거나 검색을 하면
+// 가르기 자체를 건너뛴다.
+export function splitByHorizon(eventList, horizon = upcomingHorizon()) {
+  const near = []
+  const far = []
+  for (const event of eventList) {
+    if (event.startDate && event.startDate > horizon) far.push(event)
+    else near.push(event)
+  }
+  return { near, far }
 }
 
 export function filterByCategory(eventList, category) {

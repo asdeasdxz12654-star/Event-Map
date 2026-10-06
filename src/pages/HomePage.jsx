@@ -6,7 +6,7 @@ import FilterSheet from '../components/FilterSheet'
 import ActiveFilters from '../components/ActiveFilters'
 import Icon from '../components/icons'
 import { FOCUS_RING } from '../components/ui/focusRing'
-import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, STATUS } from '../data/events'
+import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, splitByHorizon, UPCOMING_HORIZON_MONTHS, STATUS } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useOnline } from '../hooks/useOnline'
 import LoadError from '../components/LoadError'
@@ -53,8 +53,11 @@ export default function HomePage() {
   } = useHomeFilters()
 
   // 목록 전체를 세 번 훑는 집계라, 검색어를 한 글자 칠 때마다 다시 돌 이유가 없다.
+  //
+  // 예정만 지평선 안의 수를 센다 — 탭에 적힌 수와 탭을 눌렀을 때 보이는 줄 수가 달라지면
+  // 그 수가 무엇을 센 것인지 알 수 없다. 지평선 뒤 행사는 목록 아래 접힌 줄이 따로 센다.
   const statusCounts = useMemo(() => ({
-    [STATUS.UPCOMING]: filterByStatus(events, STATUS.UPCOMING).length,
+    [STATUS.UPCOMING]: splitByHorizon(filterByStatus(events, STATUS.UPCOMING)).near.length,
     [STATUS.ONGOING]:  filterByStatus(events, STATUS.ONGOING).length,
     [STATUS.ENDED]:    filterByStatus(events, STATUS.ENDED).length,
   }), [events])
@@ -79,6 +82,23 @@ export default function HomePage() {
     const base = filterByMonth(baseBeforeMonth, effectiveMonth)
     return sort === 'newest' ? sortByNewest(base) : base
   }, [baseBeforeMonth, effectiveMonth, sort])
+
+  // 예정 탭을 "앞으로 6개월"로 자른다 (src/data/events.js의 UPCOMING_HORIZON_MONTHS).
+  //
+  // 달을 골랐거나 검색 중일 때는 자르지 않는다. 2027년 3월을 직접 고른 사람에게 그 달을
+  // 숨기면 "그 달엔 행사가 없다"가 되고, "지스타 2027"을 검색한 사람에게는 우리가 아는
+  // 행사를 모른다고 답하는 셈이다. 지평선은 가만히 들어온 사람이 받는 첫 화면을 위한
+  // 것이지, 먼 행사를 못 찾게 하려는 게 아니다.
+  const horizonApplies = activeStatus === STATUS.UPCOMING && !effectiveMonth && !search.trim()
+
+  const { near, far } = useMemo(
+    () => (horizonApplies ? splitByHorizon(filtered) : { near: filtered, far: [] }),
+    [filtered, horizonApplies]
+  )
+
+  const [showFar, setShowFar] = useState(false)
+  // 위 줄의 건수는 지금 화면에 깔린 카드 수와 같아야 한다 — 접힌 줄을 펼치면 함께 늘어난다.
+  const shownCount = near.length + (showFar ? far.length : 0)
 
   // 한 해 안이면 "9월", 내년 행사까지 섞여 보이면 "26.9월"처럼 연도를 붙여 구분한다.
   const spansMultipleYears = new Set(activeMonths.map(ym => ym.slice(0, 4))).size > 1
@@ -159,7 +179,7 @@ export default function HomePage() {
           onHideSoldoutChange={setHideSoldout}
           columns={columns}
           onColumnsChange={setColumns}
-          resultCount={filtered.length}
+          resultCount={shownCount}
           onClose={() => setShowFilters(false)}
         />
       )}
@@ -168,7 +188,7 @@ export default function HomePage() {
         <ActiveFilters
           items={activeItems}
           onClearAll={resetAll}
-          resultCount={filtered.length}
+          resultCount={shownCount}
           sortLabel={sort === 'newest' ? '최신순' : '날짜순'}
           searching={!!search}
         />
@@ -181,7 +201,7 @@ export default function HomePage() {
         <div className={eventGridClass(columns)}>
           {Array.from({ length: columns === 1 ? 3 : 6 }).map((_, i) => <EventCardSkeleton key={i} />)}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : near.length === 0 && far.length === 0 ? (
         <div className="text-center py-16 text-zinc-400">
           <Icon name={search ? 'search' : 'calendar'} className="w-9 h-9 mx-auto mb-3 text-zinc-500" />
           <p>{search ? `"${search}"에 해당하는 행사가 없습니다` : '해당하는 행사가 없습니다'}</p>
@@ -200,14 +220,56 @@ export default function HomePage() {
           </button>
         </div>
       ) : (
-        <div className={eventGridClass(columns)}>
-          {filtered.map(event => (
-            <EventCard key={event.id} event={event} compact={columns === 2} />
-          ))}
-        </div>
+        <>
+          {near.length > 0 && (
+            <div className={eventGridClass(columns)}>
+              {near.map(event => (
+                <EventCard key={event.id} event={event} compact={columns === 2} />
+              ))}
+            </div>
+          )}
+
+          {/* 지평선 안은 비었는데 그 뒤에는 있는 경우(여기까지 왔으면 far가 있다).
+              "해당하는 행사가 없습니다"로 끝내면 바로 아래 줄의 "6개월 뒤 행사 3건"과
+              모순으로 읽힌다 — 없는 게 아니라 멀리 있는 것이다. */}
+          {near.length === 0 && (
+            <p className="text-center py-12 text-sm text-zinc-400">
+              앞으로 {UPCOMING_HORIZON_MONTHS}개월 안에 예정된 행사가 없습니다
+            </p>
+          )}
+
+          {/* 지평선 뒤 행사. 접어 두지만 몇 건인지는 접힌 채로도 적는다 —
+              건수를 숨기면 펼칠 이유가 있는지 알 수 없어서 아무도 누르지 않는다. */}
+          {far.length > 0 && (
+            <div className={near.length > 0 ? 'mt-7' : ''}>
+              <button
+                type="button"
+                onClick={() => setShowFar(v => !v)}
+                aria-expanded={showFar}
+                className={`w-full flex items-center gap-3 text-xs text-zinc-500 hover:text-zinc-300 transition-colors rounded ${FOCUS_RING}`}
+              >
+                <span className="flex-1 h-px bg-line" aria-hidden="true" />
+                <span className="shrink-0">
+                  {showFar
+                    ? `${UPCOMING_HORIZON_MONTHS}개월 뒤 행사 접기`
+                    : `${UPCOMING_HORIZON_MONTHS}개월 뒤 행사 ${far.length}건 더 보기`}
+                </span>
+                <span className="flex-1 h-px bg-line" aria-hidden="true" />
+              </button>
+
+              {showFar && (
+                <div className={`${eventGridClass(columns)} mt-4`}>
+                  {far.map(event => (
+                    <EventCard key={event.id} event={event} compact={columns === 2} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
-      {filtered.length > 0 && (
+      {(near.length > 0 || far.length > 0) && (
         <button
           onClick={() => setShowReport(true)}
           className={`block mx-auto mt-8 text-xs text-zinc-500 hover:text-ink transition-colors rounded ${FOCUS_RING}`}

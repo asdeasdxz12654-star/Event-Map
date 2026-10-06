@@ -11,13 +11,25 @@ const DEFAULTS = {
   search: '',
 }
 
+// 다음 방문까지 남아도 되는 것만 localStorage에 둔다 — 카테고리·정렬·매진 제외·월.
+// 이건 "무엇을 보고 싶은지"라서 기기에 남는 게 맞다.
 const useHomeFiltersStore = createLocalStorageHook('gameEventHub.homeFilters', {
-  status: DEFAULTS.status,
   category: DEFAULTS.category,
   hideSoldout: DEFAULTS.hideSoldout,
   sort: DEFAULTS.sort,
   month: DEFAULTS.month,
 })
+
+// 상태 탭(예정/진행중/종료)은 sessionStorage에 둔다. 아래 검색어와 같은 이유다.
+//
+// 예전엔 localStorage에 있어서, 지난 행사를 한 번 찾아보려고 "종료"를 눌러본 사람은
+// 그 뒤로 계속 종료된 행사 목록을 첫 화면으로 받았다. 몇 달 전에 한 번 누른 것이고
+// 본인은 누른 기억이 없다. 탭에 "종료"가 선택돼 있긴 하지만, 그게 내가 고른 값인지
+// 원래 그런 건지 구별할 방법이 없어서 사이트가 끝난 행사만 모아둔 것처럼 보인다.
+//
+// 상태는 "무엇을 보고 싶은지"가 아니라 "지금 어디를 보고 있는지"다. 탭 안에서는
+// 유지되니 목록 → 상세 → 뒤로가 그대로 돌아오고, 다시 들어오면 "예정"에서 시작한다.
+const useStatusStore = createLocalStorageHook('gameEventHub.homeStatus', DEFAULTS.status, 'session')
 
 // 검색어만 sessionStorage에 둔다. 예전엔 다른 필터와 함께 localStorage에 저장돼서,
 // "지스타"를 검색해둔 채로 닫으면 며칠 뒤 다시 들어와도 걸러진 목록이 첫 화면이었다.
@@ -86,6 +98,7 @@ function toParams(f) {
 //   상세로 갔다가 돌아오려면 눌렀던 횟수만큼 뒤로 가야 한다.
 export function useHomeFilters() {
   const [stored, setStored] = useHomeFiltersStore()
+  const [storedStatus, setStoredStatus] = useStatusStore()
   const [storedSearch, setStoredSearch] = useSearchStore()
   const [params, setParams] = useSearchParams()
 
@@ -94,7 +107,9 @@ export function useHomeFilters() {
   const current = hasUrlFilters
     ? fromParams(params)
     : {
-        status: stored.status ?? DEFAULTS.status,
+        // 저장된 값도 주소에서 온 값과 같게 검사한다 — 옛 버전이 localStorage에
+        // 넣어둔 값이 그대로 상태가 되지 않게.
+        status: VALID_STATUS.has(storedStatus) ? storedStatus : DEFAULTS.status,
         category: stored.category ?? null,
         hideSoldout: stored.hideSoldout ?? false,
         sort: stored.sort ?? DEFAULTS.sort,
@@ -106,8 +121,9 @@ export function useHomeFilters() {
 
   const update = (patch) => {
     const next = { ...current, ...patch }
-    const { search, ...rest } = next
+    const { search, status, ...rest } = next
     setStored(rest)
+    setStoredStatus(status)
     setStoredSearch(search)
     setParams(toParams(next), { replace: true })
   }
