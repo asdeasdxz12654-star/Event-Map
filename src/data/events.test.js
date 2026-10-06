@@ -79,23 +79,22 @@ describe('filterByStatus', () => {
   })
 })
 
-// 달 계산 자체는 shared/event-horizon.test.js가 지킨다(연말·윤년·말일 보정).
+// 날짜 계산 자체는 shared/event-horizon.test.js가 지킨다(연말 하한·윤년).
 // 여기서 보는 것은 "브라우저 지역 시간의 오늘"을 제대로 넘기는지뿐이다.
 describe('upcomingHorizon', () => {
   it('지역 시간의 오늘을 기준으로 센다', () => {
-    expect(upcomingHorizon(new Date(2026, 9, 6))).toBe('2027-04-06')
+    expect(upcomingHorizon(new Date(2026, 9, 6))).toBe('2026-12-31')
   })
 
   it('UTC 날짜가 아니라 지역 날짜로 센다', () => {
-    // 지역 자정. UTC+ 지역에서 이 순간의 toISOString()은 아직 전날(10-05)이라,
-    // 그걸로 날짜를 뽑으면 지평선이 하루 앞당겨진다. 그래서
-    // getFullYear/getMonth/getDate로 만든다. (UTC 환경에서는 둘이 같아서 이 단정이
-    // 아무것도 못 잡는다 — 시간대가 앞선 환경에서 갈린다.)
-    expect(upcomingHorizon(new Date(2026, 9, 6))).toBe('2027-04-06')
+    // 지역 자정. UTC+ 지역에서 이 순간의 toISOString()은 아직 전날(12-31)이라,
+    // 그걸로 날짜를 뽑으면 해가 달라져서 지평선이 한 해 어긋난다. 그래서
+    // getFullYear/getMonth/getDate로 만든다.
+    expect(upcomingHorizon(new Date(2027, 0, 1))).toBe('2027-12-31')
   })
 
   it('인자를 안 주면 오늘을 쓴다', () => {
-    on('2026-12-06', () => expect(upcomingHorizon()).toBe('2027-06-06'))
+    on('2026-10-06', () => expect(upcomingHorizon()).toBe('2026-12-31'))
   })
 })
 
@@ -103,21 +102,32 @@ describe('splitByHorizon', () => {
   const list = [
     ev('this-month', '2026-10-20', '2026-10-21'),
     ev('gstar26', '2026-11-19', '2026-11-22'),
-    ev('on-horizon', '2027-04-06', '2027-04-07'),
+    ev('year-end', '2026-12-31', '2026-12-31'),
+    ev('next-jan', '2027-01-16', '2027-01-17'),
     ev('next-year', '2027-09-20', '2027-09-21'),
   ]
 
-  it('지평선 뒤 행사만 far로 간다', () => {
+  it('10월에 보면 내년 행사가 전부 far로 간다', () => {
     on('2026-10-06', () => {
       const { near, far } = splitByHorizon(list)
-      expect(near.map(e => e.id)).toEqual(['this-month', 'gstar26', 'on-horizon'])
+      expect(near.map(e => e.id)).toEqual(['this-month', 'gstar26', 'year-end'])
+      expect(far.map(e => e.id)).toEqual(['next-jan', 'next-year'])
+    })
+  })
+
+  it('연말에 보면 코앞인 내년 초 행사는 near에 남는다', () => {
+    // 12월 20일에 1월 16일 행사를 접으면, 삼 주 뒤 행사가 안 보인다.
+    on('2026-12-20', () => {
+      const { near, far } = splitByHorizon(list)
+      expect(near.map(e => e.id)).toEqual(['this-month', 'gstar26', 'year-end', 'next-jan'])
       expect(far.map(e => e.id)).toEqual(['next-year'])
     })
   })
 
   it('지평선 당일은 안쪽이다', () => {
     on('2026-10-06', () => {
-      expect(splitByHorizon([ev('a', '2027-04-06')]).far).toEqual([])
+      expect(splitByHorizon([ev('a', '2026-12-31')]).far).toEqual([])
+      expect(splitByHorizon([ev('a', '2027-01-01')]).near).toEqual([])
     })
   })
 

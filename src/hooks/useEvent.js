@@ -6,7 +6,7 @@ import { mapEvent } from './useEvents'
 //
 // 상세 화면은 원래 useEvents()로 목록 전체를 받아 그중에서 find로 골라 썼는데, 그
 // 목록은 전체가 아니다. 지금은 "지난 1년 ~ 앞으로 1년"을 담고(useEvents.js), 그중에서도
-// 기본으로 보이는 것은 앞으로 6개월까지다(shared/event-horizon.mjs). 그래서 그 밖 행사는
+// 기본으로 보이는 것은 지평선까지다(shared/event-horizon.mjs). 그래서 그 밖 행사는
 // 링크를 직접 열거나 북마크·검색결과·공유 링크로 들어오면 데이터가 아예 없어서
 // "행사 정보를 찾을 수 없습니다"가 떴다 — 삭제된 행사와 구분이 안 됐다.
 // (실제로 링크 미리보기용 Cloudflare 함수 functions/events/[id].js는 id로 바로 조회해서

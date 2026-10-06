@@ -18,33 +18,40 @@
 // 크롤러는 KST로 "오늘"을 구하는데(crawler/src/date-kst.mjs), 그 차이는 부르는 쪽이
 // 이미 해결한 뒤다. 여기서 또 시간대를 다루면 어느 쪽 기준인지 알 수 없어진다.
 
-// 일수가 아니라 달 수로 센다. 180일은 계절에 따라 끝나는 달이 달라져서
-// "6개월"이라고 적어 둔 것과 화면이 어긋난다.
-export const UPCOMING_HORIZON_MONTHS = 6
-
-const pad = n => String(n).padStart(2, '0')
-
-// 'YYYY-MM-DD' 기준 N개월 뒤의 'YYYY-MM-DD'.
+// 연말에 보장하는 최소 일수.
 //
-// 기준일부터 미끄러지는 값이다. "올해 남은 것"으로 자르면 12월에 들어온 사람에게 코앞인
-// 1월 행사가 안 보이는데(그 함정은 src/hooks/useEvents.js에 적혀 있다), 롤링이면 그 일이
-// 일어나지 않는다 — 12월 6일의 지평선은 이듬해 6월 6일이다.
-export function horizonFrom(ymd, months = UPCOMING_HORIZON_MONTHS) {
-  const [y, m, d] = ymd.split('-').map(Number)
-  const target = m - 1 + months // 0-indexed
-  const year = y + Math.floor(target / 12)
-  const month = ((target % 12) + 12) % 12
+// 선이 "올해 12월 31일"인 이유
+//   사람이 행사를 생각하는 단위가 연도다. 10월에 들어온 사람에게 내년 3월 행사는
+//   "지금 챙길 것"이 아니다. 앞서 롤링 6개월로 뒀더니 10월의 지평선이 내년 4월이 돼서,
+//   내년 1~4월 행사가 예정 탭에 그대로 남았다 — 롤링으로는 "내년"을 뺄 수가 없다.
+//
+// 그런데 연도로만 자르면
+//   12월 28일에 들어온 사람은 예정 탭에서 아무것도 못 본다. 삼 주 뒤 행사가 "내년"이라
+//   접히기 때문이다. 이건 useEvents.js가 길게 경고하는 연말 함정과 같은 종류다.
+//
+// 그래서 하한을 둔다
+//   지평선 = max(올해 12월 31일, 오늘 + 60일).
+//   1년의 대부분은 연말이 이겨서 내년 행사가 전부 접히고, 11월 초부터는 하한이 이겨서
+//   코앞인 내년 초 행사가 펼쳐진 쪽에 남는다.
+export const HORIZON_MIN_DAYS = 60
 
-  // 그 달에 없는 날짜는 그 달 마지막 날로 맞춘다. 8/31 + 6개월을 그냥 넘기면
-  // "2월 31일"이 3월 3일로 넘어가서 지평선이 며칠 밀린다.
-  // (Date.UTC만 쓴다 — 며칠인지 세는 데에는 지역 시간이 끼어들 이유가 없다.)
-  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  return `${year}-${pad(month + 1)}-${pad(Math.min(d, lastDay))}`
+// 'YYYY-MM-DD'에 일수를 더한다. Date.UTC만 써서 지역 시간이 끼어들지 않게 한다
+// (월말·연말 넘김은 Date.UTC가 알아서 한다).
+function addDays(ymd, days) {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
+// 기준일에서 본 지평선의 'YYYY-MM-DD'. 이 날짜까지가 "가까운 것"이다(당일 포함).
+export function horizonFrom(ymd, minDays = HORIZON_MIN_DAYS) {
+  const yearEnd = `${ymd.slice(0, 4)}-12-31`
+  const floor = addDays(ymd, minDays)
+  return floor > yearEnd ? floor : yearEnd
 }
 
 // 이 행사가 지평선 밖인가. 날짜가 없으면 "밖"으로 보지 않는다 —
 // 날짜를 모르는 것과 먼 것은 다르고, 모르는 것을 조용히 치우면 찾을 길이 없어진다.
-export function isBeyondHorizon(startDate, todayYmd, months = UPCOMING_HORIZON_MONTHS) {
+export function isBeyondHorizon(startDate, todayYmd, minDays = HORIZON_MIN_DAYS) {
   if (!startDate) return false
-  return startDate > horizonFrom(todayYmd, months)
+  return startDate > horizonFrom(todayYmd, minDays)
 }

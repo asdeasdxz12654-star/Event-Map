@@ -16,7 +16,7 @@
 // 전시장(벡스코·SETEC·수원메쎄) 행사일정도 훑는다 (venue-calendar.mjs) — 행사를 실제로
 // 유치한 주체라 기사보다 먼저 일정이 뜬다. 킨텍스는 kintex.mjs가 공식 API로 이미 받고 있다.
 // confidence:high는 검수 없이 바로 승인해서 자동으로 사이트에 노출된다 (saveDraft 참고).
-// 단, 지평선(앞으로 6개월) 밖 행사는 confidence와 무관하게 검수 대기로 남는다
+// 단, 지평선(올해 끝 + 연말 하한) 밖 행사는 confidence와 무관하게 검수 대기로 남는다
 // (shouldAutoApprove 참고).
 // 실행: node src/crawl.mjs
 // 환경변수: GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
@@ -38,7 +38,7 @@ import { fetchVenueCalendarCandidates, buildVenueCalendarDraft } from './venue-c
 import { todayKST } from './date-kst.mjs'
 import { sleep, htmlToText, httpUrl } from './util.mjs'
 import { runJob } from '../../shared/job-run.mjs'
-import { isBeyondHorizon, UPCOMING_HORIZON_MONTHS } from '../../shared/event-horizon.mjs'
+import { horizonFrom, isBeyondHorizon } from '../../shared/event-horizon.mjs'
 
 // 이번 실행이 무엇을 가져왔는지. job_runs에 남겨서 대시보드가 "마지막 실행 3일 전 ·
 // 12건"이라고 말할 수 있게 한다. 소스별로 나눠 세는 이유는, 전체 합만 보면 한 소스가
@@ -200,7 +200,7 @@ async function attachPosterImage(eventId, title, officialUrls = [], startDate = 
 //      (티켓·입장료 등 부가 정보가 없어서 medium이 된 케이스를 구제)
 // 잘못 승인된 경우 events에서 직접 삭제하면 된다.
 //
-// 어느 쪽이든 지평선(앞으로 6개월, shared/event-horizon.mjs) 밖이면 승인하지 않는다.
+// 어느 쪽이든 지평선(올해 끝 + 연말 하한, shared/event-horizon.mjs) 밖이면 승인하지 않는다.
 //
 //   왜
 //     자동 승인은 곧 사이트 노출이다. 그런데 기본 목록은 지평선 안만 보여주므로,
@@ -269,7 +269,7 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
   // 보류 이유를 적는다. 안 적으면 confidence:high인데 승인이 안 된 건이 로그에서
   // "조용히 검수 대기"로만 보여서 버그와 구별되지 않는다.
   if (heldByHorizon(extracted)) {
-    console.log(`  -> ${extracted.start_date}는 앞으로 ${UPCOMING_HORIZON_MONTHS}개월 밖 -> 자동 승인 보류(검수 대기)`)
+    console.log(`  -> ${extracted.start_date}는 지평선(${horizonFrom(todayKST())}) 밖 -> 자동 승인 보류(검수 대기)`)
   }
 
   if (shouldAutoApprove(extracted)) {

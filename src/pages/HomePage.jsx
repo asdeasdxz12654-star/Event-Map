@@ -6,7 +6,7 @@ import FilterSheet from '../components/FilterSheet'
 import ActiveFilters from '../components/ActiveFilters'
 import Icon from '../components/icons'
 import { FOCUS_RING } from '../components/ui/focusRing'
-import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, splitByHorizon, UPCOMING_HORIZON_MONTHS, STATUS } from '../data/events'
+import { filterByStatus, filterByCategory, filterBySearch, filterByMonth, getActiveMonths, sortByNewest, splitByHorizon, STATUS } from '../data/events'
 import { useEvents } from '../hooks/useEvents'
 import { useOnline } from '../hooks/useOnline'
 import LoadError from '../components/LoadError'
@@ -83,7 +83,7 @@ export default function HomePage() {
     return sort === 'newest' ? sortByNewest(base) : base
   }, [baseBeforeMonth, effectiveMonth, sort])
 
-  // 예정 탭을 "앞으로 6개월"로 자른다 (src/data/events.js의 UPCOMING_HORIZON_MONTHS).
+  // 예정 탭을 지평선에서 자른다 (shared/event-horizon.mjs — 올해 끝 + 연말 하한 60일).
   //
   // 달을 골랐거나 검색 중일 때는 자르지 않는다. 2027년 3월을 직접 고른 사람에게 그 달을
   // 숨기면 "그 달엔 행사가 없다"가 되고, "지스타 2027"을 검색한 사람에게는 우리가 아는
@@ -99,6 +99,17 @@ export default function HomePage() {
   const [showFar, setShowFar] = useState(false)
   // 위 줄의 건수는 지금 화면에 깔린 카드 수와 같아야 한다 — 접힌 줄을 펼치면 함께 늘어난다.
   const shownCount = near.length + (showFar ? far.length : 0)
+
+  // 접힌 줄에 "언제부터"를 적는다.
+  //
+  // 지평선 날짜를 적지 않고 far의 첫 행사 날짜를 쓴다. 지평선은 "올해 끝"이거나 "오늘
+  // +60일"이라 그 자체로는 설명이 안 되고(12월 31일이라고 적어두면 1월 1일 행사가 왜
+  // 접혔는지만 알려준다), 사람이 알고 싶은 건 "접힌 쪽은 언제부터인가"다.
+  //
+  // 정렬이 "최신순"이면 far의 순서가 날짜순이 아니므로 가장 이른 날짜를 따로 찾는다.
+  const farFrom = far.length === 0 ? null
+    : far.reduce((earliest, e) => (e.startDate < earliest ? e.startDate : earliest), far[0].startDate)
+  const farFromLabel = farFrom ? `${farFrom.slice(0, 4)}년 ${Number(farFrom.slice(5, 7))}월` : ''
 
   // 한 해 안이면 "9월", 내년 행사까지 섞여 보이면 "26.9월"처럼 연도를 붙여 구분한다.
   const spansMultipleYears = new Set(activeMonths.map(ym => ym.slice(0, 4))).size > 1
@@ -230,11 +241,11 @@ export default function HomePage() {
           )}
 
           {/* 지평선 안은 비었는데 그 뒤에는 있는 경우(여기까지 왔으면 far가 있다).
-              "해당하는 행사가 없습니다"로 끝내면 바로 아래 줄의 "6개월 뒤 행사 3건"과
+              "해당하는 행사가 없습니다"로 끝내면 바로 아래 줄의 "2027년 1월부터 3건"과
               모순으로 읽힌다 — 없는 게 아니라 멀리 있는 것이다. */}
           {near.length === 0 && (
             <p className="text-center py-12 text-sm text-zinc-400">
-              앞으로 {UPCOMING_HORIZON_MONTHS}개월 안에 예정된 행사가 없습니다
+              가까운 예정 행사가 없습니다 — {farFromLabel}부터 {far.length}건 있습니다
             </p>
           )}
 
@@ -251,8 +262,8 @@ export default function HomePage() {
                 <span className="flex-1 h-px bg-line" aria-hidden="true" />
                 <span className="shrink-0">
                   {showFar
-                    ? `${UPCOMING_HORIZON_MONTHS}개월 뒤 행사 접기`
-                    : `${UPCOMING_HORIZON_MONTHS}개월 뒤 행사 ${far.length}건 더 보기`}
+                    ? `${farFromLabel} 이후 행사 접기`
+                    : `${farFromLabel}부터 ${far.length}건 더 보기`}
                 </span>
                 <span className="flex-1 h-px bg-line" aria-hidden="true" />
               </button>

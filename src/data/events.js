@@ -72,20 +72,25 @@ export function filterByStatus(eventList, status) {
 //
 // 목록은 "지난 1년 ~ 앞으로 1년"을 통째로 받아온다(useEvents.js — 1월 1일에 작년 행사가
 // 한꺼번에 사라지는 걸 막기 위해서다). 그 범위를 예정 탭에 그대로 쏟으면 이번 달 행사와
-// 열 달 뒤 행사가 같은 목록에 섞인다.
+// 내년 행사가 같은 목록에 섞인다.
 //
-// 선 자체는 shared/event-horizon.mjs에 있다 — 크롤러도 같은 선을 쓴다. 자동 승인된
-// 행사가 이 선 밖이면 아무도 못 보는 자리에 올리는 셈이라, 두 값은 같아야 한다.
-export { UPCOMING_HORIZON_MONTHS } from '../../shared/event-horizon.mjs'
+// 선 자체는 shared/event-horizon.mjs에 있다(올해 끝 + 연말 하한). 크롤러도 같은 선을
+// 쓴다 — 자동 승인된 행사가 이 선 밖이면 아무도 못 보는 자리에 올리는 셈이라, 두 값은
+// 같아야 한다.
 
-// 오늘부터 지평선까지의 'YYYY-MM-DD'.
+// 오늘 기준 지평선의 'YYYY-MM-DD'. 이 날짜까지가 "가까운 것"이다(당일 포함).
 //
 // 여기서 "오늘"은 브라우저 지역 시간이다. 크롤러는 KST로 오늘을 구해서 같은 함수에
-// 넣는다(crawler/src/date-kst.mjs) — 시간대는 부르는 쪽이 정하고, 달 계산은 공용이다.
+// 넣는다(crawler/src/date-kst.mjs) — 시간대는 부르는 쪽이 정하고, 날짜 계산은 공용이다.
 export function upcomingHorizon(today = new Date()) {
+  return horizonFrom(localYmd(today))
+}
+
+// Date -> 'YYYY-MM-DD' (지역 시간 기준).
+// toISOString()을 쓰면 UTC+ 지역에서 하루 앞당겨진다.
+function localYmd(date) {
   const pad = n => String(n).padStart(2, '0')
-  const ymd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
-  return horizonFrom(ymd)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 // 목록을 "지평선 안"과 "그 뒤"로 가른다.
