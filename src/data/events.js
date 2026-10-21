@@ -1,5 +1,6 @@
 // 이벤트 데이터는 Supabase 'events' 테이블에서 가져온다. (src/hooks/useEvents.js, src/supabase.js)
 import { horizonFrom } from '../../shared/event-horizon.mjs'
+import { normalizedTitle } from '../../shared/duplicate-match.mjs'
 
 export const CATEGORIES = {
   GAME: '게임전시',
@@ -114,15 +115,62 @@ export function filterByCategory(eventList, category) {
   return eventList.filter(e => e.category === category)
 }
 
+// 한글·영문으로 둘 다 불리는 행사명. 정규화한 형태(띄어쓰기·문장부호 없음, 소문자)로 적는다.
+//
+// 태그에 두 표기가 다 들어 있으면 이게 없어도 찾아지지만, 뉴스로 들어온 행사의 태그는
+// LLM이 단 것이라(참가사 이름 등) 그런 보장이 없다. "지스타"로 검색했는데 제목이
+// "G-STAR 2026"인 행사가 안 나오던 게 그 경우다.
+//
+// 여기 넣는 건 실제로 두 표기가 다 쓰이는 고정 행사뿐이다. 약칭(BIC·AGF)처럼 다른
+// 단어 안에 우연히 들어갈 수 있는 짧은 말은 넣지 않는다.
+const SEARCH_ALIASES = [
+  ['지스타', 'gstar'],
+  ['플레이엑스포', 'playx4'],
+  ['원더리벳', 'wonderlivet'],
+  ['일러스타페스', 'illustarfes'],
+  ['코믹월드', 'comicworld'],
+  ['호요랜드', 'hoyoland'],
+]
+
+// 검색어 한 단어 -> 같이 찾아볼 표기들(자기 자신 포함).
+function searchVariants(term) {
+  const variants = [term]
+  for (const group of SEARCH_ALIASES) {
+    const hit = group.find(name => term.includes(name))
+    if (!hit) continue
+    for (const other of group) {
+      if (other !== hit) variants.push(term.replace(hit, other))
+    }
+  }
+  return variants
+}
+
+// 검색.
+//
+// 띄어쓰기·문장부호를 떼고 비교한다(중복 판정과 같은 규칙 — shared/duplicate-match.mjs).
+// 예전엔 글자 그대로 비교해서 "호요랜드2026"으로 "호요랜드 2026"이 안 나왔다. 행사명은
+// 쓰는 사람마다 띄어쓰기가 다르다.
+//
+// 검색어를 공백으로 나눠 **모든 단어**가 어딘가(제목·장소·주최·태그)에 있어야 한다.
+// 통째로 붙여서 비교하면 "지스타 부산"이 "지스타2026"(제목)과 "부산"(태그)에 흩어져
+// 있어 안 나온다.
 export function filterBySearch(eventList, query) {
   if (!query || !query.trim()) return eventList
-  const q = query.trim().toLowerCase()
-  return eventList.filter(e =>
-    e.title?.toLowerCase().includes(q) ||
-    e.venue?.toLowerCase().includes(q) ||
-    e.organizer?.toLowerCase().includes(q) ||
-    e.tags?.some(t => t.toLowerCase().includes(q))
-  )
+  const terms = query.trim().split(/\s+/).map(normalizedTitle).filter(Boolean)
+  // 문장부호만 친 경우("·")는 거를 근거가 없으므로 전부 보여준다.
+  if (terms.length === 0) return eventList
+  const termVariants = terms.map(searchVariants)
+  // 통째로 붙인 검색어도 한 단어로 본다. 나눠서만 보면 "Comic World"가 "comic"과
+  // "world"가 되어 별칭(comicworld)에 걸리지 않는다.
+  const wholeVariants = searchVariants(terms.join(''))
+
+  return eventList.filter(e => {
+    const fields = [e.title, e.venue, e.organizer, ...(e.tags ?? [])]
+      .filter(Boolean)
+      .map(normalizedTitle)
+    const has = variants => variants.some(v => fields.some(f => f.includes(v)))
+    return termVariants.every(has) || has(wholeVariants)
+  })
 }
 
 export function sortByNewest(list) {

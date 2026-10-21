@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { getEventStatus, filterByStatus, splitByHorizon, upcomingHorizon, STATUS } from './events'
+import { getEventStatus, filterByStatus, filterBySearch, splitByHorizon, upcomingHorizon, STATUS } from './events'
 
 // 이 파일이 가르는 것: 끝난 행사가 "예정" 묶음에 섞이지 않는다.
 //
@@ -144,5 +144,48 @@ describe('splitByHorizon', () => {
       expect(near.map(e => e.id)).toEqual(['x'])
       expect(far).toEqual([])
     })
+  })
+})
+
+describe('filterBySearch', () => {
+  // 검색이 놓치면 "우리가 아는 행사를 모른다"고 답하는 셈이다. 아래는 실제로 놓쳤던 것들.
+  const item = (id, title, extra = {}) => ({ id, title, venue: null, organizer: null, tags: [], ...extra })
+  const list = [
+    item('hoyo', '호요랜드 2026', { venue: 'KINTEX', tags: ['원신', '붕괴: 스타레일'] }),
+    item('gstar', 'G-STAR 2026', { venue: '벡스코', tags: ['부산'] }),
+    item('cw', '코믹월드 337 울산', { tags: ['코스프레'] }),
+  ]
+  const ids = q => filterBySearch(list, q).map(e => e.id)
+
+  it('띄어쓰기가 달라도 찾는다 (호요랜드2026)', () => {
+    expect(ids('호요랜드2026')).toEqual(['hoyo'])
+    expect(ids('코믹 월드')).toEqual(['cw'])
+  })
+
+  it('한글 이름으로 영문 제목을 찾는다 (지스타 → G-STAR)', () => {
+    expect(ids('지스타')).toEqual(['gstar'])
+    expect(ids('지스타 2026')).toEqual(['gstar'])
+  })
+
+  it('영문 이름으로 한글 제목을 찾는다', () => {
+    expect(ids('hoyoland')).toEqual(['hoyo'])
+    expect(ids('Comic World')).toEqual(['cw'])
+  })
+
+  it('단어가 여러 칸에 흩어져 있어도 찾는다 (제목 + 태그)', () => {
+    expect(ids('지스타 부산')).toEqual(['gstar'])
+  })
+
+  it('단어 하나라도 없으면 거른다', () => {
+    expect(ids('지스타 울산')).toEqual([])
+  })
+
+  it('문장부호가 든 태그를 눌러 들어와도 찾는다', () => {
+    expect(ids('붕괴: 스타레일')).toEqual(['hoyo'])
+  })
+
+  it('빈 검색어와 문장부호만은 거르지 않는다', () => {
+    expect(ids('')).toHaveLength(3)
+    expect(ids(' · ')).toHaveLength(3)
   })
 })
