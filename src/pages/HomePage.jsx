@@ -96,9 +96,29 @@ export default function HomePage() {
     [filtered, horizonApplies]
   )
 
+  // 예정 탭 맨 위에 "지금 진행 중"을 따로 얹는다.
+  //
+  // 기본 탭이 예정이라, 행사 당일 들어온 사람은 바로 그 행사를 첫 화면에서 못 봤다.
+  // 지스타 주말에 지스타가 없는 목록이다. 진행중 탭이 따로 있지만 첫 화면에서 그걸
+  // 눌러야 한다는 걸 알 방법이 없다.
+  //
+  // 기본 탭을 진행중으로 바꾸지 않는 이유 — 진행 중인 행사가 없는 날이 더 많아서,
+  // 그날은 첫 화면이 빈 목록이 된다. 탭의 뜻(예정)도 그대로 둔다. 탭 숫자는 예정만
+  // 세고, 진행 중은 머리글에 따로 센다.
+  //
+  // 달을 고르면 얹지 않는다. 그 달의 예정 행사를 보겠다는 뜻이고, 진행 중인 행사가
+  // 끼면 "11월"을 골랐는데 10월에 시작한 행사가 맨 위에 뜬다.
+  const ongoingNow = useMemo(() => {
+    if (activeStatus !== STATUS.UPCOMING || effectiveMonth) return []
+    return filterBySearch(
+      filterByCategory(filterByStatus(events, STATUS.ONGOING), activeCategory),
+      search
+    ).filter(e => !hideSoldout || e.ticketStatus !== 'soldout')
+  }, [events, activeStatus, effectiveMonth, activeCategory, search, hideSoldout])
+
   const [showFar, setShowFar] = useState(false)
   // 위 줄의 건수는 지금 화면에 깔린 카드 수와 같아야 한다 — 접힌 줄을 펼치면 함께 늘어난다.
-  const shownCount = near.length + (showFar ? far.length : 0)
+  const shownCount = ongoingNow.length + near.length + (showFar ? far.length : 0)
 
   // 접힌 줄에 "언제부터"를 적는다.
   //
@@ -212,7 +232,7 @@ export default function HomePage() {
         <div className={eventGridClass(columns)}>
           {Array.from({ length: columns === 1 ? 3 : 6 }).map((_, i) => <EventCardSkeleton key={i} />)}
         </div>
-      ) : near.length === 0 && far.length === 0 ? (
+      ) : ongoingNow.length === 0 && near.length === 0 && far.length === 0 ? (
         <div className="text-center py-16 text-zinc-400">
           <Icon name={search ? 'search' : 'calendar'} className="w-9 h-9 mx-auto mb-3 text-zinc-500" />
           <p>{search ? `"${search}"에 해당하는 행사가 없습니다` : '해당하는 행사가 없습니다'}</p>
@@ -232,6 +252,23 @@ export default function HomePage() {
         </div>
       ) : (
         <>
+          {/* 머리글은 진행 중이 있을 때만 단다 — 없을 때 "다가오는 행사" 한 줄만 덩그러니
+              있으면 그 위에 뭔가 빠진 것처럼 보인다. */}
+          {ongoingNow.length > 0 && (
+            <section className="mb-7">
+              <h2 className="text-sm font-semibold text-ink mb-3">지금 진행 중 · {ongoingNow.length}</h2>
+              <div className={eventGridClass(columns)}>
+                {ongoingNow.map(event => (
+                  <EventCard key={event.id} event={event} compact={columns === 2} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {ongoingNow.length > 0 && near.length > 0 && (
+            <h2 className="text-sm font-semibold text-ink mb-3">다가오는 행사</h2>
+          )}
+
           {near.length > 0 && (
             <div className={eventGridClass(columns)}>
               {near.map(event => (
@@ -242,8 +279,9 @@ export default function HomePage() {
 
           {/* 지평선 안은 비었는데 그 뒤에는 있는 경우(여기까지 왔으면 far가 있다).
               "해당하는 행사가 없습니다"로 끝내면 바로 아래 줄의 "2027년 1월부터 3건"과
-              모순으로 읽힌다 — 없는 게 아니라 멀리 있는 것이다. */}
-          {near.length === 0 && (
+              모순으로 읽힌다 — 없는 게 아니라 멀리 있는 것이다.
+              진행 중만 있고 far가 비었으면 여기 올 수 있으므로 far를 따로 확인한다. */}
+          {near.length === 0 && far.length > 0 && (
             <p className="text-center py-12 text-sm text-zinc-400">
               가까운 예정 행사가 없습니다 — {farFromLabel}부터 {far.length}건 있습니다
             </p>
@@ -280,7 +318,7 @@ export default function HomePage() {
         </>
       )}
 
-      {(near.length > 0 || far.length > 0) && (
+      {(ongoingNow.length > 0 || near.length > 0 || far.length > 0) && (
         <button
           onClick={() => setShowReport(true)}
           className={`block mx-auto mt-8 text-xs text-zinc-500 hover:text-ink transition-colors rounded ${FOCUS_RING}`}
