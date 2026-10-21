@@ -17,46 +17,11 @@
 //   뒤의 둘은 엄격 규칙을 그대로 통과했다. 화면에는 "중복 의심 0"이 떠 있었고,
 //   사람이 목록을 눈으로 훑다가 발견했다.
 
-// SQL의 public.normalized_title()을 그대로 옮긴 것.
-//
-// 규칙이 갈라지지 않게 원본 SQL을 함께 적어둔다.
-//   lower(regexp_replace(regexp_replace(t, '[[:space:]]+', ''), '[[:punct:]·∙‧・]+', ''))
-export function normalizedTitle(t) {
-  return (t ?? '')
-    .replace(/\s+/g, '')
-    .replace(/[!-/:-@[-`{-~·∙‧・]+/g, '')
-    .toLowerCase()
-}
+// 제목 정규화와 기간 겹침은 크롤러도 쓴다(자동 승인 직전 중복 보류) — 규칙이 갈라지지
+// 않게 shared/duplicate-match.mjs 한 군데에 둔다.
+import { normalizedTitle, looseTitle, overlaps } from '../../shared/duplicate-match.mjs'
 
-// 느슨한 쪽. 엄격 규칙에 더해 두 가지를 더 뗀다.
-//
-//   괄호 안   "제29회 부천국제만화축제(BICOF)" → 영문 약칭·부제가 여기 들어간다
-//   회차      "제29회 …"                      → 기사마다 붙이기도 하고 빼기도 한다
-//
-// 괄호를 문장부호 제거보다 **먼저** 처리해야 한다. 순서가 바뀌면 괄호만 사라지고
-// 안의 글자가 제목에 붙어버린다 — "…축제(BICOF)"가 "…축제bicof"가 되어 여전히 다르다.
-//
-// 연도(2026)는 떼지 않는다. "호요랜드 2026"과 "호요랜드 2027"은 다른 행사다.
-// 회차를 떼는 것도 위험할 수 있어서("제94회 코스앤코믹" · "제95회 코스앤코믹"이
-// 같아진다) 반드시 기간이 겹치는지 함께 본다 — 회차가 다르면 날짜도 다르다.
-export function looseTitle(t) {
-  const withoutParens = (t ?? '')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/（[^）]*）/g, ' ')
-    .replace(/\[[^\]]*\]/g, ' ')
-  const withoutRound = withoutParens.replace(/제?\s*\d+\s*회/g, ' ')
-  return normalizedTitle(withoutRound)
-}
-
-// 기간이 하루라도 겹치는가. end_date가 없으면 하루짜리로 본다.
-function overlaps(a, b) {
-  const aStart = a.start_date
-  const aEnd = a.end_date ?? a.start_date
-  const bStart = b.start_date
-  const bEnd = b.end_date ?? b.start_date
-  if (!aStart || !bStart) return false
-  return aStart <= bEnd && bStart <= aEnd
-}
+export { normalizedTitle, looseTitle }
 
 // rows: [{ id, title, start_date, end_date }]
 //

@@ -39,6 +39,7 @@ import { todayKST } from './date-kst.mjs'
 import { sleep, htmlToText, httpUrl } from './util.mjs'
 import { runJob } from '../../shared/job-run.mjs'
 import { horizonFrom, isBeyondHorizon } from '../../shared/event-horizon.mjs'
+import { findSuspectedDuplicate } from '../../shared/duplicate-match.mjs'
 
 // 이번 실행이 무엇을 가져왔는지. job_runs에 남겨서 대시보드가 "마지막 실행 3일 전 ·
 // 12건"이라고 말할 수 있게 한다. 소스별로 나눠 세는 이유는, 전체 합만 보면 한 소스가
@@ -235,6 +236,26 @@ function shouldAutoApprove(extracted) {
   return meetsConfidenceBar(extracted) && !isBeyondHorizon(extracted.start_date, todayKST())
 }
 
+// 기간이 겹치는 기존 행사 중 같은 행사로 보이는 것 (규칙은 shared/duplicate-match.mjs).
+//
+// 조회가 실패하면 null — 보류하지 않고 예전처럼 승인한다. 반대로 하면 DB가 잠깐
+// 흔들린 날 그날 수집분 전체가 조용히 검수 대기로 쌓인다. 트리거의 엄격 검사는
+// 그대로 돌기 때문에 이 검사가 빠져도 예전보다 나빠지지는 않는다.
+async function findExistingDuplicate(extracted) {
+  const start = extracted.start_date
+  const end = extracted.end_date ?? start
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, title, start_date, end_date, venue')
+    .lte('start_date', end)
+    .or(`end_date.gte.${start},end_date.is.null`)
+  if (error) {
+    console.warn('  -> 중복 확인 조회 실패(보류 없이 진행):', error.message)
+    return null
+  }
+  return findSuspectedDuplicate(extracted, data ?? [])
+}
+
 async function saveDraft({ source_name, source_url, source_title, published_at, extracted }) {
   // tags: null → [] 정규화 — DB 트리거가 json_array_elements(tags)를 쓰므로
   // null이면 "cannot extract elements from a scalar" 에러 발생
@@ -254,9 +275,16 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     }
   }
 
+  // 승인될 건이면 먼저 이미 올라간 행사와 겹쳐 보이는지 본다. 겹쳐 보이면 승인하지 않고
+  // 사유를 review_note에 적어 검수 대기로 남긴다 — 검수 화면이 이 값을 그대로 보여준다.
+  const suspect = shouldAutoApprove(extracted) ? await findExistingDuplicate(extracted) : null
+  const reviewNote = suspect
+    ? `중복 의심(${suspect.reason}): ${suspect.event.title} · ${suspect.event.start_date} · ${suspect.event.id}`
+    : null
+
   const { data, error } = await supabase
     .from('event_drafts')
-    .insert({ source_name, source_url, source_title, published_at, extracted: normalizedExtracted })
+    .insert({ source_name, source_url, source_title, published_at, extracted: normalizedExtracted, review_note: reviewNote })
     .select('id')
     .single()
 
@@ -272,7 +300,9 @@ async function saveDraft({ source_name, source_url, source_title, published_at, 
     console.log(`  -> ${extracted.start_date}는 지평선(${horizonFrom(todayKST())}) 밖 -> 자동 승인 보류(검수 대기)`)
   }
 
-  if (shouldAutoApprove(extracted)) {
+  if (suspect) {
+    console.log(`  -> ${reviewNote} -> 자동 승인 보류(검수 대기)`)
+  } else if (shouldAutoApprove(extracted)) {
     const { data: approved, error: approveError } = await supabase
       .from('event_drafts')
       .update({ status: 'approved' }) // promote_event_draft() 트리거가 events에 반영
